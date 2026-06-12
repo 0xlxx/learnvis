@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "build": "tsdown && mv dist/vis.iife.js dist/vis.js",
+    "prepare": "pnpm build",
     "postinstall": "node scripts/postinstall.mjs"
   },
   "devDependencies": {
