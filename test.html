@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Vis.create() — 0016b 复刻</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="dist/theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.2rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin-bottom:1.5rem}
+    #d3-stage{width:100%;max-width:780px;aspect-ratio:780/360;background:var(--card);border:1px solid var(--border);border-radius:10px}
+  </style>
+</head>
+<body>
+
+<h1>Vis.create() — 0016b 多复合节点跨边复刻</h1>
+<p class="sub">CA 和 CB 各含子节点，a₁→b₁ 穿越两层边界</p>
+
+<div id="d3-stage"></div>
+
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="dist/vis.js"></script>
+<script>
+const W=780, H=360;
+const ctx=Vis.create('#d3-stage',{width:W,height:H,margin:40});
+const {stage,palette,geom,show,node,dummy,compound,lBend,callout,marker,katexify}=ctx;
+const S=stage, g=geom;
+
+// Two compound nodes
+const CA={x:60,y:100,w:240,h:200,rx:12};
+const CB={x:440,y:100,w:240,h:200,rx:12};
+const BEND1=CA.x+CA.w-16;
+const BEND2=CB.x+16;
+const BETWEEN_X=CA.x+CA.w;
+
+const N={
+  a1:{id:'a1',x:CA.x+80+g.nW/2,y:CA.y+90+g.nH/2},
+  b1:{id:'b1',x:CB.x+80+g.nW/2,y:CB.y+90+g.nH/2},
+};
+
+// External port dummies
+const danger=palette.danger.fg;
+const D={
+  caE:{id:'caE',x:CA.x+CA.w,y:N.a1.y,t:'dummy'},
+  cbW:{id:'cbW',x:CB.x,y:N.b1.y,t:'dummy'},
+  caI:{id:'caI',x:CA.x+CA.w-30,y:N.a1.y,t:'dummy'},
+  cbI:{id:'cbI',x:CB.x+30,y:N.b1.y,t:'dummy'},
+};
+
+show(()=>{
+  // ── Compound rects ──
+  compound(CA,{label:'CA'});
+  compound(CB,{label:'CB'});
+
+  // ── Internal nodes ──
+  node(N.a1,{stroke:palette.accent.fg,text:'a₁'});
+  node(N.b1,{stroke:palette.accent.fg,text:'b₁'});
+
+  // ── Port dummies (on overlay layer) ──
+  Object.values(D).forEach(d=>{
+    dummy(d, { fill: danger, stroke: danger, halo: true, layer: 'overlay', textSize: 0 });
+  });
+
+  // ── Segment 1: CA internal a1→caI ──
+  lBend(N.a1,D.caI,BEND1,{stroke:danger,strokeW:2,dash:'3 3',id:'s1'});
+
+  // ── Segment 2: Between compounds caE→cbW (multi-segment path) ──
+  const midY=(N.a1.y+N.b1.y)/2;
+  const p=d3.path();
+  p.moveTo(D.caE.x,D.caE.y);
+  p.lineTo(BETWEEN_X+30,D.caE.y);
+  p.lineTo(BETWEEN_X+30,midY);
+  p.lineTo(CB.x-30,midY);
+  p.lineTo(CB.x-30,D.cbW.y);
+  p.lineTo(D.cbW.x,D.cbW.y);
+  S.edges.append('path').attr('data-id','s2')
+    .attr('d',p.toString()).attr('fill','none')
+    .attr('stroke',danger).attr('stroke-width',2).attr('stroke-dasharray','5 4')
+    .attr('marker-end',marker).attr('color',danger);
+
+  // ── Segment 3: CB internal cbI→b1 ──
+  lBend(D.cbI,N.b1,BEND2,{stroke:danger,strokeW:2,dash:'3 3',id:'s3'});
+
+  // ── DOM labels (callout = old domLabel) ──
+  callout({x:(N.a1.x+D.caI.x)/2,y:N.a1.y},'CA 内部段',{place:'above',gap:8,className:'vlbl',style:{color:danger,fontSize:'11px'}});
+  callout({x:(CA.x+CA.w+CB.x)/2,y:midY},'中间段 (顶层)',{place:'above',gap:6,className:'vlbl',style:{color:danger,fontSize:'11px'}});
+  callout({x:(D.cbI.x+N.b1.x)/2,y:N.b1.y},'CB 内部段',{place:'above',gap:8,className:'vlbl',style:{color:danger,fontSize:'11px'}});
+  callout(D.caE,'CA 的输出端口',{place:'above',gap:8,className:'vlbl',style:{color:'oklch(0.50 0.05 300)',fontSize:'10px'}});
+  callout(D.cbW,'CB 的输入端口',{place:'above',gap:8,className:'vlbl',style:{color:'oklch(0.50 0.05 300)',fontSize:'10px'}});
+});
+</script>
+</body>
+</html>
