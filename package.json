@@ -4,7 +4,8 @@
   "description": "D3 visualization primitives for ELK layered algorithm lessons",
   "type": "module",
   "scripts": {
-    "build": "tsdown && mv dist/vis.iife.js dist/vis.js"
+    "build": "tsdown && mv dist/vis.iife.js dist/vis.js",
+    "postinstall": "node scripts/postinstall.mjs"
   },
   "devDependencies": {
     "tsdown": "latest"

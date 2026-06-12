@@ -28,8 +28,6 @@ export const create = (selector, {
     _tr = makeTr(ms);
     [C.bg, C.eG, C.nG, C.oG].forEach(g => g.selectAll('*').remove());
     C.root.selectAll('.vlbl').remove();
-    placedLabels.length = 0;
-    obstacles.length = 0;
     fn();
     _tr = null;
   };
@@ -163,91 +161,6 @@ export const create = (selector, {
   const label = (text, { at, ...o } = {}) => svgLabel(C.bg, at?.x ?? 0, at?.y ?? 0, text, o);
   const callout = (anchor, html, o = {}) => domLabel(C.root, anchor, html, o);
 
-  // ═══ smartLabel: semantic anchor + collision avoidance ═══
-  const placedLabels = [];
-  const obstacles = [];
-
-  const rectOverlap = (a, b) =>
-    !(a.x + a.w < b.x || b.x + b.w < a.x || a.y + a.h < b.y || b.y + b.h < a.y);
-
-  const collidesAny = (r, rects) => rects.some(o => rectOverlap(r, o));
-
-  const resolveAnchor = (a) => {
-    if (a.between) { const [A,B]=a.between; return {x:(A.x+B.x)/2,y:(A.y+B.y)/2}; }
-    if (a.node) return {x:a.node.x,y:a.node.y};
-    if (a.rect) {
-      const r=a.rect, e=a.edge||'center';
-      if (e==='center') return {x:r.x+r.w/2,y:r.y+r.h/2};
-      if (e==='top') return {x:r.x+r.w/2,y:r.y};
-      if (e==='bottom') return {x:r.x+r.w/2,y:r.y+r.h};
-      if (e==='left') return {x:r.x,y:r.y+r.h/2};
-      if (e==='right') return {x:r.x+r.w,y:r.y+r.h/2};
-    }
-    if (a.edge) { const [f,t]=a.edge, p=a.t??0.5; return {x:f.x+(t.x-f.x)*p,y:f.y+(t.y-f.y)*p}; }
-    return {x:a.x||0,y:a.y||0};
-  };
-
-  const labelOffset = (side, w, h, gap) => {
-    if (side==='top') return {ox:0, oy:-(h/2+gap)};
-    if (side==='bottom') return {ox:0, oy:h/2+gap};
-    if (side==='left') return {ox:-(w/2+gap), oy:0};
-    return {ox:w/2+gap, oy:0}; // right
-  };
-
-  const smartLabel = (anchorDecl, text, opts = {}) => {
-    const { size = 12, side = null, gap = 8, style = {}, className = 'vlbl' } = opts;
-    const pos = resolveAnchor(anchorDecl);
-    const svgEl = C.svg.node();
-    const vb = svgEl.viewBox.baseVal;
-
-    // Estimate label size in SVG coords
-    const plain = String(text).replace(/<[^>]+>/g, '');
-    const estW = Math.max(plain.length * size * 0.65 + 16, 50);
-    const estH = size + 10;
-
-    // Candidate sides (respect explicit side, else try top→bottom→right→left)
-    const sides = side ? [side] : ['top','bottom','right','left'];
-
-    let best = null;
-    for (const s of sides) {
-      const {ox, oy} = labelOffset(s, estW, estH, gap);
-      const r = { x: pos.x + ox - estW/2, y: pos.y + oy - estH/2, w: estW, h: estH };
-      if (!collidesAny(r, placedLabels) && !collidesAny(r, obstacles)) {
-        best = { side: s, rect: r }; break;
-      }
-    }
-
-    // Fallback: push further along first candidate side
-    if (!best && sides.length) {
-      const s = sides[0];
-      const {ox, oy} = labelOffset(s, estW, estH, gap);
-      const dx = s==='right'?1:s==='left'?-1:0, dy = s==='bottom'?1:s==='top'?-1:0;
-      for (let e=0; e<250; e+=12) {
-        const r = { x: pos.x+ox+dx*e-estW/2, y: pos.y+oy+dy*e-estH/2, w: estW, h: estH };
-        if (!collidesAny(r, placedLabels) && !collidesAny(r, obstacles)) {
-          best = { side: s, rect: r }; break;
-        }
-      }
-    }
-
-    if (!best) return;
-
-    placedLabels.push(best.rect);
-
-    // Render as DOM label at percentage position
-    const lx = ((best.rect.x + estW/2) / vb.width) * 100;
-    const ly = ((best.rect.y) / vb.height) * 100;
-    const div = C.root.append('div').attr('class', className)
-      .style('position', 'absolute').style('pointer-events', 'none')
-      .style('left', lx + '%').style('top', ly + '%')
-      .style('transform', 'translate(-50%, -100%)').html(text);
-    for (const [k, v] of Object.entries(style)) div.style(k, v);
-    return div;
-  };
-
-  // Register node rects as obstacles
-  const markObstacle = (r) => obstacles.push(r);
-
   const bounds = (nodes, o) => getBounds(nodes, { nW: g.nW, nH: g.nH, dR: g.dR, ...o });
   const bbox = (nodes, o = {}) => {
     const b = getBounds(nodes, { nW: g.nW, nH: g.nH, dR: g.dR, ...o });
@@ -277,7 +190,7 @@ export const create = (selector, {
     node, dummy, edge, path, lBend, halo,
     bbox, bboxRect,
     block, compound, pipeline, group, connect, crossEdge,
-    label, callout, smartLabel, markObstacle, eLabel, katexify,
+    label, callout, eLabel, katexify,
     bounds, distribute: (count, container, o) => distribute(count, container, { itemW: g.nW, itemH: g.nH, ...o }),
     centerIn,
     show, flow,
