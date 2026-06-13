@@ -415,9 +415,9 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eidSeg, { type: 'segment', a: pt, b: [fx, fy], stroke, strokeW: 1.2, dash, label: '', labelGap: 0 });
     fm.declare(eidPt, { type: 'point', x: fx, y: fy, r: 3, stroke: pc, fill: pc, label: '', labelPlace: undefined, labelGap: undefined });
     return {
-      color(c: string) { const r = resolveColor(p, c); fm.patch(eidSeg, { stroke: r.stroke }); return this; },
-      dash(d: string) { fm.patch(eidSeg, { dash: d }); return this; },
-      strokeW(n: number) { fm.patch(eidSeg, { strokeW: n }); return this; },
+      ...mixStroke(eidSeg, fm, p),
+      ...mixDashed(eidSeg, fm),
+      ...mixStrokeW(eidSeg, fm),
     };
   }
 

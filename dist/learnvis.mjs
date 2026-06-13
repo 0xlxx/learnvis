@@ -5179,19 +5179,9 @@ function createMathRenderer(fm, ctx, palette) {
 			labelGap: void 0
 		});
 		return {
-			color(c) {
-				const r = resolveColor(p, c);
-				fm.patch(eidSeg, { stroke: r.stroke });
-				return this;
-			},
-			dash(d) {
-				fm.patch(eidSeg, { dash: d });
-				return this;
-			},
-			strokeW(n) {
-				fm.patch(eidSeg, { strokeW: n });
-				return this;
-			}
+			...mixStroke(eidSeg, fm, p),
+			...mixDashed(eidSeg, fm),
+			...mixStrokeW(eidSeg, fm)
 		};
 	}
 	function fill(id, pts, opts = {}) {
