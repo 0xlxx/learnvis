@@ -3743,10 +3743,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		const { markerFor } = defineArrows(C.svg, { sw: 2 });
 		const callout = (anchor, html, o = {}) => domLabel(C.root, anchor, html, o);
 		return {
+			svg: C.svg,
 			W: C.W,
 			H: C.H,
 			M: C.M,
-			svg: C.svg,
 			stage: {
 				bg: C.bg,
 				nodes: C.nG,

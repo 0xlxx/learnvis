@@ -139,7 +139,10 @@ export interface StageCtx {
   svg: S; W: number; H: number; M: number;
   stage: { bg: S; nodes: S; edges: S; overlay: S };
   root: S;
-  callout(anchor: Point, html: string, o?: Record<string, unknown>): S;
+  palette: Palette;
+  geom: { nW: number; nH: number; dR: number; rx: number; gap: number };
+  markerFor: (c: string) => string;
+  callout(anchor: Point | { x?: number; y?: number; nW?: number; nH?: number; w?: number; h?: number; r?: number }, html: string, o?: Record<string, unknown>): S;
 }
 
 // ── Math subsystem ──

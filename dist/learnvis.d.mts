@@ -254,36 +254,29 @@ declare global {
 }
 declare const katexify: (html: string) => string;
 //#endregion
-//#region vis/bootstrap.d.ts
-interface Geom {
-  nW: number;
-  nH: number;
-  dR: number;
-  rx: number;
-  gap: number;
+//#region vis/renderer/index.d.ts
+interface RenderHandle {
+  /** Update visual to match new state (may animate) */
+  update(state: EntityState, opts?: {
+    animate?: boolean;
+    transition?: any;
+  }): void;
+  /** Remove visual from scene */
+  remove(): void;
 }
-interface StageCtx2 {
-  W: number;
-  H: number;
-  M: number;
-  svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
-  stage: {
-    bg: d3.Selection<SVGGElement, unknown, null, undefined>;
-    nodes: d3.Selection<SVGGElement, unknown, null, undefined>;
-    edges: d3.Selection<SVGGElement, unknown, null, undefined>;
-    overlay: d3.Selection<SVGGElement, unknown, null, undefined>;
-  };
-  root: d3.Selection<BaseType, unknown, null, undefined>;
-  palette: ReturnType<typeof palette>;
-  geom: Geom;
-  markerFor: (c: string) => string;
+interface Renderer {
+  /** Create visual object for an entity */
+  create(id: string, state: EntityState): RenderHandle;
+  /** Called before frame rendering */
+  beginFrame(): void;
+  /** Called after all entities are processed */
+  commitFrame(opts?: {
+    animate?: boolean;
+    ms?: number;
+  }): void;
+  /** Release resources */
+  dispose(): void;
 }
-declare function bootstrap(selector: string | BaseType, opts?: {
-  width?: number;
-  height?: number;
-  margin?: number;
-  geom?: Partial<Geom>;
-}): StageCtx2;
 //#endregion
 //#region vis/frame.d.ts
 declare class FrameManager {
@@ -560,7 +553,24 @@ interface StageCtx {
     overlay: S;
   };
   root: S;
-  callout(anchor: Point, html: string, o?: Record<string, unknown>): S;
+  palette: Palette;
+  geom: {
+    nW: number;
+    nH: number;
+    dR: number;
+    rx: number;
+    gap: number;
+  };
+  markerFor: (c: string) => string;
+  callout(anchor: Point | {
+    x?: number;
+    y?: number;
+    nW?: number;
+    nH?: number;
+    w?: number;
+    h?: number;
+    r?: number;
+  }, html: string, o?: Record<string, unknown>): S;
 }
 interface MathPoint {
   pos(): Vec2;
@@ -755,29 +765,19 @@ interface AgentStage extends Disposable {
   theme: Theme;
 }
 //#endregion
-//#region vis/renderer/index.d.ts
-interface RenderHandle {
-  /** Update visual to match new state (may animate) */
-  update(state: EntityState, opts?: {
-    animate?: boolean;
-    transition?: any;
-  }): void;
-  /** Remove visual from scene */
-  remove(): void;
-}
-interface Renderer {
-  /** Create visual object for an entity */
-  create(id: string, state: EntityState): RenderHandle;
-  /** Called before frame rendering */
-  beginFrame(): void;
-  /** Called after all entities are processed */
-  commitFrame(opts?: {
-    animate?: boolean;
-    ms?: number;
-  }): void;
-  /** Release resources */
-  dispose(): void;
-}
+//#region vis/bootstrap.d.ts
+declare function bootstrap(selector: string | BaseType, opts?: {
+  width?: number;
+  height?: number;
+  margin?: number;
+  geom?: {
+    nW?: number;
+    nH?: number;
+    dR?: number;
+    rx?: number;
+    gap?: number;
+  };
+}): StageCtx;
 //#endregion
 //#region vis/stage.d.ts
 declare function stage(selector: string, opts?: StageOptions): AgentStage;
