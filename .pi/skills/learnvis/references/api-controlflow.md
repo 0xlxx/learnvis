@@ -11,17 +11,17 @@ function demo() {
 ```
 
 ```js
-// JavaScript / HTML inline
+// JavaScript / HTML inline — 资源全自动管理
 const s = LearnVis.stage('#selector', {
   width: 780, height: 460,
   margin: 48, ms: 500,
   theme: 'warm', // warm | cool | dark | paper | vivid | soft
 });
-// 手动清理: s[Symbol.dispose]()
 ```
 
-- `AgentStage` 实现 `Disposable`，支持 `using` 声明
-- `[Symbol.dispose]()` 移除 SVG 及所有 DOM 子节点
+- `AgentStage` 实现 `Disposable`，支持 `using` 声明（仅 TS）
+- 资源完全自管理：selector 去重自动废弃旧实例、容器移除自动清理
+- JS 用户无需任何清理代码 — 页面关闭 / 容器移除 / 重用 selector 全自动
 - `s.ctx` — 低层上下文（不推荐 agent 直接使用，用高阶 API）
 - `s.palette` — 调色板 `{ primary, accent, danger, warning, info, success, dim, muted }`，每个有 `.fg` / `.bg` / `.a(pct)` 
 - `s.theme` — 当前主题元数据

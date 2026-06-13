@@ -28,9 +28,17 @@ function injectCSS() {
   _cssInjected = true;
 }
 
+// Module-level stage registry for self-managing lifecycle (dedup + auto-dispose)
+const _stages = new Map<string, { [Symbol.dispose](): void }>();
+let _observer: MutationObserver | null = null;
+
 export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   const { width = 780, height = 460, margin = 48, geom, ms = 600, theme = 'warm' } = opts;
   injectCSS();
+
+  // Dispose previous stage on same selector (self-managing — user never cleans up)
+  const prev = _stages.get(selector);
+  if (prev) prev[Symbol.dispose]();
 
   const ctx = create(selector, { width, height, margin, geom });
   const _theme = resolveTheme(theme);
@@ -148,10 +156,23 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     graph: undefined,
     layout: undefined,
     [Symbol.dispose]() {
+      _stages.delete(selector);
+      _observer?.disconnect();
       ctx.svg.remove();
       ctx.root.selectAll('*').remove();
     },
   };
+
+  // Auto-dispose when container is removed from DOM
+  const container = typeof selector === 'string' ? document.querySelector(selector) : selector;
+  if (container && typeof MutationObserver !== 'undefined') {
+    _observer = new MutationObserver(() => {
+      if (!document.contains(container as Node)) (api as unknown as { [Symbol.dispose](): void })[Symbol.dispose]();
+    });
+    _observer.observe(document.body, { childList: true, subtree: true });
+  }
+
+  _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
   api.math = createMathRenderer(api as unknown as AgentStage);
   api.graph = createGraph(api as unknown as AgentStage);
   api.layout = createLayout(width, height, margin);

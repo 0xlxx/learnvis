@@ -5628,9 +5628,13 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		document.head.appendChild(s);
 		_cssInjected = true;
 	}
+	const _stages = /* @__PURE__ */ new Map();
+	let _observer = null;
 	function stage(selector, opts = {}) {
 		const { width = 780, height = 460, margin = 48, geom, ms = 600, theme = "warm" } = opts;
 		injectCSS();
+		const prev = _stages.get(selector);
+		if (prev) prev[Symbol.dispose]();
 		const ctx = create(selector, {
 			width,
 			height,
@@ -5745,10 +5749,23 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			graph: void 0,
 			layout: void 0,
 			[Symbol.dispose]() {
+				_stages.delete(selector);
+				_observer?.disconnect();
 				ctx.svg.remove();
 				ctx.root.selectAll("*").remove();
 			}
 		};
+		const container = typeof selector === "string" ? document.querySelector(selector) : selector;
+		if (container && typeof MutationObserver !== "undefined") {
+			_observer = new MutationObserver(() => {
+				if (!document.contains(container)) api[Symbol.dispose]();
+			});
+			_observer.observe(document.body, {
+				childList: true,
+				subtree: true
+			});
+		}
+		_stages.set(selector, api);
 		api.math = createMathRenderer(api);
 		api.graph = createGraph(api);
 		api.layout = createLayout(width, height, margin);
