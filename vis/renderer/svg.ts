@@ -169,16 +169,18 @@ function applyCommon(svg: E, d: any) {
 
 function _angleArc(vx: number, vy: number, r1x: number, r1y: number, r2x: number, r2y: number, arcR: number) {
   let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
-  // Normalize to [0, 2π), ensure a1 < a2 for consistent CCW sweep
   if (a1 < 0) a1 += 2 * Math.PI;
   if (a2 < 0) a2 += 2 * Math.PI;
-  if (a2 < a1) a2 += 2 * Math.PI;
+  // Always draw the acute angle (shortest arc)
+  // SVG: sweep=1 = CW (positive angle), sweep=0 = CCW (negative angle)
+  if (a2 < a1) [a2, a1] = [a1, a2]; // ensure a1 ≤ a2
+  const diff = a2 - a1;
+  const sweep = diff <= Math.PI ? 0 : 1;
   // Minimum visible arc
   if (Math.abs(a2 - a1) < 0.001) { a2 = a1 + 0.02; }
   const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
   const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
-  const large = a2 - a1 > Math.PI ? 1 : 0;
-  return { a1, a2, sweep: 1, path: `M${x1},${y1} A${arcR},${arcR} 0 ${large},1 ${x2},${y2}` };
+  return { a1, a2, sweep, path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}` };
 }
 
 function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Record<string, string>): { group: E; text: E | null } {

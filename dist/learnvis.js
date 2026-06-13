@@ -5735,16 +5735,16 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
 		if (a1 < 0) a1 += 2 * Math.PI;
 		if (a2 < 0) a2 += 2 * Math.PI;
-		if (a2 < a1) a2 += 2 * Math.PI;
+		if (a2 < a1) [a2, a1] = [a1, a2];
+		const sweep = a2 - a1 <= Math.PI ? 0 : 1;
 		if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
 		const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
 		const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
-		const large = a2 - a1 > Math.PI ? 1 : 0;
 		return {
 			a1,
 			a2,
-			sweep: 1,
-			path: `M${x1},${y1} A${arcR},${arcR} 0 ${large},1 ${x2},${y2}`
+			sweep,
+			path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
 		};
 	}
 	function drawEntity(ctx, id, d, markerCache) {
