@@ -31,7 +31,7 @@ describe('math point', () => {
   it('declares entity in FrameManager', () => {
     math.point('O', [250, 200]);
     expect(fm.entities.has('point:O')).toBe(true);
-    expect(fm.entities.get('point:O')!.desired).toMatchObject({ type: 'point', x: 250, y: 200, r: 4 });
+    expect(fm.entities.get('point:O')!.desired).toMatchObject({ type: 'node', shape: 'circle', x: 250, y: 200, r: 4 });
   });
 
   it('color() updates entity', () => {
@@ -99,7 +99,7 @@ describe('math circle', () => {
   it('declares circle entity', () => {
     math.circle('c', [100, 100], 40);
     expect(fm.entities.has('circle:c')).toBe(true);
-    expect(fm.entities.get('circle:c')!.desired).toMatchObject({ type: 'circle', cx: 100, cy: 100, r: 40 });
+    expect(fm.entities.get('circle:c')!.desired).toMatchObject({ type: 'region', shape: 'circle', cx: 100, cy: 100, r: 40 });
   });
 
   it('color() changes stroke and fill', () => {
@@ -128,7 +128,7 @@ describe('math polygon', () => {
     math.polygon('tri', verts);
     expect(fm.entities.has('polygon:tri')).toBe(true);
     const desired = fm.entities.get('polygon:tri')!.desired;
-    expect(desired.type).toBe('polygon');
+    expect(desired.type).toBe('region');
     expect(desired.vertices).toEqual(verts);
   });
 
@@ -201,7 +201,7 @@ describe('math ellipse', () => {
   it('creates an ellipse approximation as polygon', () => {
     math.ellipse('e', 200, 150, 80, 40, 16);
     const desired = fm.entities.get('polygon:e')!.desired;
-    expect(desired.type).toBe('polygon');
+    expect(desired.type).toBe('region');
     const verts = desired.vertices as [number, number][];
     expect(verts.length).toBe(16);
     // Rightmost point at a=0

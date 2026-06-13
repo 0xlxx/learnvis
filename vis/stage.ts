@@ -3,10 +3,9 @@
 import { bootstrap } from './bootstrap';
 import { resolveTheme } from './themes';
 import { createElements } from './elements';
-import { createAxes } from './axes';
 import { createMathRenderer } from './math';
-import { createLayout } from './layout';
 import { createGraph } from './graph';
+import { createLayout } from './layout';
 import { FrameManager } from './frame';
 import { SVGRenderer } from './renderer/svg';
 import type { Renderer } from './renderer';
@@ -45,7 +44,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   }
 
   const elements = createElements(fm, ctx, p);
-  const { axes } = createAxes(ctx.stage.bg, p, () => {}, () => {});
 
   function steps(defs: StepLike[], opts?: StepsOptions): StepsController {
     const { start = 0 } = opts ?? {};
@@ -100,7 +98,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     arrow: elements.arrow,
     path: elements.path,
     tag: elements.tag,
-    axes,
     steps, frame, play,
     frames: fm,
     theme: _theme,
@@ -126,13 +123,11 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
   api.math = createMathRenderer(fm, ctx, p);
   api.graph = createGraph(fm, ctx, p);
-  api.layout = createLayout(width, height, margin);
+  api.layout = createLayout(fm, p);
   return api as unknown as AgentStage;
 }
 
 /** 3D stage (placeholder — requires three.js renderer) */
 export function stage3D(selector: string, opts: StageOptions & { renderer: Renderer; camera?: { position: [number, number, number]; lookAt: [number, number, number] } }): AgentStage {
-  // For now, delegates to stage() with custom renderer
-  // Future: WebGLRenderer wraps three.js
   return stage(selector, { ...opts, renderer: opts.renderer } as any);
 }

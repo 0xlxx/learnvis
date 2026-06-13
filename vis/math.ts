@@ -177,7 +177,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const r = opts.size ?? 4;
     const label = opts.label ?? '';
 
-    fm.declare(eid, { type: 'point', x: pos[0], y: pos[1], r, stroke, fill, label, labelPlace: opts.labelPlace, labelGap: opts.labelGap });
+    fm.declare(eid, { type: 'node', shape: 'circle', x: pos[0], y: pos[1], r, stroke, fill, label, labelPlace: opts.labelPlace, labelGap: opts.labelGap });
 
     return {
       pos() { return [pos[0], pos[1]]; },
@@ -202,7 +202,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
 
     const mh = markerHalf(marker);
     const a = offsetLine(from, to, 4, 4 + mh, true);
-    fm.declare(eid, { type: 'vector', from: [a.x1, a.y1], to: [a.x2, a.y2], stroke, strokeW, dash, label, labelPlace, labelGap, marker });
+    fm.declare(eid, { type: 'line', marker: 'arrow', from: [a.x1, a.y1], to: [a.x2, a.y2], stroke, strokeW, dash, label, labelPlace, labelGap, marker });
 
     return {
       ...mixStroke(eid, fm, p),
@@ -222,7 +222,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const label = opts.label ?? '';
     const labelGap = opts.labelGap ?? 10;
 
-    fm.declare(eid, { type: 'segment', a, b, stroke, strokeW, dash, label, labelGap });
+    fm.declare(eid, { type: 'line', a, b, stroke, strokeW, dash, label, labelGap });
 
     return {
       ...mixStroke(eid, fm, p),
@@ -241,7 +241,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const opacity = opts.opacity ?? 1;
     const finalFill = opts.fill ?? p.accent.a(8);
 
-    fm.declare(eid, { type: 'circle', cx: center[0], cy: center[1], r: radius, stroke, fill: finalFill, strokeW, dash, opacity });
+    fm.declare(eid, { type: 'region', shape: 'circle', cx: center[0], cy: center[1], r: radius, stroke, fill: finalFill, strokeW, dash, opacity });
 
     return {
       ...mixColor(eid, fm, p),
@@ -260,7 +260,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const opacity = opts.opacity ?? 1;
     const finalFill = opts.fill ?? r.fill;
 
-    fm.declare(eid, { type: 'polygon', vertices, stroke: r.stroke, fill: finalFill, strokeW, opacity });
+    fm.declare(eid, { type: 'region', shape: 'polygon', vertices, stroke: r.stroke, fill: finalFill, strokeW, opacity });
 
     return {
       ...mixColor(eid, fm, p),
@@ -287,7 +287,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       [vx + u2x * sz, vy + u2y * sz],
     ];
     const ptsStr = pts.map(p => p.join(',')).join(' ');
-    fm.declare(eid, { type: 'path' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
+    fm.declare(eid, { type: 'region', shape: 'polygon' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
     return {
       ...mixStroke(eid, fm, p),
       ...mixStrokeW(eid, fm),
@@ -303,7 +303,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const arcR = opts.size ?? 30;
     const finalFill = opts.fill ?? p.warning.a(15);
 
-    fm.declare(eid, { type: 'angle', vertex, ray1, ray2, stroke, fill: finalFill, label, arcR });
+    fm.declare(eid, { type: 'group', subtype: 'angle', vertex, ray1, ray2, stroke, fill: finalFill, label, arcR });
 
     return {
       ...mixColor(eid, fm, p),
@@ -329,7 +329,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const pw = opts.width ?? 780;
     const ph = opts.height ?? 460;
 
-    fm.declare(eid, { type: 'fn', f: f.toString(), domain, range: opts.range, x: ox, y: oy, width: pw, height: ph, samples, stroke, strokeW, dash, opacity, label });
+    fm.declare(eid, { type: 'curve', f: f.toString(), domain, range: opts.range, x: ox, y: oy, width: pw, height: ph, samples, stroke, strokeW, dash, opacity, label });
 
     return {
       ...mixStroke(eid, fm, p),
@@ -344,7 +344,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const eid: `grid:${string}` = `grid:${id}`;
     const { stroke } = resolveColor(p, opts.color);
     fm.declare(eid, {
-      type: 'grid',
+      type: 'group', subtype: 'grid',
       ox: origin[0], oy: origin[1],
       w: opts.width ?? 400, h: opts.height ?? 300,
       sp: opts.spacing ?? 40,
@@ -356,7 +356,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const eid: `axes:${string}` = `axes:${id}`;
     const { stroke } = resolveColor(p, opts.color);
     fm.declare(eid, {
-      type: 'axes',
+      type: 'group', subtype: 'axes',
       ox: origin[0], oy: origin[1],
       xl: opts.xLen ?? 300, yl: opts.yLen ?? 200,
       xLabel: opts.xLabel, yLabel: opts.yLabel,
@@ -393,7 +393,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const d = sy ? `${sy}` : '';
     const r = resolveColor(p, opts.color);
     const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-    fm.declare(eid, { type: 'path', d, x: pos[0], y: pos[1], stroke: r.stroke, fill: rf, strokeW: 1.2 });
+    fm.declare(eid, { type: 'region', shape: 'polygon', d, x: pos[0], y: pos[1], stroke: r.stroke, fill: rf, strokeW: 1.2 });
     return {
       ...mixStroke(eid, fm, p),
       ...mixStrokeW(eid, fm),
@@ -410,7 +410,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const a = d3Arc()({ innerRadius: opts.innerR ?? 0, outerRadius: opts.outerR, startAngle: opts.startAngle, endAngle: opts.endAngle }) || '';
     const r = resolveColor(p, opts.color);
     const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-    fm.declare(eid, { type: 'path', d: `${a}`, x: center[0], y: center[1], stroke: r.stroke, fill: rf, strokeW: opts.strokeW ?? 1.2 });
+    fm.declare(eid, { type: 'region', shape: 'polygon', d: `${a}`, x: center[0], y: center[1], stroke: r.stroke, fill: rf, strokeW: opts.strokeW ?? 1.2 });
     return {
       ...mixStroke(eid, fm, p),
       ...mixStrokeW(eid, fm),
@@ -432,8 +432,8 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const dx = x2 - x1, dy = y2 - y1;
     const t = dx === 0 && dy === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
     const fx = x1 + t * dx, fy = y1 + t * dy;
-    fm.declare(eidSeg, { type: 'segment', a: pt, b: [fx, fy], stroke, strokeW: 1.2, dash, label: '', labelGap: 0 });
-    fm.declare(eidPt, { type: 'point', x: fx, y: fy, r: 3, stroke: pc, fill: pc, label: '', labelPlace: undefined, labelGap: undefined });
+    fm.declare(eidSeg, { type: 'line', a: pt, b: [fx, fy], stroke, strokeW: 1.2, dash, label: '', labelGap: 0 });
+    fm.declare(eidPt, { type: 'node', shape: 'circle', x: fx, y: fy, r: 3, stroke: pc, fill: pc, label: '', labelPlace: undefined, labelGap: undefined });
     return {
       ...mixStroke(eidSeg, fm, p),
       ...mixDashed(eidSeg, fm),
@@ -444,7 +444,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   function fill(id: string, pts: Vec2[], opts: { color?: string; opacity?: number } = {}): MathFill {
     const eid: `fill:${string}` = `fill:${id}`;
     const r = resolveColor(p, opts.color);
-    fm.declare(eid, { type: 'fill', pts, fill: r.fill, opacity: opts.opacity });
+    fm.declare(eid, { type: 'region', shape: 'fill', pts, fill: r.fill, opacity: opts.opacity });
     return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) };
   }
   function fillFn(id: string, f: (x: number) => number, opts: { domain?: [number,number]; range?: [number,number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number } = {}): MathFill {
@@ -477,7 +477,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     }
     pts.push([sx(d1), sy(baseline)]);
 
-    fm.declare(eid, { type: 'fill', pts, fill: r.fill, opacity: opts.opacity ?? 0.45 });
+    fm.declare(eid, { type: 'region', shape: 'fill', pts, fill: r.fill, opacity: opts.opacity ?? 0.45 });
     return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) };
   }
 

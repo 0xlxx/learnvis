@@ -31,7 +31,7 @@ describe('graph vertex (chainable)', () => {
   it('declares entity in FrameManager', () => {
     graph.vertex('A', [100, 200]);
     expect(fm.entities.has('vertex:A')).toBe(true);
-    expect(fm.entities.get('vertex:A')!.desired).toMatchObject({ type: 'vertex', x: 100, y: 200, r: 10 });
+    expect(fm.entities.get('vertex:A')!.desired).toMatchObject({ type: 'node', x: 100, y: 200, r: 10 });
   });
 
   it('color() updates entity', () => {

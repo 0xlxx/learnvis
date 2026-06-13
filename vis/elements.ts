@@ -31,21 +31,21 @@ export function createElements(
     const pos = xy(x, y);
     const id = `dot:e${_counter++}`;
     const { stroke, fill } = resolve(p.primary.fg);
-    fm.declare(id, { type: 'dot', x: pos.x, y: pos.y, stroke, fill, r: 5, label: '' });
+    fm.declare(id, { type: 'node', shape: 'circle', x: pos.x, y: pos.y, stroke, fill, r: 5, label: '' });
     const el = {
-      _id: id, _type: 'dot', _x: pos.x, _y: pos.y,
+      _id: id, _type: 'node', shape: 'circle', _x: pos.x, _y: pos.y,
       _opts: {} as Record<string, unknown>, _text: '',
       pos() { return { x: this._x, y: this._y }; },
-      move(nx: number | [number, number], ny?: number) { const pt = xy(nx, ny); this._x = pt.x; this._y = pt.y; fm.declare(id, { type: 'dot', x: pt.x, y: pt.y, stroke, fill }); return this; },
-      dx(dx: number, dy: number) { this._x += dx; this._y += dy; fm.declare(id, { type: 'dot', x: this._x, y: this._y, stroke, fill }); return this; },
+      move(nx: number | [number, number], ny?: number) { const pt = xy(nx, ny); this._x = pt.x; this._y = pt.y; fm.declare(id, { type: 'node', shape: 'circle', x: pt.x, y: pt.y, stroke, fill }); return this; },
+      dx(dx: number, dy: number) { this._x += dx; this._y += dy; fm.declare(id, { type: 'node', shape: 'circle', x: this._x, y: this._y, stroke, fill }); return this; },
       color(c: string) {
         const r = resolve(c);
-        fm.declare(id, { type: 'dot', x: this._x, y: this._y, stroke: r.stroke, fill: r.fill });
+        fm.declare(id, { type: 'node', shape: 'circle', x: this._x, y: this._y, stroke: r.stroke, fill: r.fill });
         return this;
       },
-      size(s: number) { fm.declare(id, { type: 'dot', x: this._x, y: this._y, stroke, fill, r: s }); return this; },
+      size(s: number) { fm.declare(id, { type: 'node', shape: 'circle', x: this._x, y: this._y, stroke, fill, r: s }); return this; },
       opacity(v: number) { this._opts.opacity = v; return this; },
-      text(t: string) { this._text = t; fm.declare(id, { type: 'dot', x: this._x, y: this._y, stroke, fill, label: t }); return this; },
+      text(t: string) { this._text = t; fm.declare(id, { type: 'node', shape: 'circle', x: this._x, y: this._y, stroke, fill, label: t }); return this; },
       font(_k: string, _v: string) { return this; },
       show() { return this; },
       glyph(_g: string) { return this; },
@@ -56,9 +56,9 @@ export function createElements(
   function zone(x: number, y: number, w: number, h: number, label: string, color: string): El {
     const id = `zone:e${_counter++}`;
     const { stroke, fill } = resolve(color);
-    fm.declare(id, { type: 'zone', x, y, w, h, stroke, fill, label });
+    fm.declare(id, { type: 'region', shape: 'polygon', x, y, w, h, stroke, fill, label });
     const el = {
-      _id: id, _type: 'zone', _x: x, _y: y,
+      _id: id, _type: 'region', shape: 'polygon', _x: x, _y: y,
       _opts: {} as Record<string, unknown>, _text: label,
       pos() { return { x: this._x, y: this._y }; },
       move(nx: number, ny: number) { this._x = nx; this._y = ny; return this; },
@@ -79,10 +79,10 @@ export function createElements(
     const o = xy(dx, dy);
     const fp = from.pos();
     const tx = fp.x + o.x, ty = fp.y + o.y;
-    fm.declare(id + '-tip', { type: 'point', x: tx, y: ty, r: 3.5, stroke: p.danger.fg, fill: p.danger.a(70) });
-    fm.declare(id + '-line', { type: 'edge', from: from._id, to: id + '-tip', x1: fp.x, y1: fp.y, x2: tx, y2: ty, stroke: p.danger.a(65), strokeW: 1.4, dash: '', directed: true });
+    fm.declare(id + '-tip', { type: 'node', shape: 'circle', x: tx, y: ty, r: 3.5, stroke: p.danger.fg, fill: p.danger.a(70) });
+    fm.declare(id + '-line', { type: 'line', from: from._id, to: id + '-tip', x1: fp.x, y1: fp.y, x2: tx, y2: ty, stroke: p.danger.a(65), strokeW: 1.4, dash: '', directed: true });
     const el = {
-      _id: id, _type: 'arrow', _x: tx, _y: ty,
+      _id: id, _type: 'line', marker: 'arrow', _x: tx, _y: ty,
       _opts: {} as Record<string, unknown>, _text: '',
       pos() { return { x: this._x, y: this._y }; },
       move(_nx: number | [number, number], _ny?: number) { return this; },
@@ -113,8 +113,8 @@ export function createElements(
     const id = `path:e${_counter++}`;
     const dots = pts.map(([px, py]) => {
       const did = `${id}-d${_counter++}`;
-      fm.declare(did, { type: 'point', x: px, y: py, r: 2, stroke: p.dim.fg, fill: 'var(--bg-node)' });
-      return { _id: did, _type: 'dot', _x: px, _y: py, _opts: {}, _text: '', pos() { return { x: px, y: py }; }, color() { return this as any; }, size() { return this as any; } };
+      fm.declare(did, { type: 'node', shape: 'circle', x: px, y: py, r: 2, stroke: p.dim.fg, fill: 'var(--bg-node)' });
+      return { _id: did, _type: 'node', shape: 'circle', _x: px, _y: py, _opts: {}, _text: '', pos() { return { x: px, y: py }; }, color() { return this as any; }, size() { return this as any; } };
     });
     ctx.stage.edges.append('polyline')
       .attr('points', pts.map(p => p.join(',')).join(' '))

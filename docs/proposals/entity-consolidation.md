@@ -85,15 +85,15 @@ layout.port('p', owner, pos) → fm.declare('node:p', { type:'node', shape:'circ
 
 ## 实现步骤
 
-- [ ] **Phase 1**: 统一 EntityState 为 5 个类型（types.ts）
-- [ ] **Phase 2**: 统一 EntityPrefix（'node'|'line'|'region'|'curve'|'group'）
-- [ ] **Phase 3**: 重写渲染器 drawNode/drawLine/drawRegion/drawCurve/drawGroup
-- [ ] **Phase 4**: 更新 mixins 匹配新 entity 结构
-- [ ] **Phase 5**: 更新 math.ts 用新 entity type
-- [ ] **Phase 6**: 更新 graph.ts 用新 entity type
-- [ ] **Phase 7**: 更新 layout.ts 用新 entity type
-- [ ] **Phase 8**: 添加 mixDirected/mixMarker/mixBend 通用 mixin
-- [ ] **Phase 9**: 更新 CLI 用新 entity type
+- [x] **Phase 1**: 统一 EntityState 为 5 个类型（types.ts）
+- [x] **Phase 2**: 统一 EntityPrefix（'node'|'line'|'region'|'curve'|'group'）
+- [x] **Phase 3**: 重写渲染器 drawEntity → 5 个 case（node/line/region/curve/group）
+- [x] **Phase 4**: 更新 mixins 匹配新 entity 结构
+- [x] **Phase 5**: 更新 math.ts 用新 entity type
+- [x] **Phase 6**: 更新 graph.ts 用新 entity type
+- [x] **Phase 7**: 更新 layout.ts 用新 entity type
+- [x] **Phase 8**: 添加 mixDirected/mixMarker/mixBend 通用 mixin
+- [x] **Phase 9**: 更新 CLI 用新 entity type
 - [ ] **Phase 10**: CLI 测试方案 + 补充测试
 - [ ] **Phase 11**: vitest 补充测试
 - [ ] **Phase 12**: 构建验证 + 全量测试通过

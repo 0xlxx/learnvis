@@ -4020,7 +4020,8 @@ function createElements(fm, ctx, p) {
 		const id = `dot:e${_counter++}`;
 		const { stroke, fill } = resolve(p.primary.fg);
 		fm.declare(id, {
-			type: "dot",
+			type: "node",
+			shape: "circle",
 			x: pos.x,
 			y: pos.y,
 			stroke,
@@ -4030,7 +4031,8 @@ function createElements(fm, ctx, p) {
 		});
 		return {
 			_id: id,
-			_type: "dot",
+			_type: "node",
+			shape: "circle",
 			_x: pos.x,
 			_y: pos.y,
 			_opts: {},
@@ -4046,7 +4048,8 @@ function createElements(fm, ctx, p) {
 				this._x = pt.x;
 				this._y = pt.y;
 				fm.declare(id, {
-					type: "dot",
+					type: "node",
+					shape: "circle",
 					x: pt.x,
 					y: pt.y,
 					stroke,
@@ -4058,7 +4061,8 @@ function createElements(fm, ctx, p) {
 				this._x += dx;
 				this._y += dy;
 				fm.declare(id, {
-					type: "dot",
+					type: "node",
+					shape: "circle",
 					x: this._x,
 					y: this._y,
 					stroke,
@@ -4069,7 +4073,8 @@ function createElements(fm, ctx, p) {
 			color(c) {
 				const r = resolve(c);
 				fm.declare(id, {
-					type: "dot",
+					type: "node",
+					shape: "circle",
 					x: this._x,
 					y: this._y,
 					stroke: r.stroke,
@@ -4079,7 +4084,8 @@ function createElements(fm, ctx, p) {
 			},
 			size(s) {
 				fm.declare(id, {
-					type: "dot",
+					type: "node",
+					shape: "circle",
 					x: this._x,
 					y: this._y,
 					stroke,
@@ -4095,7 +4101,8 @@ function createElements(fm, ctx, p) {
 			text(t) {
 				this._text = t;
 				fm.declare(id, {
-					type: "dot",
+					type: "node",
+					shape: "circle",
 					x: this._x,
 					y: this._y,
 					stroke,
@@ -4119,7 +4126,8 @@ function createElements(fm, ctx, p) {
 		const id = `zone:e${_counter++}`;
 		const { stroke, fill } = resolve(color);
 		fm.declare(id, {
-			type: "zone",
+			type: "region",
+			shape: "polygon",
 			x,
 			y,
 			w,
@@ -4130,7 +4138,8 @@ function createElements(fm, ctx, p) {
 		});
 		return {
 			_id: id,
-			_type: "zone",
+			_type: "region",
+			shape: "polygon",
 			_x: x,
 			_y: y,
 			_opts: {},
@@ -4180,7 +4189,8 @@ function createElements(fm, ctx, p) {
 		const fp = from.pos();
 		const tx = fp.x + o.x, ty = fp.y + o.y;
 		fm.declare(id + "-tip", {
-			type: "point",
+			type: "node",
+			shape: "circle",
 			x: tx,
 			y: ty,
 			r: 3.5,
@@ -4188,7 +4198,7 @@ function createElements(fm, ctx, p) {
 			fill: p.danger.a(70)
 		});
 		fm.declare(id + "-line", {
-			type: "edge",
+			type: "line",
 			from: from._id,
 			to: id + "-tip",
 			x1: fp.x,
@@ -4202,7 +4212,8 @@ function createElements(fm, ctx, p) {
 		});
 		return {
 			_id: id,
-			_type: "arrow",
+			_type: "line",
+			marker: "arrow",
 			_x: tx,
 			_y: ty,
 			_opts: {},
@@ -4283,7 +4294,8 @@ function createElements(fm, ctx, p) {
 		const dots = pts.map(([px, py]) => {
 			const did = `${id}-d${_counter++}`;
 			fm.declare(did, {
-				type: "point",
+				type: "node",
+				shape: "circle",
 				x: px,
 				y: py,
 				r: 2,
@@ -4292,7 +4304,8 @@ function createElements(fm, ctx, p) {
 			});
 			return {
 				_id: did,
-				_type: "dot",
+				_type: "node",
+				shape: "circle",
 				_x: px,
 				_y: py,
 				_opts: {},
@@ -4324,72 +4337,6 @@ function createElements(fm, ctx, p) {
 }
 
 //#endregion
-//#region vis/axes.ts
-function formatTick(v) {
-	if (Number.isInteger(v)) return String(v);
-	const s = v.toFixed(2);
-	return s.includes(".") ? s.replace(/0+$/, "").replace(/\.$/, "") : s;
-}
-function createAxes(bg, p, tagFn, schedule) {
-	const _axes = [];
-	function axes(ox, oy, { xRange = [0, 10], yRange = [0, 10], ticks = 5, labels = true, xLabel, yLabel } = {}) {
-		const originX = ox, originY = oy;
-		const len = 300;
-		const c = p.dim;
-		const tickLen = 5, labelGap = 18;
-		const axisW = 1.3;
-		_axes.push(() => {
-			const x = originX, y = originY;
-			const g = bg;
-			g.selectAll(".ax-grid,.ax-tip,.ax-origin,.ax-tick,.ax-line").remove();
-			for (let i = 0; i <= ticks; i++) {
-				const tx = x + len / ticks * i;
-				const ty = y - len / ticks * i;
-				g.append("line").attr("class", "ax-grid").attr("x1", tx).attr("y1", y).attr("x2", tx).attr("y2", y - len).attr("stroke", c.a(8)).attr("stroke-width", .3);
-				g.append("line").attr("class", "ax-grid").attr("x1", x).attr("y1", ty).attr("x2", x + len).attr("y2", ty).attr("stroke", c.a(8)).attr("stroke-width", .3);
-			}
-			const as = 6;
-			g.append("line").attr("class", "ax-line").attr("x1", x).attr("y1", y).attr("x2", x + len + as + 4).attr("y2", y).attr("stroke", c.a(40)).attr("stroke-width", axisW);
-			g.append("polygon").attr("class", "ax-tip").attr("points", `${x + len + as + 4},${y} ${x + len},${y - as} ${x + len},${y + as}`).attr("fill", c.a(40));
-			g.append("line").attr("class", "ax-line").attr("x1", x).attr("y1", y).attr("x2", x).attr("y2", y - len - as - 4).attr("stroke", c.a(40)).attr("stroke-width", axisW);
-			g.append("polygon").attr("class", "ax-tip").attr("points", `${x},${y - len - as - 4} ${x - as},${y - len} ${x + as},${y - len}`).attr("fill", c.a(40));
-			g.append("circle").attr("class", "ax-origin").attr("cx", x).attr("cy", y).attr("r", 3).attr("fill", "#fff").attr("stroke", c.a(40)).attr("stroke-width", axisW);
-			if (labels) {
-				for (let i = 0; i <= ticks; i++) {
-					const tx = x + len / ticks * i;
-					const ty = y - len / ticks * i;
-					g.append("line").attr("class", "ax-tick").attr("x1", tx).attr("y1", y - tickLen).attr("x2", tx).attr("y2", y + tickLen).attr("stroke", c.a(35)).attr("stroke-width", .8);
-					const xv = xRange[0] + (xRange[1] - xRange[0]) / ticks * i;
-					tagFn({
-						x: tx,
-						y
-					}, formatTick(xv)).below(labelGap).size(11);
-					g.append("line").attr("class", "ax-tick").attr("x1", x - tickLen).attr("y1", ty).attr("x2", x + tickLen).attr("y2", ty).attr("stroke", c.a(35)).attr("stroke-width", .8);
-					const yv = yRange[0] + (yRange[1] - yRange[0]) / ticks * i;
-					tagFn({
-						x,
-						y: ty
-					}, formatTick(yv)).left(labelGap - 6).size(11);
-				}
-				if (xLabel) tagFn({
-					x: x + len / 2,
-					y
-				}, xLabel).below(38).size(11);
-				if (yLabel) tagFn({
-					x: x - 36,
-					y: y - len / 2
-				}, yLabel).size(11);
-			}
-		});
-		schedule();
-	}
-	return {
-		axes,
-		_axes
-	};
-}
-
-//#endregion
 //#region vis/mixins.ts
 function resolveColor(p, c) {
 	if (!c) return {
@@ -4406,50 +4353,50 @@ function resolveColor(p, c) {
 		fill: c
 	};
 }
-function patch(eid, fm, props) {
+function patch$1(eid, fm, props) {
 	fm.patch(eid, props);
 }
 const mixColor = (eid, fm, p) => ({ color(c) {
 	const r = resolveColor(p, c);
-	patch(eid, fm, {
+	patch$1(eid, fm, {
 		stroke: r.stroke,
 		fill: r.fill
 	});
 	return this;
 } });
 const mixStroke = (eid, fm, p) => ({ color(c) {
-	patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+	patch$1(eid, fm, { stroke: resolveColor(p, c).stroke });
 	return this;
 } });
 const mixStrokeW = (eid, fm) => ({ strokeW(n) {
-	patch(eid, fm, { strokeW: n });
+	patch$1(eid, fm, { strokeW: n });
 	return this;
 } });
 const mixFill = (eid, fm, p) => ({ fill(c) {
-	patch(eid, fm, { fill: resolveColor(p, c).fill });
+	patch$1(eid, fm, { fill: resolveColor(p, c).fill });
 	return this;
 } });
 const mixOpacity = (eid, fm) => ({ opacity(v) {
-	patch(eid, fm, { opacity: v });
+	patch$1(eid, fm, { opacity: v });
 	return this;
 } });
 const mixSize = (eid, fm) => ({ size(n) {
-	patch(eid, fm, {
+	patch$1(eid, fm, {
 		r: n,
 		pathSize: n
 	});
 	return this;
 } });
 const mixDashed = (eid, fm) => ({ dashed(d = "5 4") {
-	patch(eid, fm, { dash: d });
+	patch$1(eid, fm, { dash: d });
 	return this;
 } });
 const mixLabel = (eid, fm) => ({ label(t) {
-	patch(eid, fm, { label: t });
+	patch$1(eid, fm, { label: t });
 	return this;
 } });
 const mixLabelPos = (eid, fm, defaults) => ({ label(t, place, gap) {
-	patch(eid, fm, {
+	patch$1(eid, fm, {
 		label: t,
 		labelPlace: place ?? defaults.labelPlace,
 		labelGap: gap ?? defaults.labelGap
@@ -4485,11 +4432,11 @@ function applyTransform(type, eid, fm, getKey, a, b, c) {
 		const my = vs.reduce((s, v) => s + v[1], 0) / vs.length;
 		if (type === "rotate") {
 			const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
-			patch(eid, fm, { vertices: vs.map(([px, py]) => [b + (px - b) * cos - (py - c) * sin, c + (px - b) * sin + (py - c) * cos]) });
+			patch$1(eid, fm, { vertices: vs.map(([px, py]) => [b + (px - b) * cos - (py - c) * sin, c + (px - b) * sin + (py - c) * cos]) });
 		} else if (type === "scale") {
 			const sy = b;
-			patch(eid, fm, { vertices: vs.map(([px, py]) => [mx + (px - mx) * a, my + (py - my) * sy]) });
-		} else if (type === "translate") patch(eid, fm, { vertices: vs.map(([px, py]) => [px + a, py + b]) });
+			patch$1(eid, fm, { vertices: vs.map(([px, py]) => [mx + (px - mx) * a, my + (py - my) * sy]) });
+		} else if (type === "translate") patch$1(eid, fm, { vertices: vs.map(([px, py]) => [px + a, py + b]) });
 		return;
 	}
 	if (!pf || !pt) return;
@@ -4506,7 +4453,7 @@ function applyTransform(type, eid, fm, getKey, a, b, c) {
 		nf = [pf[0] + a, pf[1] + b];
 		nt = [pt[0] + a, pt[1] + b];
 	}
-	patch(eid, fm, {
+	patch$1(eid, fm, {
 		from: nf,
 		to: nt
 	});
@@ -4515,11 +4462,11 @@ const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
 	const e = fm.entities.get(eid);
 	if (!e) return this;
 	const d = e.desired;
-	if (d.x != null) patch(eid, fm, {
+	if (d.x != null) patch$1(eid, fm, {
 		x: d.x + dx,
 		y: (d.y ?? 0) + dy
 	});
-	else if (d.cx != null) patch(eid, fm, {
+	else if (d.cx != null) patch$1(eid, fm, {
 		cx: d.cx + dx,
 		cy: d.cy + dy
 	});
@@ -4537,7 +4484,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const r = opts.size ?? 4;
 		const label = opts.label ?? "";
 		fm.declare(eid, {
-			type: "point",
+			type: "node",
+			shape: "circle",
 			x: pos[0],
 			y: pos[1],
 			r,
@@ -4573,7 +4521,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const marker = opts.marker ?? null;
 		const a = offsetLine(from, to, 4, 4 + markerHalf(marker), true);
 		fm.declare(eid, {
-			type: "vector",
+			type: "line",
+			marker: "arrow",
 			from: [a.x1, a.y1],
 			to: [a.x2, a.y2],
 			stroke,
@@ -4604,7 +4553,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const label = opts.label ?? "";
 		const labelGap = opts.labelGap ?? 10;
 		fm.declare(eid, {
-			type: "segment",
+			type: "line",
 			a,
 			b,
 			stroke,
@@ -4629,7 +4578,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? p.accent.a(8);
 		fm.declare(eid, {
-			type: "circle",
+			type: "region",
+			shape: "circle",
 			cx: center[0],
 			cy: center[1],
 			r: radius,
@@ -4655,7 +4605,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? r.fill;
 		fm.declare(eid, {
-			type: "polygon",
+			type: "region",
+			shape: "polygon",
 			vertices,
 			stroke: r.stroke,
 			fill: finalFill,
@@ -4686,7 +4637,8 @@ function createMathRenderer(fm, ctx, palette) {
 			[vx + u2x * sz, vy + u2y * sz]
 		].map((p) => p.join(",")).join(" ");
 		fm.declare(eid, {
-			type: "path",
+			type: "region",
+			shape: "polygon",
 			d: `M${ptsStr}`,
 			x: 0,
 			y: 0,
@@ -4708,7 +4660,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const arcR = opts.size ?? 30;
 		const finalFill = opts.fill ?? p.warning.a(15);
 		fm.declare(eid, {
-			type: "angle",
+			type: "group",
+			subtype: "angle",
 			vertex,
 			ray1,
 			ray2,
@@ -4740,7 +4693,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const pw = opts.width ?? 780;
 		const ph = opts.height ?? 460;
 		fm.declare(eid, {
-			type: "fn",
+			type: "curve",
 			f: f.toString(),
 			domain,
 			range: opts.range,
@@ -4767,7 +4720,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const eid = `grid:${id}`;
 		const { stroke } = resolveColor(p, opts.color);
 		fm.declare(eid, {
-			type: "grid",
+			type: "group",
+			subtype: "grid",
 			ox: origin[0],
 			oy: origin[1],
 			w: opts.width ?? 400,
@@ -4781,7 +4735,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const eid = `axes:${id}`;
 		const { stroke } = resolveColor(p, opts.color);
 		fm.declare(eid, {
-			type: "axes",
+			type: "group",
+			subtype: "axes",
 			ox: origin[0],
 			oy: origin[1],
 			xl: opts.xLen ?? 300,
@@ -4833,7 +4788,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
 		fm.declare(eid, {
-			type: "path",
+			type: "region",
+			shape: "polygon",
 			d,
 			x: pos[0],
 			y: pos[1],
@@ -4862,7 +4818,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
 		fm.declare(eid, {
-			type: "path",
+			type: "region",
+			shape: "polygon",
 			d: `${a}`,
 			x: center[0],
 			y: center[1],
@@ -4891,7 +4848,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const t = dx === 0 && dy === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
 		const fx = x1 + t * dx, fy = y1 + t * dy;
 		fm.declare(eidSeg, {
-			type: "segment",
+			type: "line",
 			a: pt,
 			b: [fx, fy],
 			stroke,
@@ -4901,7 +4858,8 @@ function createMathRenderer(fm, ctx, palette) {
 			labelGap: 0
 		});
 		fm.declare(eidPt, {
-			type: "point",
+			type: "node",
+			shape: "circle",
 			x: fx,
 			y: fy,
 			r: 3,
@@ -4921,7 +4879,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const eid = `fill:${id}`;
 		const r = resolveColor(p, opts.color);
 		fm.declare(eid, {
-			type: "fill",
+			type: "region",
+			shape: "fill",
 			pts,
 			fill: r.fill,
 			opacity: opts.opacity
@@ -4960,7 +4919,8 @@ function createMathRenderer(fm, ctx, palette) {
 		for (let i = 0; i < samples; i++) pts.push([sx(d0 + i * step), sy(f(d0 + i * step))]);
 		pts.push([sx(d1), sy(baseline)]);
 		fm.declare(eid, {
-			type: "fill",
+			type: "region",
+			shape: "fill",
 			pts,
 			fill: r.fill,
 			opacity: opts.opacity ?? .45
@@ -5052,70 +5012,6 @@ function createMathRenderer(fm, ctx, palette) {
 }
 
 //#endregion
-//#region vis/layout.ts
-function cells(width, height, margin) {
-	const W = width - margin * 2;
-	const H = height - margin * 2;
-	return {
-		/** Horizontal split. ratios sum to 1. */
-		hsplit(ratios) {
-			let cx = margin;
-			const gap = 8;
-			const avail = W - (ratios.length - 1) * gap;
-			return ratios.map((r) => {
-				const w = avail * r;
-				const cell = {
-					x: cx,
-					y: margin,
-					w,
-					h: H
-				};
-				cx += w + gap;
-				return cell;
-			});
-		},
-		/** Vertical split. ratios sum to 1. */
-		vsplit(ratios) {
-			let cy = margin;
-			const gap = 8;
-			const avail = H - (ratios.length - 1) * gap;
-			return ratios.map((r) => {
-				const h = avail * r;
-				const cell = {
-					x: margin,
-					y: cy,
-					w: W,
-					h
-				};
-				cy += h + gap;
-				return cell;
-			});
-		},
-		/** 2D grid of cells. */
-		grid(rows, cols) {
-			const gap = 8;
-			const cw = (W - (cols - 1) * gap) / cols;
-			const ch = (H - (rows - 1) * gap) / rows;
-			const result = [];
-			for (let r = 0; r < rows; r++) {
-				const row = [];
-				for (let c = 0; c < cols; c++) row.push({
-					x: margin + c * (cw + gap),
-					y: margin + r * (ch + gap),
-					w: cw,
-					h: ch
-				});
-				result.push(row);
-			}
-			return result;
-		}
-	};
-}
-function createLayout(width, height, margin = 48) {
-	return cells(width, height, margin);
-}
-
-//#endregion
 //#region vis/graph.ts
 function createGraph(fm, ctx, palette) {
 	const p = palette;
@@ -5137,7 +5033,7 @@ function createGraph(fm, ctx, palette) {
 		const stroke = p.primary.fg;
 		const fill = p.primary.a(15);
 		fm.declare(eid, {
-			type: "vertex",
+			type: "node",
 			x: pos[0],
 			y: pos[1],
 			r,
@@ -5194,7 +5090,7 @@ function createGraph(fm, ctx, palette) {
 		const marker = opts?.marker;
 		const { x1, y1, x2, y2 } = offsetLine([a.x, a.y], [b.x, b.y], a._r + gap, b._r + markerHalf(marker), directed);
 		fm.declare(eid, {
-			type: "edge",
+			type: "line",
 			from: a.id,
 			to: b.id,
 			x1,
@@ -5259,7 +5155,7 @@ function createGraph(fm, ctx, palette) {
 			}
 		}
 		for (const v of vertices) fm.declare(`vertex:${v.id}`, {
-			type: "vertex",
+			type: "node",
 			x: v.x,
 			y: v.y,
 			r: v._r,
@@ -5276,7 +5172,548 @@ function createGraph(fm, ctx, palette) {
 }
 
 //#endregion
+//#region vis/layout.ts
+function patch(eid, fm, props) {
+	fm.patch(eid, props);
+}
+/** Compute absolute port position from owner node position + port placement */
+function portPos(ownerId, pos, fm) {
+	const e = fm.entities.get(`vertex:${ownerId}`);
+	if (!e) return [0, 0];
+	const d = e.desired;
+	const cx = d.x ?? 0, cy = d.y ?? 0;
+	const bw = d._blockW ?? d.r * 2 ?? 20;
+	const bh = d._blockH ?? d.r * 2 ?? 20;
+	const hw = bw / 2, hh = bh / 2;
+	if (Array.isArray(pos)) return [cx + pos[0], cy + pos[1]];
+	switch (pos) {
+		case "top": return [cx, cy - hh];
+		case "bottom": return [cx, cy + hh];
+		case "left": return [cx - hw, cy];
+		case "right": return [cx + hw, cy];
+	}
+}
+const mixLabelNode = (eid, fm) => ({ label(t, place = "above") {
+	const e = fm.entities.get(eid);
+	if (!e) return this;
+	const d = e.desired;
+	d.x;
+	const cy = d.y ?? 0;
+	const hh = (d._blockH ?? (d.r ?? 10) * 2) / 2 + 12;
+	let ly = cy - hh, la = "middle";
+	if (place === "below") {
+		ly = cy + hh;
+		la = "middle";
+	}
+	if (place === "left") la = "end";
+	if (place === "right") la = "start";
+	patch(eid, fm, {
+		_label: t,
+		_labelY: ly,
+		_labelAnchor: la
+	});
+	return this;
+} });
+const mixMoveTo = (eid, fm) => ({ moveTo(x, y) {
+	const e = fm.entities.get(eid);
+	if (!e) return this;
+	const d = e.desired;
+	const dx = x - (d.x ?? 0), dy = y - (d.y ?? 0);
+	patch(eid, fm, {
+		x,
+		y
+	});
+	for (const [pid, pe] of fm.entities) if (pid.startsWith(`port:`) && pe.desired._owner === eid) {
+		const px = pe.desired.x ?? 0, py = pe.desired.y ?? 0;
+		patch(pid, fm, {
+			x: px + dx,
+			y: py + dy
+		});
+	}
+	return this;
+} });
+function createLayout(fm, p) {
+	function port(id, ownerId, pos, opts = {}) {
+		const eid = `port:${id}`;
+		const r = resolveColor(p, opts.stroke);
+		const [px, py] = portPos(ownerId, pos, fm);
+		fm.declare(eid, {
+			type: "node",
+			shape: "circle",
+			x: px,
+			y: py,
+			r: opts.size ?? 4,
+			stroke: r.stroke,
+			fill: opts.fill ?? r.fill,
+			label: opts.label ?? "",
+			_owner: `vertex:${ownerId}`,
+			_portPos: pos
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			...mixSize(eid, fm),
+			fill(c) {
+				patch(eid, fm, { fill: resolveColor(p, c).fill });
+				return this;
+			},
+			...mixOpacity(eid, fm),
+			label(t) {
+				patch(eid, fm, { label: t });
+				return this;
+			},
+			pos() {
+				const e = fm.entities.get(eid);
+				if (!e) return [0, 0];
+				return [e.desired.x ?? 0, e.desired.y ?? 0];
+			}
+		};
+	}
+	function node(id, x, y, opts = {}) {
+		const eid = `vertex:${id}`;
+		const r = resolveColor(p, opts.stroke ?? "primary");
+		const isCircle = opts.shape === "circle";
+		const sizeW = opts.w ?? 60, sizeH = opts.h ?? 36;
+		opts.r;
+		fm.declare(eid, {
+			type: "node",
+			x,
+			y,
+			r: opts.rx ?? 5,
+			fill: opts.fill ?? r.fill,
+			stroke: r.stroke,
+			strokeW: opts.strokeW ?? 1.5,
+			opacity: opts.opacity ?? 1,
+			_label: opts.label ?? "",
+			_labelPlace: opts.labelPlace ?? "above",
+			_blockW: isCircle ? void 0 : sizeW,
+			_blockH: isCircle ? void 0 : sizeH,
+			_shape: opts.shape ?? "rect"
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			fill(c) {
+				patch(eid, fm, { fill: resolveColor(p, c).fill });
+				return this;
+			},
+			...mixStrokeW(eid, fm),
+			...mixOpacity(eid, fm),
+			...mixLabelNode(eid, fm),
+			...mixMoveTo(eid, fm),
+			size(w, h) {
+				patch(eid, fm, {
+					_blockW: w,
+					_blockH: h ?? w
+				});
+				return this;
+			},
+			port(pid, pos, portOpts = {}) {
+				return port(pid, id, pos, portOpts);
+			}
+		};
+	}
+	function block(id, x, y, w, h, opts = {}) {
+		const eid = `vertex:${id}`;
+		const r = resolveColor(p, opts.stroke ?? (opts.emph ? "accent" : "dim"));
+		const emph = opts.emph ?? false;
+		const fill = opts.fill ?? (emph ? p.accent?.a?.(15) : p.accent?.a?.(8)) ?? r.fill;
+		fm.declare(eid, {
+			type: "node",
+			x: x + w / 2,
+			y: y + h / 2,
+			r: opts.rx ?? 8,
+			fill,
+			stroke: r.stroke,
+			strokeW: opts.strokeW ?? (emph ? 2 : 1.2),
+			opacity: opts.opacity ?? 1,
+			_label: opts.label ?? "",
+			_labelPlace: "above",
+			_blockW: w,
+			_blockH: h,
+			_shape: "rect",
+			_children: opts.childIds ?? []
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			fill(c) {
+				patch(eid, fm, { fill: resolveColor(p, c).fill });
+				return this;
+			},
+			...mixStrokeW(eid, fm),
+			...mixOpacity(eid, fm),
+			...mixLabelNode(eid, fm),
+			...mixMoveTo(eid, fm),
+			size(nw, nh) {
+				patch(eid, fm, {
+					_blockW: nw,
+					_blockH: nh ?? nw
+				});
+				return this;
+			},
+			port(pid, pos, portOpts = {}) {
+				return port(pid, id, pos, portOpts);
+			},
+			fit(pad = 16) {
+				const e = fm.entities.get(eid);
+				if (!e) return this;
+				const children = e.desired._children ?? [];
+				if (children.length === 0) return this;
+				let mx = Infinity, My = Infinity, Mx = -Infinity, my = -Infinity;
+				for (const cid of children) {
+					const ce = fm.entities.get(`vertex:${cid}`);
+					if (!ce) continue;
+					const cd = ce.desired;
+					const bw = cd._blockW ?? (cd.r ?? 10) * 2;
+					const bh = cd._blockH ?? (cd.r ?? 10) * 2;
+					const l = (cd.x ?? 0) - bw / 2, t = (cd.y ?? 0) - bh / 2;
+					if (l < mx) mx = l;
+					if (t < My) My = t;
+					if (l + bw > Mx) Mx = l + bw;
+					if (t + bh > my) my = t + bh;
+				}
+				const nw = Mx - mx + pad * 2, nh = my - My + pad * 2;
+				patch(eid, fm, {
+					x: mx - pad + nw / 2,
+					y: My - pad + nh / 2,
+					_blockW: nw,
+					_blockH: nh
+				});
+				return this;
+			}
+		};
+	}
+	function edge(id, fromPortId, toPortId, opts = {}) {
+		const eid = `edge:${id}`;
+		const r = resolveColor(p, opts.color ?? "dim");
+		const fpe = fm.entities.get(`port:${fromPortId}`);
+		const tpe = fm.entities.get(`port:${toPortId}`);
+		const fx = (fpe?.desired)?.x ?? 0, fy = (fpe?.desired)?.y ?? 0;
+		const tx = (tpe?.desired)?.x ?? 0, ty = (tpe?.desired)?.y ?? 0;
+		fm.declare(eid, {
+			type: "line",
+			x1: fx,
+			y1: fy,
+			x2: tx,
+			y2: ty,
+			stroke: r.stroke,
+			strokeW: opts.strokeW ?? 1.5,
+			dash: opts.dash ?? "",
+			directed: opts.directed ?? false,
+			_bend: opts.bend ?? false,
+			_fromPort: fromPortId,
+			_toPort: toPortId,
+			_label: opts.label ?? ""
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			...mixStrokeW(eid, fm),
+			...mixDashed(eid, fm),
+			...mixOpacity(eid, fm),
+			label(t) {
+				patch(eid, fm, { _label: t });
+				return this;
+			},
+			directed(v) {
+				patch(eid, fm, { directed: v });
+				return this;
+			},
+			bend() {
+				patch(eid, fm, { _bend: true });
+				return this;
+			}
+		};
+	}
+	function layer(id, y, h, opts = {}) {
+		const eid = `fill:${id}`;
+		const r = resolveColor(p, opts.color ?? "accent");
+		const x = opts.x ?? 0, w = opts.w ?? 780;
+		const pts = [
+			[x, y],
+			[x + w, y],
+			[x + w, y + h],
+			[x, y + h]
+		];
+		fm.declare(eid, {
+			type: "region",
+			shape: "fill",
+			pts,
+			fill: r.fill,
+			opacity: opts.opacity ?? .12,
+			_label: opts.label ?? ""
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { fill: resolveColor(p, c).fill });
+				return this;
+			},
+			...mixOpacity(eid, fm),
+			label(t) {
+				patch(eid, fm, { _label: t });
+				return this;
+			}
+		};
+	}
+	function enclosure(id, x, y, w, h, opts = {}) {
+		const eid = `polygon:${id}`;
+		const r = resolveColor(p, opts.color ?? "dim");
+		const rx = opts.rx ?? 8;
+		const pts = [
+			[x, y],
+			[x + w, y],
+			[x + w, y + h],
+			[x, y + h]
+		];
+		fm.declare(eid, {
+			type: "region",
+			shape: "polygon",
+			vertices: pts,
+			stroke: r.stroke,
+			fill: r.fill + " / 0.05",
+			strokeW: opts.strokeW ?? 1.5,
+			dash: opts.dash ?? "6 3",
+			opacity: opts.opacity ?? 1,
+			_rx: rx,
+			_label: opts.label ?? ""
+		});
+		return {
+			color(c) {
+				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			...mixDashed(eid, fm),
+			...mixStrokeW(eid, fm),
+			...mixOpacity(eid, fm),
+			label(t) {
+				patch(eid, fm, { _label: t });
+				return this;
+			}
+		};
+	}
+	return {
+		node,
+		block,
+		port,
+		edge,
+		layer,
+		enclosure
+	};
+}
+
+//#endregion
 //#region vis/renderer/svg.ts
+function markerFor(stroke, cache, svg, config) {
+	if (!stroke) return void 0;
+	const size = config?.size ?? 10, w = config?.width ?? size, h = config?.height ?? size;
+	const offset = config?.offset ?? 0, open = config?.open ?? false;
+	const key = `${stroke}|${size}|${w}|${h}|${offset}|${open}`;
+	if (!cache[key]) {
+		let defs = svg.select("defs");
+		if (defs.empty()) defs = svg.append("defs");
+		const id = "fm" + Object.keys(cache).length;
+		const vbW = w + offset + 2;
+		const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
+		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", "none").attr("stroke", stroke).attr("stroke-width", 1.5);
+		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", stroke);
+		cache[key] = id;
+	}
+	return `url(#${cache[key]})`;
+}
+function applyCommon(svg, d) {
+	if (d.opacity != null) svg.attr("opacity", d.opacity);
+}
+function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
+	let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
+	if (a1 < 0) a1 += 2 * Math.PI;
+	if (a2 < 0) a2 += 2 * Math.PI;
+	if (a2 < a1) [a2, a1] = [a1, a2];
+	const sweep = a2 - a1 <= Math.PI ? 0 : 1;
+	if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
+	const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
+	const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
+	return {
+		a1,
+		a2,
+		sweep,
+		path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
+	};
+}
+function drawEntity(ctx, id, d, markerCache) {
+	const { bg, nodes, edges, overlay } = ctx.stage;
+	switch (d.type) {
+		case "node": {
+			const g = nodes.append("g").attr("data-id", id);
+			const shape = d.shape;
+			if (shape === "rect") {
+				const bw = d._blockW ?? d.w ?? 60, bh = d._blockH ?? d.h ?? 36;
+				g.append("rect").attr("class", "shp").attr("x", d.x - bw / 2).attr("y", d.y - bh / 2).attr("width", bw).attr("height", bh).attr("rx", d.rx ?? 5).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			} else if (shape === "symbol") {
+				const sym = globalThis.d3?.symbol?.().type?.(globalThis.d3?.[d.symType ?? "symbolCircle"] ?? globalThis.d3?.symbolCircle)?.size?.((d.r ?? 8) ** 2)?.();
+				g.append("path").attr("data-id", id).attr("d", sym ? `${sym}` : "").attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.2);
+			} else g.append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 4).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			applyCommon(g, d);
+			const label = d.label ?? "";
+			let text = null;
+			if (label) {
+				const ly = d._labelY ?? d.y - (d._blockH ?? (d.r ?? 4) * 2) / 2 - 12;
+				text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke).attr("font-weight", "600").attr("x", d.x).attr("y", ly).attr("text-anchor", d._labelAnchor ?? "middle").text(label);
+			}
+			return {
+				group: g,
+				text
+			};
+		}
+		case "line": {
+			const x1 = d.x1 ?? d.from?.[0] ?? 0, y1 = d.y1 ?? d.from?.[1] ?? 0;
+			const x2 = d.x2 ?? d.to?.[0] ?? 0, y2 = d.y2 ?? d.to?.[1] ?? 0;
+			const hasMarker = d.marker === "arrow" || d.directed;
+			const line = edges.append("line").attr("data-id", id).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("stroke-dasharray", d.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(d.stroke, markerCache, ctx.svg, d.marker) ?? null : null);
+			applyCommon(line, d);
+			return {
+				group: line,
+				text: null
+			};
+		}
+		case "region": {
+			if (d.shape === "circle") {
+				const el = bg.append("circle").attr("data-id", id).attr("cx", d.cx ?? 0).attr("cy", d.cy ?? 0).attr("r", d.r ?? 0).attr("fill", d.fill).attr("stroke", d.stroke ?? d.fill).attr("stroke-width", d.strokeW ?? 1.2);
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			if (d.shape === "arc") {
+				const a = globalThis.d3?.arc?.()?.({
+					innerRadius: d.innerR ?? 0,
+					outerRadius: d.outerR ?? 0,
+					startAngle: d.startAngle ?? 0,
+					endAngle: d.endAngle ?? 0
+				}) ?? "";
+				const el = bg.append("path").attr("data-id", id).attr("d", `${a}`).attr("transform", `translate(${d.cx ?? 0},${d.cy ?? 0})`).attr("fill", d.fill).attr("stroke", d.stroke ?? d.fill).attr("stroke-width", d.strokeW ?? 1.2);
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			const ptsStr = (d.pts ?? d.vertices ?? []).map((p) => p.join(",")).join(" ");
+			const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", d.fill).attr("stroke", d.stroke ?? "none").attr("stroke-width", d.strokeW ?? 0).attr("stroke-dasharray", d.dash ?? "");
+			applyCommon(el, d);
+			return {
+				group: el,
+				text: null
+			};
+		}
+		case "curve": {
+			const [d0, d1] = d.domain ?? [0, 10], n = d.samples ?? 200;
+			const step = (d1 - d0) / (n - 1), ox = d.x ?? 0, oy = d.y ?? 0;
+			const pw = d.width ?? 780, ph = d.height ?? 460;
+			const fn = new Function("x", `return (${d.f})(x)`);
+			let yMin = Infinity, yMax = -Infinity;
+			for (let i = 0; i < n; i++) {
+				const y = fn(d0 + i * step);
+				if (y < yMin) yMin = y;
+				if (y > yMax) yMax = y;
+			}
+			let r0 = yMin, r1 = yMax;
+			if (d.range) [r0, r1] = d.range;
+			if (r0 === r1) {
+				r0 -= 1;
+				r1 += 1;
+			}
+			const sx = (x) => ox + (x - d0) / (d1 - d0) * pw;
+			const sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
+			const ptsStr = Array.from({ length: n }, (_, i) => {
+				const xv = d0 + i * step;
+				return [sx(xv), sy(fn(xv))].join(",");
+			}).join(" ");
+			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("stroke-dasharray", d.dash ?? "");
+			applyCommon(el, d);
+			return {
+				group: el,
+				text: null
+			};
+		}
+		case "group": {
+			const g = bg.append("g").attr("data-id", id);
+			if (d.subtype === "axes") {
+				const ox = d.ox ?? 0, oy = d.oy ?? 0, xl = d.xl ?? 300, yl = d.yl ?? 200, sw = d.strokeW ?? 1.4;
+				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", d.stroke).attr("stroke-width", sw);
+				g.append("polygon").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", d.stroke);
+				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", d.stroke).attr("stroke-width", sw);
+				g.append("polygon").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", d.stroke);
+				g.append("circle").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", "#fff").attr("stroke", d.stroke).attr("stroke-width", sw);
+			} else if (d.subtype === "grid") {
+				const ox = d.ox ?? 0, oy = d.oy ?? 0, w = d.w ?? 400, h = d.h ?? 300, sp = d.sp ?? 40;
+				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+			} else if (d.subtype === "angle") {
+				const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+				g.append("path").attr("d", arc.path).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			}
+			applyCommon(g, d);
+			return {
+				group: g,
+				text: null
+			};
+		}
+		default: throw new Error(`Unknown entity type: ${d.type}`);
+	}
+}
+function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
+	switch (d.type) {
+		case "node":
+			if (d.shape === "rect") svg.select("rect").interrupt().transition(tr).attr("x", d.x - (d._blockW ?? d.w ?? 60) / 2).attr("y", d.y - (d._blockH ?? d.h ?? 36) / 2).attr("width", d._blockW ?? d.w ?? 60).attr("height", d._blockH ?? d.h ?? 36).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			else svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 4).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			applyCommon(svg, d);
+			break;
+		case "line":
+			svg.interrupt().transition(tr).attr("x1", d.x1 ?? d.from?.[0] ?? 0).attr("y1", d.y1 ?? d.from?.[1] ?? 0).attr("x2", d.x2 ?? d.to?.[0] ?? 0).attr("y2", d.y2 ?? d.to?.[1] ?? 0).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+			break;
+		case "region":
+			if (d.shape === "circle") svg.interrupt().transition(tr).attr("cx", d.cx ?? 0).attr("cy", d.cy ?? 0).attr("r", d.r ?? 0).attr("fill", d.fill).attr("stroke", d.stroke ?? d.fill);
+			else {
+				const pts = d.pts ?? d.vertices ?? [];
+				svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke ?? "none");
+			}
+			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+			break;
+		case "curve": break;
+		case "group": break;
+	}
+}
+function updateEntityImmediate(svg, text, d) {
+	switch (d.type) {
+		case "node":
+			if (d.shape === "rect") svg.select("rect").attr("x", d.x - (d._blockW ?? d.w ?? 60) / 2).attr("y", d.y - (d._blockH ?? d.h ?? 36) / 2).attr("width", d._blockW ?? d.w ?? 60).attr("height", d._blockH ?? d.h ?? 36).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			else svg.select(".shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 4).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+			applyCommon(svg, d);
+			break;
+		case "line":
+			svg.attr("x1", d.x1 ?? d.from?.[0] ?? 0).attr("y1", d.y1 ?? d.from?.[1] ?? 0).attr("x2", d.x2 ?? d.to?.[0] ?? 0).attr("y2", d.y2 ?? d.to?.[1] ?? 0).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+			applyCommon(svg, d);
+			break;
+		case "region": {
+			const pts = d.pts ?? d.vertices ?? [];
+			svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke ?? "none").attr("stroke-width", d.strokeW ?? 0);
+			applyCommon(svg, d);
+			break;
+		}
+	}
+}
 var SVGRenderer = class {
 	constructor(ctx) {
 		this.handles = /* @__PURE__ */ new Map();
@@ -5300,12 +5737,14 @@ var SVGRenderer = class {
 	_repositionLabels() {
 		const edgeAngles = /* @__PURE__ */ new Map();
 		for (const [id, h] of this.handles) {
-			if (h.state.type !== "edge") continue;
+			if (h.state.type !== "line") continue;
 			const d = h.state;
-			const dx = d.x2 - d.x1, dy = d.y2 - d.y1;
+			const x1 = d.x1 ?? d.from?.[0] ?? 0, y1 = d.y1 ?? d.from?.[1] ?? 0;
+			const x2 = d.x2 ?? d.to?.[0] ?? 0, y2 = d.y2 ?? d.to?.[1] ?? 0;
+			const dx = x2 - x1, dy = y2 - y1;
 			const ang = Math.atan2(dy, dx);
 			const rev = ang > 0 ? ang - Math.PI : ang + Math.PI;
-			const from = d.from, to = d.to;
+			const from = d._fromPort ?? "", to = d._toPort ?? "";
 			if (!edgeAngles.has(from)) edgeAngles.set(from, []);
 			if (!edgeAngles.has(to)) edgeAngles.set(to, []);
 			edgeAngles.get(from).push(ang);
@@ -5351,10 +5790,11 @@ var SVGRenderer = class {
 			return d;
 		}
 		for (const [id, h] of this.handles) {
-			if (h.state.type !== "vertex") continue;
+			if (h.state.type !== "node") continue;
 			const d = h.state;
-			if (!(d._label || d.label || "")) continue;
-			const angles = edgeAngles.get(d._label || d.label || "") ?? [];
+			const label = d.label ?? "";
+			if (!label) continue;
+			const angles = edgeAngles.get(label) ?? [];
 			let place = dirs[0];
 			for (const dir of dirs) if (angles.every((a) => angleDiff(a, dir.angle) >= Math.PI / 4)) {
 				place = dir;
@@ -5410,302 +5850,6 @@ var SVGHandle = class {
 		}).remove());
 	}
 };
-function markerFor(stroke, cache, svg, config) {
-	if (!stroke) return void 0;
-	const size = config?.size ?? 10;
-	const w = config?.width ?? size;
-	const h = config?.height ?? size;
-	const offset = config?.offset ?? 0;
-	const open = config?.open ?? false;
-	const key = `${stroke}|${size}|${w}|${h}|${offset}|${open}`;
-	if (!cache[key]) {
-		let defs = svg.select("defs");
-		if (defs.empty()) defs = svg.append("defs");
-		const id = "fm" + Object.keys(cache).length;
-		const vbW = w + offset + 2;
-		const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
-		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", "none").attr("stroke", stroke).attr("stroke-width", 1.5);
-		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", stroke);
-		cache[key] = id;
-	}
-	return `url(#${cache[key]})`;
-}
-function applyCommon(svg, d) {
-	if (d.opacity != null) svg.attr("opacity", d.opacity);
-}
-function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
-	let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
-	if (a1 < 0) a1 += 2 * Math.PI;
-	if (a2 < 0) a2 += 2 * Math.PI;
-	if (a2 < a1) [a2, a1] = [a1, a2];
-	const sweep = a2 - a1 <= Math.PI ? 0 : 1;
-	if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
-	const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
-	const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
-	return {
-		a1,
-		a2,
-		sweep,
-		path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
-	};
-}
-function drawEntity(ctx, id, d, markerCache) {
-	const bg = ctx.stage.bg, nodes = ctx.stage.nodes, edges = ctx.stage.edges;
-	switch (d.type) {
-		case "vertex": {
-			const r = d.r ?? 10;
-			const g = nodes.append("g").attr("data-id", id);
-			g.append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", r).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", 1.5);
-			applyCommon(g, d);
-			const label = d._label || d.label || "";
-			let text = null;
-			if (label) text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke).attr("font-weight", "600").text(label);
-			return {
-				group: g,
-				text
-			};
-		}
-		case "point": {
-			const g = nodes.append("g").attr("data-id", id);
-			g.append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 4).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", 1.5);
-			applyCommon(g, d);
-			return {
-				group: g,
-				text: null
-			};
-		}
-		case "edge": {
-			const line = edges.append("line").attr("data-id", id).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.8).attr("stroke-dasharray", d.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", d.directed !== false ? markerFor(d.stroke, markerCache, ctx.svg, d.marker) ?? null : null);
-			applyCommon(line, d);
-			return {
-				group: line,
-				text: null
-			};
-		}
-		case "vector":
-		case "segment": {
-			const [fx, fy] = d.from || d.a;
-			const [tx, ty] = d.to || d.b;
-			const isVector = d.type === "vector";
-			const hasMarker = isVector && !d.dash;
-			const line = edges.append("line").attr("data-id", id).attr("x1", fx).attr("y1", fy).attr("x2", tx).attr("y2", ty).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? (isVector ? 1.6 : 1.5)).attr("stroke-dasharray", d.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(d.stroke, markerCache, ctx.svg, d.marker) ?? null : null);
-			applyCommon(line, d);
-			return {
-				group: line,
-				text: null
-			};
-		}
-		case "circle": {
-			const el = bg.append("circle").attr("data-id", id).attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.2).attr("stroke-dasharray", d.dash ?? "");
-			applyCommon(el, d);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		case "polygon": {
-			const el = bg.append("polygon").attr("data-id", id).attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
-			applyCommon(el, d);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		case "angle": {
-			const [vx, vy] = d.vertex, [r1x, r1y] = d.ray1, [r2x, r2y] = d.ray2;
-			const arcR = d.arcR;
-			const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR);
-			const g = ctx.stage.overlay.append("g").attr("data-id", id);
-			g.append("path").attr("d", arc.path).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
-			let text = null;
-			const label = d.label;
-			if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-				const ma = (arc.a1 + arc.a2) / 2, lr = arcR + 12;
-				text = g.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke).text(label);
-			}
-			return {
-				group: g,
-				text
-			};
-		}
-		case "fill": {
-			const pts = d.pts.map((p) => p.join(",")).join(" ");
-			const el = bg.append("polygon").attr("data-id", id).attr("points", pts).attr("fill", d.fill ?? "oklch(0.5 0.1 240)").attr("stroke", "none");
-			applyCommon(el, d);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		case "path": {
-			const el = bg.append("path").attr("data-id", id).attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.2);
-			applyCommon(el, d);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		default: return {
-			group: drawStaticEntity(ctx, id, d),
-			text: null
-		};
-	}
-}
-function drawStaticEntity(ctx, id, d) {
-	const bg = ctx.stage.bg, nodes = ctx.stage.nodes, edges = ctx.stage.edges;
-	switch (d.type) {
-		case "fn": {
-			const [d0, d1] = d.domain || [0, 10], n = d.samples ?? 200;
-			const step = (d1 - d0) / (n - 1), ox = d.x ?? 0, oy = d.y ?? 0;
-			const pw = d.width ?? 780, ph = d.height ?? 460;
-			const fn = new Function("x", `return (${d.f})(x)`);
-			let yMin = Infinity, yMax = -Infinity;
-			for (let i = 0; i < n; i++) {
-				const y = fn(d0 + i * step);
-				if (y < yMin) yMin = y;
-				if (y > yMax) yMax = y;
-			}
-			let r0 = yMin, r1 = yMax;
-			if (d.range) [r0, r1] = d.range;
-			if (r0 === r1) {
-				r0 -= 1;
-				r1 += 1;
-			}
-			const sx = (x) => ox + (x - d0) / (d1 - d0) * pw, sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
-			const pts = Array.from({ length: n }, (_, i) => {
-				const xv = d0 + i * step;
-				return [sx(xv), sy(fn(xv))].join(",");
-			}).join(" ");
-			const el = edges.append("polyline").attr("data-id", id).attr("points", pts).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5).attr("stroke-dasharray", d.dash ?? "");
-			applyCommon(el, d);
-			return el;
-		}
-		case "grid": {
-			const ox = d.ox, oy = d.oy, w = d.w, h = d.h, sp = d.sp;
-			const g = bg.append("g").attr("data-id", id);
-			for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("data-id", id + "-v" + x).attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
-			for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("data-id", id + "-h" + y).attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
-			applyCommon(g, d);
-			return g;
-		}
-		case "axes": {
-			const ox = d.ox, oy = d.oy, xl = d.xl, yl = d.yl, sw = d.strokeW ?? 1.4;
-			const g = bg.append("g").attr("data-id", id);
-			g.append("line").attr("data-id", id + "-x").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", d.stroke).attr("stroke-width", sw);
-			g.append("polygon").attr("data-id", id + "-xt").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", d.stroke);
-			g.append("line").attr("data-id", id + "-y").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", d.stroke).attr("stroke-width", sw);
-			g.append("polygon").attr("data-id", id + "-yt").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", d.stroke);
-			g.append("circle").attr("data-id", id + "-o").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", "#fff").attr("stroke", d.stroke).attr("stroke-width", sw);
-			applyCommon(g, d);
-			return g;
-		}
-		case "dot": return nodes.append("g").attr("data-id", id).append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 5).attr("fill", d.fill ?? "").attr("stroke", d.stroke ?? "");
-		case "line": return edges.append("line").attr("data-id", id).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1).attr("stroke-dasharray", d.dash ?? "");
-		default: throw new Error(`Unknown entity type: ${d.type}`);
-	}
-}
-function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
-	switch (d.type) {
-		case "vertex":
-			svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
-			break;
-		case "point":
-			svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
-			break;
-		case "edge":
-			svg.interrupt().transition(tr).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("marker-end", d.directed !== false ? markerFor(d.stroke, markerCache, svgRoot, d.marker) ?? null : null);
-			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
-			break;
-		case "vector":
-			svg.interrupt().transition(tr).attr("x1", d.x1 ?? d.from?.[0]).attr("y1", d.y1 ?? d.from?.[1]).attr("x2", d.x2 ?? d.to?.[0]).attr("y2", d.y2 ?? d.to?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("marker-end", !d.dash ? markerFor(d.stroke, markerCache, svgRoot, d.marker) ?? null : null);
-			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
-			break;
-		case "segment":
-		case "line":
-			svg.interrupt().transition(tr).attr("x1", d.x1 ?? d.from?.[0] ?? d.a?.[0]).attr("y1", d.y1 ?? d.from?.[1] ?? d.a?.[1]).attr("x2", d.x2 ?? d.to?.[0] ?? d.b?.[0]).attr("y2", d.y2 ?? d.to?.[1] ?? d.b?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			break;
-		case "circle":
-			svg.interrupt().transition(tr).attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("stroke", d.stroke).attr("fill", d.fill);
-			break;
-		case "polygon":
-			svg.interrupt().transition(tr).attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
-			break;
-		case "fill":
-			svg.interrupt().transition(tr).attr("points", d.pts.map((v) => v.join(",")).join(" ")).attr("fill", d.fill ?? "oklch(0.5 0.1 240)");
-			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
-			break;
-		case "path":
-			svg.interrupt().transition(tr).attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
-			break;
-		case "angle": {
-			const [vx, vy] = d.vertex;
-			const [r1x, r1y] = d.ray1;
-			const [r2x, r2y] = d.ray2;
-			const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
-			svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
-			if (text && Math.abs(arc.a2 - arc.a1) > .02) {
-				const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
-				text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("fill", d.stroke).text(d.label ?? "");
-			}
-			break;
-		}
-		case "dot":
-			svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y);
-			break;
-	}
-}
-function updateEntityImmediate(svg, text, d) {
-	switch (d.type) {
-		case "vertex":
-			svg.select(".shp").attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
-			applyCommon(svg, d);
-			break;
-		case "point":
-			svg.select(".shp").attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
-			applyCommon(svg, d);
-			break;
-		case "edge":
-		case "vector":
-		case "segment":
-		case "line":
-			svg.attr("x1", d.x1 ?? d.from?.[0] ?? d.a?.[0]).attr("y1", d.y1 ?? d.from?.[1] ?? d.a?.[1]).attr("x2", d.x2 ?? d.to?.[0] ?? d.b?.[0]).attr("y2", d.y2 ?? d.to?.[1] ?? d.b?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			applyCommon(svg, d);
-			break;
-		case "circle":
-			svg.attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("stroke", d.stroke).attr("fill", d.fill);
-			applyCommon(svg, d);
-			break;
-		case "polygon":
-			svg.attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			applyCommon(svg, d);
-			break;
-		case "fill":
-			svg.attr("points", d.pts.map((v) => v.join(",")).join(" ")).attr("fill", d.fill ?? "oklch(0.5 0.1 240)");
-			applyCommon(svg, d);
-			break;
-		case "path":
-			svg.attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
-			applyCommon(svg, d);
-			break;
-		case "angle": {
-			const [vx, vy] = d.vertex;
-			const [r1x, r1y] = d.ray1;
-			const [r2x, r2y] = d.ray2;
-			const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
-			svg.select("path").attr("d", arc.path).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
-			if (text && Math.abs(arc.a2 - arc.a1) > .02) {
-				const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
-				text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("fill", d.stroke).text(d.label ?? "");
-			}
-			break;
-		}
-		case "dot":
-			svg.select(".shp").attr("cx", d.x).attr("cy", d.y);
-			break;
-	}
-}
 
 //#endregion
 //#region vis/frame.ts
@@ -5857,7 +6001,6 @@ function stage(selector, opts = {}) {
 		}
 	}
 	const elements = createElements(fm, ctx, p);
-	const { axes } = createAxes(ctx.stage.bg, p, () => {}, () => {});
 	function steps(defs, opts) {
 		const { start = 0 } = opts ?? {};
 		const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
@@ -5916,7 +6059,6 @@ function stage(selector, opts = {}) {
 		arrow: elements.arrow,
 		path: elements.path,
 		tag: elements.tag,
-		axes,
 		steps,
 		frame,
 		play,
@@ -5945,7 +6087,7 @@ function stage(selector, opts = {}) {
 	_stages.set(selector, api);
 	api.math = createMathRenderer(fm, ctx, p);
 	api.graph = createGraph(fm, ctx, p);
-	api.layout = createLayout(width, height, margin);
+	api.layout = createLayout(fm, p);
 	return api;
 }
 /** 3D stage (placeholder — requires three.js renderer) */
@@ -5962,4 +6104,4 @@ if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispo
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

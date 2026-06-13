@@ -54,7 +54,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     const fill = p.primary.a(15);
 
     fm.declare(eid, {
-      type: 'vertex', x: pos[0], y: pos[1],
+      type: 'node', x: pos[0], y: pos[1],
       r, stroke, fill, _label: id,
     });
 
@@ -92,7 +92,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     );
 
     fm.declare(eid, {
-      type: 'edge', from: a.id, to: b.id,
+      type: 'line', from: a.id, to: b.id,
       x1, y1, x2, y2,
       stroke, strokeW, dash: '', directed,
       marker: marker ?? null,
@@ -151,7 +151,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     // Re-declare vertices with new positions
     for (const v of vertices) {
       fm.declare(`vertex:${v.id}`, {
-        type: 'vertex', x: v.x, y: v.y,
+        type: 'node', x: v.x, y: v.y,
         r: v._r, stroke: v._stroke, fill: v._fill, _label: v._label,
       });
     }
