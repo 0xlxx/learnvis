@@ -74,7 +74,7 @@ export const mixLabelPos = (eid: string, fm: FrameManager, defaults: { labelPlac
 export const mixTransform = (eid: string, fm: FrameManager, getKey: string) => ({
   rotate(a: number, cx: number, cy: number) { applyTransform('rotate', eid, fm, getKey, a, cx, cy); return this; },
   translate(dx: number, dy: number) { applyTransform('translate', eid, fm, getKey, dx, dy); return this; },
-  scale(s: number) { applyTransform('scale', eid, fm, getKey, s); return this; },
+  scale(sx: number, sy?: number) { applyTransform('scale', eid, fm, getKey, sx, sy ?? sx); return this; },
 });
 
 function applyTransform(type: string, eid: string, fm: FrameManager, getKey: string, a: number, b: number, c?: number) {
@@ -96,8 +96,9 @@ function applyTransform(type: string, eid: string, fm: FrameManager, getKey: str
         [b + (px-b)*cos - (py-c!)*sin, c! + (px-b)*sin + (py-c!)*cos] as [number,number]);
       patch(eid, fm, { vertices: nv });
     } else if (type === 'scale') {
+      const sy = b;  // a=sx, b=sy (sy defaults to sx from mixTransform)
       const nv = vs.map(([px, py]: [number,number]) =>
-        [mx + (px-mx)*a, my + (py-my)*a] as [number,number]);
+        [mx + (px-mx)*a, my + (py-my)*sy] as [number,number]);
       patch(eid, fm, { vertices: nv });
     } else if (type === 'translate') {
       const nv = vs.map(([px, py]: [number,number]) =>
@@ -121,3 +122,16 @@ function applyTransform(type: string, eid: string, fm: FrameManager, getKey: str
   }
   patch(eid, fm, { from: nf, to: nt });
 }
+
+// ── Position translate (point, circle, shape — modifies x/y or cx/cy) ──
+
+export const mixTranslatePos = (eid: string, fm: FrameManager) => ({
+  translate(dx: number, dy: number) {
+    const e = fm.entities.get(eid);
+    if (!e) return this;
+    const d = e.desired as any;
+    if (d.x != null) patch(eid, fm, { x: d.x + dx, y: (d.y ?? 0) + dy });
+    else if (d.cx != null) patch(eid, fm, { cx: d.cx + dx, cy: d.cy + dy });
+    return this;
+  },
+});

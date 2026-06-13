@@ -5,7 +5,7 @@ import type { Vec2, Palette, Place, D3S, MarkerConfig } from './types';
 import type { FrameManager } from './frame';
 import { offsetLine, markerHalf } from './geometry';
 import { symbol as d3Symbol, symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye, arc as d3Arc } from 'd3-shape';
-import { mixColor, mixStroke, mixStrokeW, mixFill, mixOpacity, mixDashed, mixLabel, mixLabelPos, mixTransform, mixSize, resolveColor } from './mixins';
+import { mixColor, mixStroke, mixStrokeW, mixFill, mixOpacity, mixDashed, mixLabel, mixLabelPos, mixTransform, mixSize, mixTranslatePos, resolveColor } from './mixins';
 
 // ── Marker cache ──
 const _markers: Record<string, string> = {};
@@ -57,6 +57,7 @@ export interface MathPoint {
   size(r: number): MathPoint;
   fill(c: string): MathPoint;
   opacity(v: number): MathPoint;
+  translate(dx: number, dy: number): MathPoint;
 }
 
 export interface MathVector {
@@ -67,7 +68,7 @@ export interface MathVector {
   opacity(v: number): MathVector;
   rotate(a: number, cx: number, cy: number): MathVector;
   translate(dx: number, dy: number): MathVector;
-  scale(s: number): MathVector;
+  scale(sx: number, sy?: number): MathVector;
 }
 
 export interface MathSegment {
@@ -84,6 +85,7 @@ export interface MathCircle {
   fill(c: string): MathCircle;
   dashed(d?: string): MathCircle;
   opacity(v: number): MathCircle;
+  translate(dx: number, dy: number): MathCircle;
 }
 
 export interface MathPolygon {
@@ -94,19 +96,23 @@ export interface MathPolygon {
   opacity(v: number): MathPolygon;
   rotate(a: number, cx: number, cy: number): MathPolygon;
   translate(dx: number, dy: number): MathPolygon;
-  scale(s: number): MathPolygon;
+  scale(sx: number, sy?: number): MathPolygon;
 }
 
 export interface MathAngle {
   color(c: string): MathAngle;
   strokeW(n: number): MathAngle;
   fill(c: string): MathAngle;
+  dashed(d?: string): MathAngle;
+  opacity(v: number): MathAngle;
   label(t: string): MathAngle;
 }
 
 export interface MathRightAngle {
   color(c: string): MathRightAngle;
   size(n: number): MathRightAngle;
+  strokeW(n: number): MathRightAngle;
+  opacity(v: number): MathRightAngle;
 }
 
 export interface MathProjection {
@@ -132,7 +138,10 @@ export interface MathShape {
   color(c: string): MathShape;
   size(n: number): MathShape;
   fill(c: string): MathShape;
+  strokeW(n: number): MathShape;
+  dashed(d?: string): MathShape;
   opacity(v: number): MathShape;
+  translate(dx: number, dy: number): MathShape;
 }
 
 interface FnOpts {
@@ -177,6 +186,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
+      ...mixTranslatePos(eid, fm),
     };
   }
 
@@ -239,6 +249,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixFill(eid, fm, p),
       ...mixDashed(eid, fm),
       ...mixOpacity(eid, fm),
+      ...mixTranslatePos(eid, fm),
     };
   }
 
@@ -279,6 +290,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eid, { type: 'path' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
     return {
       ...mixStroke(eid, fm, p),
+      ...mixStrokeW(eid, fm),
       ...mixSize(eid, fm),
       ...mixOpacity(eid, fm),
     };
@@ -297,6 +309,8 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixColor(eid, fm, p),
       ...mixStrokeW(eid, fm),
       ...mixFill(eid, fm, p),
+      ...mixDashed(eid, fm),
+      ...mixOpacity(eid, fm),
       ...mixLabel(eid, fm),
     };
   }
@@ -382,9 +396,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eid, { type: 'path', d, x: pos[0], y: pos[1], stroke: r.stroke, fill: rf, strokeW: 1.2 });
     return {
       ...mixStroke(eid, fm, p),
+      ...mixStrokeW(eid, fm),
+      ...mixDashed(eid, fm),
       ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
+      ...mixTranslatePos(eid, fm),
     };
   }
 
@@ -396,9 +413,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eid, { type: 'path', d: `${a}`, x: center[0], y: center[1], stroke: r.stroke, fill: rf, strokeW: opts.strokeW ?? 1.2 });
     return {
       ...mixStroke(eid, fm, p),
+      ...mixStrokeW(eid, fm),
+      ...mixDashed(eid, fm),
       ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
+      ...mixTranslatePos(eid, fm),
     };
   }
   function projection(id: string, pt: Vec2, lf: Vec2, lt: Vec2, opts: { color?: string; dash?: string; pointColor?: string } = {}): MathProjection {

@@ -4763,8 +4763,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			applyTransform("translate", eid, fm, getKey, dx, dy);
 			return this;
 		},
-		scale(s) {
-			applyTransform("scale", eid, fm, getKey, s);
+		scale(sx, sy) {
+			applyTransform("scale", eid, fm, getKey, sx, sy ?? sx);
 			return this;
 		}
 	});
@@ -4784,8 +4784,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			if (type === "rotate") {
 				const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
 				patch(eid, fm, { vertices: vs.map(([px, py]) => [b + (px - b) * cos - (py - c) * sin, c + (px - b) * sin + (py - c) * cos]) });
-			} else if (type === "scale") patch(eid, fm, { vertices: vs.map(([px, py]) => [mx + (px - mx) * a, my + (py - my) * a]) });
-			else if (type === "translate") patch(eid, fm, { vertices: vs.map(([px, py]) => [px + a, py + b]) });
+			} else if (type === "scale") {
+				const sy = b;
+				patch(eid, fm, { vertices: vs.map(([px, py]) => [mx + (px - mx) * a, my + (py - my) * sy]) });
+			} else if (type === "translate") patch(eid, fm, { vertices: vs.map(([px, py]) => [px + a, py + b]) });
 			return;
 		}
 		if (!pf || !pt) return;
@@ -4807,6 +4809,20 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			to: nt
 		});
 	}
+	const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
+		const e = fm.entities.get(eid);
+		if (!e) return this;
+		const d = e.desired;
+		if (d.x != null) patch(eid, fm, {
+			x: d.x + dx,
+			y: (d.y ?? 0) + dy
+		});
+		else if (d.cx != null) patch(eid, fm, {
+			cx: d.cx + dx,
+			cy: d.cy + dy
+		});
+		return this;
+	} });
 
 //#endregion
 //#region vis/math.ts
@@ -4840,7 +4856,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				}),
 				...mixSize(eid, fm),
 				...mixFill(eid, fm, p),
-				...mixOpacity(eid, fm)
+				...mixOpacity(eid, fm),
+				...mixTranslatePos(eid, fm)
 			};
 		}
 		function vector(id, from, to, opts = {}) {
@@ -4925,7 +4942,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				...mixStrokeW(eid, fm),
 				...mixFill(eid, fm, p),
 				...mixDashed(eid, fm),
-				...mixOpacity(eid, fm)
+				...mixOpacity(eid, fm),
+				...mixTranslatePos(eid, fm)
 			};
 		}
 		function polygon(id, vertices, opts = {}) {
@@ -4976,6 +4994,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			});
 			return {
 				...mixStroke(eid, fm, p),
+				...mixStrokeW(eid, fm),
 				...mixSize(eid, fm),
 				...mixOpacity(eid, fm)
 			};
@@ -5000,6 +5019,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				...mixColor(eid, fm, p),
 				...mixStrokeW(eid, fm),
 				...mixFill(eid, fm, p),
+				...mixDashed(eid, fm),
+				...mixOpacity(eid, fm),
 				...mixLabel(eid, fm)
 			};
 		}
@@ -5120,9 +5141,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			});
 			return {
 				...mixStroke(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixDashed(eid, fm),
 				...mixSize(eid, fm),
 				...mixFill(eid, fm, p),
-				...mixOpacity(eid, fm)
+				...mixOpacity(eid, fm),
+				...mixTranslatePos(eid, fm)
 			};
 		}
 		function arc(id, center, opts) {
@@ -5146,9 +5170,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			});
 			return {
 				...mixStroke(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixDashed(eid, fm),
 				...mixSize(eid, fm),
 				...mixFill(eid, fm, p),
-				...mixOpacity(eid, fm)
+				...mixOpacity(eid, fm),
+				...mixTranslatePos(eid, fm)
 			};
 		}
 		function projection(id, pt, lf, lt, opts = {}) {
