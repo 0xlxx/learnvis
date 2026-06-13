@@ -1,50 +1,31 @@
-// vis/stage.ts — lifecycle: draw, schedule, animate (stepper)
+// vis/stage.ts — lifecycle: steps, frame, play via FrameManager
+
 import { create } from './create';
 import { resolveTheme } from './themes';
 import { createElements } from './elements';
-import { createBoundTag, createStandaloneTag } from './tag';
 import { createAxes } from './axes';
-import * as math from './math';
 import { createMathRenderer } from './math';
 import { createLayout } from './layout';
 import { createGraph } from './graph';
-import { steps } from './stepper';
-import type { El, Tag, Point, Palette, SemColor, AgentStage, StageOptions, AxesOptions, StepperOptions } from './types';
+import { FrameManager } from './frame';
+import { SVGRenderer } from './renderer/svg';
+import type { Renderer } from './renderer';
+import type { El, Point, Palette, SemColor, AgentStage, StageOptions, AxesOptions, StepsController, StepLike, StepsOptions } from './types';
 
-type Vec2 = [number, number];
-
-/** Inject default stepper CSS once */
-let _cssInjected = false;
-function injectCSS() {
-  if (_cssInjected || typeof document === 'undefined') return;
-  const s = document.createElement('style');
-  s.textContent = `
-    .vis-stepper{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
-    .vis-stepper button{border:1px solid var(--border,oklch(0 0 0/0.12));background:var(--card,oklch(0.96 0.008 78/0.85));color:var(--text-dim,oklch(0.55 0.02 65));font-family:var(--font-mono,JetBrains Mono,monospace);font-size:0.78rem;padding:4px 14px;border-radius:6px;cursor:pointer;transition:all 0.15s}
-    .vis-stepper button:hover{border-color:var(--blue,oklch(0.62 0.18 68));color:var(--blue,oklch(0.62 0.18 68))}
-    .vis-stepper button.active{background:var(--blue-05,oklch(0.62 0.18 68/0.05));border-color:var(--blue,oklch(0.62 0.18 68));color:var(--blue,oklch(0.62 0.18 68));font-weight:600}
-  `;
-  document.head.appendChild(s);
-  _cssInjected = true;
-}
-
-// Module-level stage registry for self-managing lifecycle (dedup + auto-dispose)
 const _stages = new Map<string, { [Symbol.dispose](): void }>();
 let _observer: MutationObserver | null = null;
 
 export function stage(selector: string, opts: StageOptions = {}): AgentStage {
-  const { width = 780, height = 460, margin = 48, geom, ms = 600, theme = 'warm' } = opts;
-  injectCSS();
+  const { width = 780, height = 460, margin = 48, geom, theme = 'warm', animation, renderer } = opts as StageOptions & { renderer?: Renderer };
 
-  // Dispose previous stage on same selector (self-managing — user never cleans up)
   const prev = _stages.get(selector);
   if (prev) prev[Symbol.dispose]();
 
   const ctx = create(selector, { width, height, margin, geom });
+  const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
   const _theme = resolveTheme(theme);
   const defaultP: Palette = ctx.palette;
 
-  // Build theme-aware palette
   const p: Record<string, SemColor> = { ...defaultP };
   if (_theme.palette) {
     const tp = _theme.palette;
@@ -63,83 +44,53 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     }
   }
 
-  // Registry
-  const _els = new Map<string, El>();
-  const _tags: Tag[] = [];
-  let _dirty = false, _drawing = false;
+  const elements = createElements(fm, ctx, p);
+  const { axes } = createAxes(ctx.stage.bg, p, () => {}, () => {});
 
-  function schedule() {
-    if (_dirty || _drawing) return;
-    _dirty = true;
-    queueMicrotask(() => {
-      if (!_dirty) return;
-      _dirty = false;
-      draw();
-    });
-  }
+  function steps(defs: StepLike[], opts?: StepsOptions): StepsController {
+    const { start = 0 } = opts ?? {};
+    const normalized = defs.map(d => typeof d === 'function' ? { frame: d } : d);
+    let current = -1;
+    let busy = false;
+    const listeners: ((i: number) => void)[] = [];
 
-  // Create sub-modules
-  const elements = createElements(ctx, p, schedule, _els);
-
-  function tag(target: El | { pos(): Point }, html: string): Tag {
-    if ('_id' in target) {
-      const t = createBoundTag(ctx.callout, target as El, html);
-      schedule();
-      return t;
+    function go(i: number) {
+      if (i === current || busy || i < 0 || i >= normalized.length) return;
+      busy = true;
+      try {
+        fm.begin();
+        normalized[i].frame(api as unknown as AgentStage);
+        fm.commit();
+        current = i;
+      } finally {
+        busy = false;
+      }
+      listeners.forEach(fn => fn(i));
     }
-    const t = createStandaloneTag(ctx.callout, target.pos(), html);
-    _tags.push(t);
-    schedule();
-    return t;
-  }
 
-  const { axes, _axes } = createAxes(ctx.stage.bg, p, (pos, html) => {
-    const t = createStandaloneTag(ctx.callout, pos, html);
-    _tags.push(t);
-    return t;
-  }, schedule);
+    go(start);
 
-  // Draw
-  let _first = true;
-
-  interface ElWithDraw extends El { _draw(): void }
-  interface TagWithDraw extends Tag { _draw(at?: Point): void }
-
-  function draw(dur?: number) {
-    _dirty = false;
-    _drawing = true;
-    const duration = dur ?? ms;
-    const fn = () => {
-      for (const el of _els.values()) (el as ElWithDraw)._draw();
-      for (const t of _tags) (t as TagWithDraw)._draw();
-      for (const a of _axes) a();
+    return {
+      go,
+      get current() { return current; },
+      onChange(fn) { listeners.push(fn); return () => { const idx = listeners.indexOf(fn); if (idx >= 0) listeners.splice(idx, 1); }; },
+      destroy() { listeners.length = 0; },
     };
-    if (_first) { ctx.show(fn, duration); _first = false; }
-    else { ctx.flow(fn, duration); }
-    _drawing = false;
   }
 
-  function animate(count: number, stepFn: (i: number) => void, opts: StepperOptions = {}) {
-    const { container = '.vis-stepper:not(.vis-init)', labels = [], texts = [], panel, start = 0 } = opts;
-    let ct: HTMLElement | null = typeof container === 'string' ? document.querySelector(container) : container as HTMLElement;
-    if (!ct) {
-      ct = document.createElement('div');
-      ct.className = 'vis-stepper vis-init';
-      const stageEl = document.querySelector(selector);
-      if (stageEl?.parentNode) stageEl.parentNode.insertBefore(ct, stageEl);
-    }
-    return steps(count, {
-      container: ct.className ? `.${ct.className.split(' ').join('.')}` : container,
-      labels, start,
-      draw: (s: number) => {
-        if (panel) {
-          const el = typeof panel === 'string' ? document.querySelector(panel) : panel as HTMLElement;
-          if (el && texts[s] !== undefined) el.innerHTML = texts[s];
-        }
-        stepFn(s);
-        draw();
-      },
+  function frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void> {
+    return new Promise(resolve => {
+      fm.begin();
+      frameFn(api as unknown as AgentStage);
+      fm.commit({ ms: opts?.ms });
+      setTimeout(resolve, opts?.ms ?? 500);
     });
+  }
+
+  async function play(fns: ((s: AgentStage) => void)[], opts?: { ms?: number }): Promise<void> {
+    for (const fn of fns) {
+      await frame(fn, opts);
+    }
   }
 
   const api: Record<string, unknown> = {
@@ -147,11 +98,12 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     dot: elements.dot,
     zone: elements.zone,
     arrow: elements.arrow,
-    line: elements.line,
     path: elements.path,
-    tag, axes, draw, animate,
+    tag: elements.tag,
+    axes,
+    steps, frame, play,
+    frames: fm,
     theme: _theme,
-    raw: { show: ctx.show, flow: ctx.flow, render: ctx.render },
     math: undefined,
     graph: undefined,
     layout: undefined,
@@ -163,7 +115,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     },
   };
 
-  // Auto-dispose when container is removed from DOM
   const container = typeof selector === 'string' ? document.querySelector(selector) : selector;
   if (container && typeof MutationObserver !== 'undefined') {
     _observer = new MutationObserver(() => {
@@ -173,8 +124,15 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   }
 
   _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
-  api.math = createMathRenderer(api as unknown as AgentStage);
-  api.graph = createGraph(api as unknown as AgentStage);
+  api.math = createMathRenderer(fm, ctx, p);
+  api.graph = createGraph(fm, ctx, p);
   api.layout = createLayout(width, height, margin);
   return api as unknown as AgentStage;
+}
+
+/** 3D stage (placeholder — requires three.js renderer) */
+export function stage3D(selector: string, opts: StageOptions & { renderer: Renderer; camera?: { position: [number, number, number]; lookAt: [number, number, number] } }): AgentStage {
+  // For now, delegates to stage() with custom renderer
+  // Future: WebGLRenderer wraps three.js
+  return stage(selector, { ...opts, renderer: opts.renderer } as any);
 }

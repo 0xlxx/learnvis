@@ -7,15 +7,32 @@
     "build": "tsdown && mv dist/learnvis.iife.js dist/learnvis.js",
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:cli": "npx tsdown cli.ts --format esm --outDir dist --clean false --minify false"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
+    "jsdom": "^29.1.1",
     "tsdown": "latest",
     "typescript": "^6.0.3",
     "vitest": "^4.1.8"
   },
   "dependencies": {
-    "d3": "^7.9.0"
+    "cac": "^7.0.0",
+    "d3": "^7.9.0",
+    "d3-interpolate": "^3.0.1",
+    "d3-shape": "^3.2.0"
+  },
+  "bin": {
+    "learnvis": "dist/cli.mjs"
+  },
+  "main": "dist/learnvis.mjs",
+  "module": "dist/learnvis.mjs",
+  "exports": {
+    ".": {
+      "import": "./dist/learnvis.mjs",
+      "require": "./dist/learnvis.js",
+      "types": "./vis/index.ts"
+    }
   }
 }

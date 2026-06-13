@@ -1,49 +1,45 @@
-// 5. STEPPER — stepper, pages, steps
+// vis/stepper.ts — standalone stepper UI, decoupled from steps
 
-declare global { interface Window { katex?: { renderToString(src: string, opts?: Record<string, unknown>): string } } }
+/**
+ * Create stepper buttons in a container element.
+ *
+ * @param container - CSS selector or HTMLElement to hold buttons
+ * @param labels - button labels
+ * @param onChange - called with step index when user clicks a button
+ * @param opts.start - initial active step (default 0)
+ */
+export function stepper(
+  container: string | HTMLElement,
+  labels: string[],
+  onChange: (i: number) => void,
+  opts?: { start?: number },
+): { go(i: number): void; destroy(): void } {
+  const ct = typeof container === 'string' ? document.querySelector(container) : container;
+  if (!ct) throw new Error(`Stepper container not found: ${container}`);
 
-export const stepper = (selector: string, { panel, texts = [] as string[], draw, start = 0 }: {
-  panel?: string; texts?: string[]; draw?: (s: number) => void; start?: number;
-} = {}) => {
-  const btns = document.querySelectorAll(selector);
-  const show = (s: number) => {
-    btns.forEach((b, i) => b.classList.toggle('active', i === s));
-    if (panel) {
-      const el = document.querySelector(panel);
-      if (el && texts[s] !== undefined) {
-        if (typeof window !== 'undefined' && window.katex)
-          el.innerHTML = window.katex.renderToString(texts[s], { throwOnError: false });
-        else el.innerHTML = texts[s];
-      }
-    }
-    if (draw) draw(s);
-  };
-  btns.forEach((b, i) => b.addEventListener('click', () => show(i)));
-  show(start);
-  return { go: show };
-};
+  const start = opts?.start ?? 0;
+  const buttons: HTMLButtonElement[] = [];
 
-export const pages = (count: number, prefix = 't'): string[] =>
-  Array.from({ length: count }, (_: unknown, i: number): string =>
-    document.getElementById(prefix + i)?.innerHTML || '');
-
-export const steps = (count: number, {
-  container = '.stepper', panel, labels, texts, draw, start = 0, prefix = 't',
-}: {
-  container?: string; panel?: string; labels?: string[]; texts?: string[];
-  draw?: (s: number) => void; start?: number; prefix?: string;
-} = {}) => {
-  const ct = document.querySelector(container);
-  if (!ct) throw new Error(`Stepper container "${container}" not found`);
-  if (!ct.children.length || ct.querySelector('button') === null) {
-    const circle = '\u2460\u2461\u2462\u2463\u2464\u2465\u2466\u2467\u2468\u2469\u246A\u246B\u246C\u246D\u246E\u246F\u2470\u2471\u2472\u2473';
-    ct.innerHTML = '';
-    for (let i = 0; i < count; i++) {
-      const btn = document.createElement('button');
-      btn.textContent = labels?.[i] || `${circle[i] || (i + 1)}`;
-      ct.appendChild(btn);
-    }
+  ct.innerHTML = '';
+  for (let i = 0; i < labels.length; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = labels[i];
+    if (i === start) btn.classList.add('active');
+    btn.addEventListener('click', () => go(i));
+    ct.appendChild(btn);
+    buttons.push(btn);
   }
-  const resolved = texts || pages(count, prefix);
-  return stepper(`${container} button`, { panel, texts: resolved, draw, start });
-};
+
+  function go(i: number) {
+    if (i < 0 || i >= labels.length) return;
+    buttons.forEach((b, j) => b.classList.toggle('active', j === i));
+    onChange(i);
+  }
+
+  function destroy() {
+    ct!.innerHTML = '';
+    buttons.length = 0;
+  }
+
+  return { go, destroy };
+}

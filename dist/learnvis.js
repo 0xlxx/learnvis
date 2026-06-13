@@ -84,12 +84,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region vis/geometry.ts
-/** 欧氏距离 */
 	const len = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
-	/**
-	* 节点出射点：从 n 出发指向 (tx, ty) 的边与节点边界的交点。
-	* dummy 节点按半径方向计算；普通节点按方向优先（竖直/水平边）。
-	*/
 	const exitPt = (n, tx, ty, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
 		if (n.t === "dummy") {
 			const dx = tx - n.x, dy = ty - n.y, l = len(dx, dy);
@@ -108,10 +103,6 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			y: n.y
 		};
 	};
-	/**
-	* 节点入射点：从 (fx, fy) 进入节点 n 的边与节点边界的交点。
-	* 与 exitPt 对称，但 gap 控制边与节点边界的间距。
-	*/
 	const entryPt = (n, fx, fy, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
 		if (n.t === "dummy") {
 			const dx = n.x - fx, dy = n.y - fy, l = len(dx, dy);
@@ -130,7 +121,6 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			y: n.y
 		};
 	};
-	/** 获取一组节点的包围盒 { mx, Mx, my, My }，pad 控制外扩距离 */
 	const getBounds = (nodes, { nW = 34, nH = 26, dR = 8, pad = 8 } = {}) => {
 		if (!nodes.length) return null;
 		const xs = nodes.map((n) => n.x - (n.t === "dummy" ? dR : nW / 2));
@@ -144,12 +134,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			My: Math.max(...ye) + pad
 		};
 	};
-	/** 获取矩形中心点 */
 	const centerIn = (rect) => ({
 		x: rect.x + rect.w / 2,
 		y: rect.y + rect.h / 2
 	});
-	/** 在容器内均匀分布 count 个项目，返回坐标数组 */
 	const distribute = (count, container, { dir = "v", gap = 16, itemW, itemH, align = "center" } = {}) => {
 		const iw = itemW || 40, ih = itemH || 30;
 		const out = [];
@@ -172,6 +160,22 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		}
 		return out;
 	};
+	/** Half-width of a marker arrow tip, including offset. Used for edge endpoint adjustment. */
+	function markerHalf(config) {
+		return ((config?.width ?? config?.size ?? 10) + (config?.offset ?? 0) + 2) / 2;
+	}
+	/** Offset line endpoints by given radii. Marker tip extends outward from line end. */
+	function offsetLine(from, to, fromR, toR, _directed = true) {
+		const dx = to[0] - from[0], dy = to[1] - from[1];
+		const l = len(dx, dy);
+		const ux = dx / l, uy = dy / l;
+		return {
+			x1: from[0] + ux * fromR,
+			y1: from[1] + uy * fromR,
+			x2: to[0] - ux * toR,
+			y2: to[1] - uy * toR
+		};
+	}
 
 //#endregion
 //#region node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/dispatch.js
@@ -421,7 +425,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/constant.js
-	function constant_default$2(x) {
+	function constant_default$3(x) {
 		return function() {
 			return x;
 		};
@@ -460,7 +464,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	function data_default$1(value, key) {
 		if (!arguments.length) return Array.from(this, datum);
 		var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
-		if (typeof value !== "function") value = constant_default$2(value);
+		if (typeof value !== "function") value = constant_default$3(value);
 		for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
 			var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength);
 			bind(parent, group, enterGroup, updateGroup, exit[j] = new Array(groupLength), data, key);
@@ -1367,7 +1371,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/constant.js
-	var constant_default$1 = (x) => () => x;
+	var constant_default$2 = (x) => () => x;
 
 //#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/color.js
@@ -1383,12 +1387,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	}
 	function gamma(y) {
 		return (y = +y) === 1 ? nogamma : function(a, b) {
-			return b - a ? exponential(a, b, y) : constant_default$1(isNaN(a) ? b : a);
+			return b - a ? exponential(a, b, y) : constant_default$2(isNaN(a) ? b : a);
 		};
 	}
 	function nogamma(a, b) {
 		var d = b - a;
-		return d ? linear(a, d) : constant_default$1(isNaN(a) ? b : a);
+		return d ? linear(a, d) : constant_default$2(isNaN(a) ? b : a);
 	}
 
 //#endregion
@@ -2326,6 +2330,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/src/cubic.js
+	function cubicIn(t) {
+		return t * t * t;
+	}
+	function cubicOut(t) {
+		return --t * t * t + 1;
+	}
 	function cubicInOut(t) {
 		return ((t *= 2) <= 1 ? t * t * t : (t -= 2) * t * t + 2) / 2;
 	}
@@ -2358,7 +2368,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/src/brush.js
-	const { abs, max, min } = Math;
+	const { abs: abs$1, max: max$1, min: min$1 } = Math;
 	function number1(e) {
 		return [+e[0], +e[1]];
 	}
@@ -2407,6 +2417,83 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	function type(t) {
 		return { type: t };
 	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/path.js
+	const pi$1 = Math.PI, tau$1 = 2 * pi$1, epsilon$1 = 1e-6, tauEpsilon = tau$1 - epsilon$1;
+	function append(strings) {
+		this._ += strings[0];
+		for (let i = 1, n = strings.length; i < n; ++i) this._ += arguments[i] + strings[i];
+	}
+	function appendRound(digits) {
+		let d = Math.floor(digits);
+		if (!(d >= 0)) throw new Error(`invalid digits: ${digits}`);
+		if (d > 15) return append;
+		const k = 10 ** d;
+		return function(strings) {
+			this._ += strings[0];
+			for (let i = 1, n = strings.length; i < n; ++i) this._ += Math.round(arguments[i] * k) / k + strings[i];
+		};
+	}
+	var Path = class {
+		constructor(digits) {
+			this._x0 = this._y0 = this._x1 = this._y1 = null;
+			this._ = "";
+			this._append = digits == null ? append : appendRound(digits);
+		}
+		moveTo(x, y) {
+			this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}`;
+		}
+		closePath() {
+			if (this._x1 !== null) {
+				this._x1 = this._x0, this._y1 = this._y0;
+				this._append`Z`;
+			}
+		}
+		lineTo(x, y) {
+			this._append`L${this._x1 = +x},${this._y1 = +y}`;
+		}
+		quadraticCurveTo(x1, y1, x, y) {
+			this._append`Q${+x1},${+y1},${this._x1 = +x},${this._y1 = +y}`;
+		}
+		bezierCurveTo(x1, y1, x2, y2, x, y) {
+			this._append`C${+x1},${+y1},${+x2},${+y2},${this._x1 = +x},${this._y1 = +y}`;
+		}
+		arcTo(x1, y1, x2, y2, r) {
+			x1 = +x1, y1 = +y1, x2 = +x2, y2 = +y2, r = +r;
+			if (r < 0) throw new Error(`negative radius: ${r}`);
+			let x0 = this._x1, y0 = this._y1, x21 = x2 - x1, y21 = y2 - y1, x01 = x0 - x1, y01 = y0 - y1, l01_2 = x01 * x01 + y01 * y01;
+			if (this._x1 === null) this._append`M${this._x1 = x1},${this._y1 = y1}`;
+			else if (!(l01_2 > epsilon$1));
+			else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon$1) || !r) this._append`L${this._x1 = x1},${this._y1 = y1}`;
+			else {
+				let x20 = x2 - x0, y20 = y2 - y0, l21_2 = x21 * x21 + y21 * y21, l20_2 = x20 * x20 + y20 * y20, l21 = Math.sqrt(l21_2), l01 = Math.sqrt(l01_2), l = r * Math.tan((pi$1 - Math.acos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2), t01 = l / l01, t21 = l / l21;
+				if (Math.abs(t01 - 1) > epsilon$1) this._append`L${x1 + t01 * x01},${y1 + t01 * y01}`;
+				this._append`A${r},${r},0,0,${+(y01 * x20 > x01 * y20)},${this._x1 = x1 + t21 * x21},${this._y1 = y1 + t21 * y21}`;
+			}
+		}
+		arc(x, y, r, a0, a1, ccw) {
+			x = +x, y = +y, r = +r, ccw = !!ccw;
+			if (r < 0) throw new Error(`negative radius: ${r}`);
+			let dx = r * Math.cos(a0), dy = r * Math.sin(a0), x0 = x + dx, y0 = y + dy, cw = 1 ^ ccw, da = ccw ? a0 - a1 : a1 - a0;
+			if (this._x1 === null) this._append`M${x0},${y0}`;
+			else if (Math.abs(this._x1 - x0) > epsilon$1 || Math.abs(this._y1 - y0) > epsilon$1) this._append`L${x0},${y0}`;
+			if (!r) return;
+			if (da < 0) da = da % tau$1 + tau$1;
+			if (da > tauEpsilon) this._append`A${r},${r},0,1,${cw},${x - dx},${y - dy}A${r},${r},0,1,${cw},${this._x1 = x0},${this._y1 = y0}`;
+			else if (da > epsilon$1) this._append`A${r},${r},0,${+(da >= pi$1)},${cw},${this._x1 = x + r * Math.cos(a1)},${this._y1 = y + r * Math.sin(a1)}`;
+		}
+		rect(x, y, w, h) {
+			this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}h${w = +w}v${+h}h${-w}Z`;
+		}
+		toString() {
+			return this._;
+		}
+	};
+	function path() {
+		return new Path();
+	}
+	path.prototype = Path.prototype;
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/center.js
@@ -2732,7 +2819,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/constant.js
-	function constant_default(x) {
+	function constant_default$1(x) {
 		return function() {
 			return x;
 		};
@@ -2754,7 +2841,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	}
 	function collide_default(radius) {
 		var nodes, radii, random, strength = 1, iterations = 1;
-		if (typeof radius !== "function") radius = constant_default(radius == null ? 1 : +radius);
+		if (typeof radius !== "function") radius = constant_default$1(radius == null ? 1 : +radius);
 		function force() {
 			var i, n = nodes.length, tree, node, xi, yi, ri, ri2;
 			for (var k = 0; k < iterations; ++k) {
@@ -2809,7 +2896,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			return arguments.length ? (strength = +_, force) : strength;
 		};
 		force.radius = function(_) {
-			return arguments.length ? (radius = typeof _ === "function" ? _ : constant_default(+_), initialize(), force) : radius;
+			return arguments.length ? (radius = typeof _ === "function" ? _ : constant_default$1(+_), initialize(), force) : radius;
 		};
 		return force;
 	}
@@ -2825,7 +2912,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		return node;
 	}
 	function link_default(links) {
-		var id = index, strength = defaultStrength, strengths, distance = constant_default(30), distances, nodes, count, bias, random, iterations = 1;
+		var id = index, strength = defaultStrength, strengths, distance = constant_default$1(30), distances, nodes, count, bias, random, iterations = 1;
 		if (links == null) links = [];
 		function defaultStrength(link) {
 			return 1 / Math.min(count[link.source.index], count[link.target.index]);
@@ -2881,22 +2968,22 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			return arguments.length ? (iterations = +_, force) : iterations;
 		};
 		force.strength = function(_) {
-			return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default(+_), initializeStrength(), force) : strength;
+			return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default$1(+_), initializeStrength(), force) : strength;
 		};
 		force.distance = function(_) {
-			return arguments.length ? (distance = typeof _ === "function" ? _ : constant_default(+_), initializeDistance(), force) : distance;
+			return arguments.length ? (distance = typeof _ === "function" ? _ : constant_default$1(+_), initializeDistance(), force) : distance;
 		};
 		return force;
 	}
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/lcg.js
-	const a = 1664525;
-	const c = 1013904223;
+	const a$1 = 1664525;
+	const c$1 = 1013904223;
 	const m = 4294967296;
 	function lcg_default() {
 		let s = 1;
-		return () => (s = (a * s + c) % m) / m;
+		return () => (s = (a$1 * s + c$1) % m) / m;
 	}
 
 //#endregion
@@ -3009,7 +3096,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/manyBody.js
 	function manyBody_default() {
-		var nodes, node, random, alpha, strength = constant_default(-30), strengths, distanceMin2 = 1, distanceMax2 = Infinity, theta2 = .81;
+		var nodes, node, random, alpha, strength = constant_default$1(-30), strengths, distanceMin2 = 1, distanceMax2 = Infinity, theta2 = .81;
 		function force(_) {
 			var i, n = nodes.length, tree = quadtree(nodes, x, y).visitAfter(accumulate);
 			for (alpha = _, i = 0; i < n; ++i) node = nodes[i], tree.visit(apply);
@@ -3068,7 +3155,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			initialize();
 		};
 		force.strength = function(_) {
-			return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default(+_), initialize(), force) : strength;
+			return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default$1(+_), initialize(), force) : strength;
 		};
 		force.distanceMin = function(_) {
 			return arguments.length ? (distanceMin2 = _ * _, force) : Math.sqrt(distanceMin2);
@@ -3080,6 +3167,306 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			return arguments.length ? (theta2 = _ * _, force) : Math.sqrt(theta2);
 		};
 		return force;
+	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/constant.js
+	function constant_default(x) {
+		return function constant() {
+			return x;
+		};
+	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/math.js
+	const abs = Math.abs;
+	const atan2 = Math.atan2;
+	const cos = Math.cos;
+	const max = Math.max;
+	const min = Math.min;
+	const sin = Math.sin;
+	const sqrt = Math.sqrt;
+	const epsilon = 1e-12;
+	const pi = Math.PI;
+	const halfPi = pi / 2;
+	const tau = 2 * pi;
+	function acos(x) {
+		return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
+	}
+	function asin(x) {
+		return x >= 1 ? halfPi : x <= -1 ? -halfPi : Math.asin(x);
+	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/path.js
+	function withPath(shape) {
+		let digits = 3;
+		shape.digits = function(_) {
+			if (!arguments.length) return digits;
+			if (_ == null) digits = null;
+			else {
+				const d = Math.floor(_);
+				if (!(d >= 0)) throw new RangeError(`invalid digits: ${_}`);
+				digits = d;
+			}
+			return shape;
+		};
+		return () => new Path(digits);
+	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/arc.js
+	function arcInnerRadius(d) {
+		return d.innerRadius;
+	}
+	function arcOuterRadius(d) {
+		return d.outerRadius;
+	}
+	function arcStartAngle(d) {
+		return d.startAngle;
+	}
+	function arcEndAngle(d) {
+		return d.endAngle;
+	}
+	function arcPadAngle(d) {
+		return d && d.padAngle;
+	}
+	function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
+		var x10 = x1 - x0, y10 = y1 - y0, x32 = x3 - x2, y32 = y3 - y2, t = y32 * x10 - x32 * y10;
+		if (t * t < 1e-12) return;
+		t = (x32 * (y0 - y2) - y32 * (x0 - x2)) / t;
+		return [x0 + t * x10, y0 + t * y10];
+	}
+	function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
+		var x01 = x0 - x1, y01 = y0 - y1, lo = (cw ? rc : -rc) / sqrt(x01 * x01 + y01 * y01), ox = lo * y01, oy = -lo * x01, x11 = x0 + ox, y11 = y0 + oy, x10 = x1 + ox, y10 = y1 + oy, x00 = (x11 + x10) / 2, y00 = (y11 + y10) / 2, dx = x10 - x11, dy = y10 - y11, d2 = dx * dx + dy * dy, r = r1 - rc, D = x11 * y10 - x10 * y11, d = (dy < 0 ? -1 : 1) * sqrt(max(0, r * r * d2 - D * D)), cx0 = (D * dy - dx * d) / d2, cy0 = (-D * dx - dy * d) / d2, cx1 = (D * dy + dx * d) / d2, cy1 = (-D * dx + dy * d) / d2, dx0 = cx0 - x00, dy0 = cy0 - y00, dx1 = cx1 - x00, dy1 = cy1 - y00;
+		if (dx0 * dx0 + dy0 * dy0 > dx1 * dx1 + dy1 * dy1) cx0 = cx1, cy0 = cy1;
+		return {
+			cx: cx0,
+			cy: cy0,
+			x01: -ox,
+			y01: -oy,
+			x11: cx0 * (r1 / r - 1),
+			y11: cy0 * (r1 / r - 1)
+		};
+	}
+	function arc_default() {
+		var innerRadius = arcInnerRadius, outerRadius = arcOuterRadius, cornerRadius = constant_default(0), padRadius = null, startAngle = arcStartAngle, endAngle = arcEndAngle, padAngle = arcPadAngle, context = null, path = withPath(arc);
+		function arc() {
+			var buffer, r, r0 = +innerRadius.apply(this, arguments), r1 = +outerRadius.apply(this, arguments), a0 = startAngle.apply(this, arguments) - halfPi, a1 = endAngle.apply(this, arguments) - halfPi, da = abs(a1 - a0), cw = a1 > a0;
+			if (!context) context = buffer = path();
+			if (r1 < r0) r = r1, r1 = r0, r0 = r;
+			if (!(r1 > 1e-12)) context.moveTo(0, 0);
+			else if (da > tau - 1e-12) {
+				context.moveTo(r1 * cos(a0), r1 * sin(a0));
+				context.arc(0, 0, r1, a0, a1, !cw);
+				if (r0 > 1e-12) {
+					context.moveTo(r0 * cos(a1), r0 * sin(a1));
+					context.arc(0, 0, r0, a1, a0, cw);
+				}
+			} else {
+				var a01 = a0, a11 = a1, a00 = a0, a10 = a1, da0 = da, da1 = da, ap = padAngle.apply(this, arguments) / 2, rp = ap > 1e-12 && (padRadius ? +padRadius.apply(this, arguments) : sqrt(r0 * r0 + r1 * r1)), rc = min(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)), rc0 = rc, rc1 = rc, t0, t1;
+				if (rp > 1e-12) {
+					var p0 = asin(rp / r0 * sin(ap)), p1 = asin(rp / r1 * sin(ap));
+					if ((da0 -= p0 * 2) > 1e-12) p0 *= cw ? 1 : -1, a00 += p0, a10 -= p0;
+					else da0 = 0, a00 = a10 = (a0 + a1) / 2;
+					if ((da1 -= p1 * 2) > 1e-12) p1 *= cw ? 1 : -1, a01 += p1, a11 -= p1;
+					else da1 = 0, a01 = a11 = (a0 + a1) / 2;
+				}
+				var x01 = r1 * cos(a01), y01 = r1 * sin(a01), x10 = r0 * cos(a10), y10 = r0 * sin(a10);
+				if (rc > 1e-12) {
+					var x11 = r1 * cos(a11), y11 = r1 * sin(a11), x00 = r0 * cos(a00), y00 = r0 * sin(a00), oc;
+					if (da < pi) if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
+						var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt(ax * ax + ay * ay) * sqrt(bx * bx + by * by))) / 2), lc = sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
+						rc0 = min(rc, (r0 - lc) / (kc - 1));
+						rc1 = min(rc, (r1 - lc) / (kc + 1));
+					} else rc0 = rc1 = 0;
+				}
+				if (!(da1 > 1e-12)) context.moveTo(x01, y01);
+				else if (rc1 > 1e-12) {
+					t0 = cornerTangents(x00, y00, x01, y01, r1, rc1, cw);
+					t1 = cornerTangents(x11, y11, x10, y10, r1, rc1, cw);
+					context.moveTo(t0.cx + t0.x01, t0.cy + t0.y01);
+					if (rc1 < rc) context.arc(t0.cx, t0.cy, rc1, atan2(t0.y01, t0.x01), atan2(t1.y01, t1.x01), !cw);
+					else {
+						context.arc(t0.cx, t0.cy, rc1, atan2(t0.y01, t0.x01), atan2(t0.y11, t0.x11), !cw);
+						context.arc(0, 0, r1, atan2(t0.cy + t0.y11, t0.cx + t0.x11), atan2(t1.cy + t1.y11, t1.cx + t1.x11), !cw);
+						context.arc(t1.cx, t1.cy, rc1, atan2(t1.y11, t1.x11), atan2(t1.y01, t1.x01), !cw);
+					}
+				} else context.moveTo(x01, y01), context.arc(0, 0, r1, a01, a11, !cw);
+				if (!(r0 > 1e-12) || !(da0 > 1e-12)) context.lineTo(x10, y10);
+				else if (rc0 > 1e-12) {
+					t0 = cornerTangents(x10, y10, x11, y11, r0, -rc0, cw);
+					t1 = cornerTangents(x01, y01, x00, y00, r0, -rc0, cw);
+					context.lineTo(t0.cx + t0.x01, t0.cy + t0.y01);
+					if (rc0 < rc) context.arc(t0.cx, t0.cy, rc0, atan2(t0.y01, t0.x01), atan2(t1.y01, t1.x01), !cw);
+					else {
+						context.arc(t0.cx, t0.cy, rc0, atan2(t0.y01, t0.x01), atan2(t0.y11, t0.x11), !cw);
+						context.arc(0, 0, r0, atan2(t0.cy + t0.y11, t0.cx + t0.x11), atan2(t1.cy + t1.y11, t1.cx + t1.x11), cw);
+						context.arc(t1.cx, t1.cy, rc0, atan2(t1.y11, t1.x11), atan2(t1.y01, t1.x01), !cw);
+					}
+				} else context.arc(0, 0, r0, a10, a00, cw);
+			}
+			context.closePath();
+			if (buffer) return context = null, buffer + "" || null;
+		}
+		arc.centroid = function() {
+			var r = (+innerRadius.apply(this, arguments) + +outerRadius.apply(this, arguments)) / 2, a = (+startAngle.apply(this, arguments) + +endAngle.apply(this, arguments)) / 2 - pi / 2;
+			return [cos(a) * r, sin(a) * r];
+		};
+		arc.innerRadius = function(_) {
+			return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : innerRadius;
+		};
+		arc.outerRadius = function(_) {
+			return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : outerRadius;
+		};
+		arc.cornerRadius = function(_) {
+			return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : cornerRadius;
+		};
+		arc.padRadius = function(_) {
+			return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant_default(+_), arc) : padRadius;
+		};
+		arc.startAngle = function(_) {
+			return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : startAngle;
+		};
+		arc.endAngle = function(_) {
+			return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : endAngle;
+		};
+		arc.padAngle = function(_) {
+			return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : padAngle;
+		};
+		arc.context = function(_) {
+			return arguments.length ? (context = _ == null ? null : _, arc) : context;
+		};
+		return arc;
+	}
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/circle.js
+	var circle_default = { draw(context, size) {
+		const r = sqrt(size / pi);
+		context.moveTo(r, 0);
+		context.arc(0, 0, r, 0, tau);
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/cross.js
+	var cross_default = { draw(context, size) {
+		const r = sqrt(size / 5) / 2;
+		context.moveTo(-3 * r, -r);
+		context.lineTo(-r, -r);
+		context.lineTo(-r, -3 * r);
+		context.lineTo(r, -3 * r);
+		context.lineTo(r, -r);
+		context.lineTo(3 * r, -r);
+		context.lineTo(3 * r, r);
+		context.lineTo(r, r);
+		context.lineTo(r, 3 * r);
+		context.lineTo(-r, 3 * r);
+		context.lineTo(-r, r);
+		context.lineTo(-3 * r, r);
+		context.closePath();
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/diamond.js
+	const tan30 = sqrt(1 / 3);
+	const tan30_2 = tan30 * 2;
+	var diamond_default = { draw(context, size) {
+		const y = sqrt(size / tan30_2);
+		const x = y * tan30;
+		context.moveTo(0, -y);
+		context.lineTo(x, 0);
+		context.lineTo(0, y);
+		context.lineTo(-x, 0);
+		context.closePath();
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/square.js
+	var square_default = { draw(context, size) {
+		const w = sqrt(size);
+		const x = -w / 2;
+		context.rect(x, x, w, w);
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/star.js
+	const ka = .8908130915292852;
+	const kr = sin(pi / 10) / sin(7 * pi / 10);
+	const kx = sin(tau / 10) * kr;
+	const ky = -cos(tau / 10) * kr;
+	var star_default = { draw(context, size) {
+		const r = sqrt(size * ka);
+		const x = kx * r;
+		const y = ky * r;
+		context.moveTo(0, -r);
+		context.lineTo(x, y);
+		for (let i = 1; i < 5; ++i) {
+			const a = tau * i / 5;
+			const c = cos(a);
+			const s = sin(a);
+			context.lineTo(s * r, -c * r);
+			context.lineTo(c * x - s * y, s * x + c * y);
+		}
+		context.closePath();
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/triangle.js
+	const sqrt3 = sqrt(3);
+	var triangle_default = { draw(context, size) {
+		const y = -sqrt(size / (sqrt3 * 3));
+		context.moveTo(0, y * 2);
+		context.lineTo(-sqrt3 * y, -y);
+		context.lineTo(sqrt3 * y, -y);
+		context.closePath();
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/wye.js
+	const c = -.5;
+	const s = sqrt(3) / 2;
+	const k = 1 / sqrt(12);
+	const a = (k / 2 + 1) * 3;
+	var wye_default = { draw(context, size) {
+		const r = sqrt(size / a);
+		const x0 = r / 2, y0 = r * k;
+		const x1 = x0, y1 = r * k + r;
+		const x2 = -x1, y2 = y1;
+		context.moveTo(x0, y0);
+		context.lineTo(x1, y1);
+		context.lineTo(x2, y2);
+		context.lineTo(c * x0 - s * y0, s * x0 + c * y0);
+		context.lineTo(c * x1 - s * y1, s * x1 + c * y1);
+		context.lineTo(c * x2 - s * y2, s * x2 + c * y2);
+		context.lineTo(c * x0 + s * y0, c * y0 - s * x0);
+		context.lineTo(c * x1 + s * y1, c * y1 - s * x1);
+		context.lineTo(c * x2 + s * y2, c * y2 - s * x2);
+		context.closePath();
+	} };
+
+//#endregion
+//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol.js
+	function Symbol$1(type, size) {
+		let context = null, path = withPath(symbol);
+		type = typeof type === "function" ? type : constant_default(type || circle_default);
+		size = typeof size === "function" ? size : constant_default(size === void 0 ? 64 : +size);
+		function symbol() {
+			let buffer;
+			if (!context) context = buffer = path();
+			type.apply(this, arguments).draw(context, +size.apply(this, arguments));
+			if (buffer) return context = null, buffer + "" || null;
+		}
+		symbol.type = function(_) {
+			return arguments.length ? (type = typeof _ === "function" ? _ : constant_default(_), symbol) : type;
+		};
+		symbol.size = function(_) {
+			return arguments.length ? (size = typeof _ === "function" ? _ : constant_default(+_), symbol) : size;
+		};
+		symbol.context = function(_) {
+			return arguments.length ? (context = _ == null ? null : _, symbol) : context;
+		};
+		return symbol;
 	}
 
 //#endregion
@@ -3501,42 +3888,42 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region vis/stepper.ts
-	const stepper = (selector, { panel, texts = [], draw, start = 0 } = {}) => {
-		const btns = document.querySelectorAll(selector);
-		const show = (s) => {
-			btns.forEach((b, i) => b.classList.toggle("active", i === s));
-			if (panel) {
-				const el = document.querySelector(panel);
-				if (el && texts[s] !== void 0) if (typeof window !== "undefined" && window.katex) el.innerHTML = window.katex.renderToString(texts[s], { throwOnError: false });
-				else el.innerHTML = texts[s];
-			}
-			if (draw) draw(s);
-		};
-		btns.forEach((b, i) => b.addEventListener("click", () => show(i)));
-		show(start);
-		return { go: show };
-	};
-	const pages = (count, prefix = "t") => Array.from({ length: count }, (_, i) => document.getElementById(prefix + i)?.innerHTML || "");
-	const steps = (count, { container = ".stepper", panel, labels, texts, draw, start = 0, prefix = "t" } = {}) => {
-		const ct = document.querySelector(container);
-		if (!ct) throw new Error(`Stepper container "${container}" not found`);
-		if (!ct.children.length || ct.querySelector("button") === null) {
-			const circle = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳";
-			ct.innerHTML = "";
-			for (let i = 0; i < count; i++) {
-				const btn = document.createElement("button");
-				btn.textContent = labels?.[i] || `${circle[i] || i + 1}`;
-				ct.appendChild(btn);
-			}
+/**
+	* Create stepper buttons in a container element.
+	*
+	* @param container - CSS selector or HTMLElement to hold buttons
+	* @param labels - button labels
+	* @param onChange - called with step index when user clicks a button
+	* @param opts.start - initial active step (default 0)
+	*/
+	function stepper(container, labels, onChange, opts) {
+		const ct = typeof container === "string" ? document.querySelector(container) : container;
+		if (!ct) throw new Error(`Stepper container not found: ${container}`);
+		const start = opts?.start ?? 0;
+		const buttons = [];
+		ct.innerHTML = "";
+		for (let i = 0; i < labels.length; i++) {
+			const btn = document.createElement("button");
+			btn.textContent = labels[i];
+			if (i === start) btn.classList.add("active");
+			btn.addEventListener("click", () => go(i));
+			ct.appendChild(btn);
+			buttons.push(btn);
 		}
-		const resolved = texts || pages(count, prefix);
-		return stepper(`${container} button`, {
-			panel,
-			texts: resolved,
-			draw,
-			start
-		});
-	};
+		function go(i) {
+			if (i < 0 || i >= labels.length) return;
+			buttons.forEach((b, j) => b.classList.toggle("active", j === i));
+			onChange(i);
+		}
+		function destroy() {
+			ct.innerHTML = "";
+			buttons.length = 0;
+		}
+		return {
+			go,
+			destroy
+		};
+	}
 
 //#endregion
 //#region vis/katex.ts
@@ -3561,271 +3948,38 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			gap
 		});
 		const { markerFor } = defineArrows(C.svg, { sw: 2 });
-		let _tr = null;
-		let _seenIds = null;
-		let _first = true;
-		const makeTr = (ms = 400) => transition().duration(ms).ease(cubicInOut);
-		const fadeIn = (sel) => sel.attr("opacity", 0).transition(_tr ?? makeTr(250)).attr("opacity", 1);
-		const see = (id) => {
-			if (_seenIds) _seenIds.add(id);
-		};
-		const show = (fn, ms = 400) => {
-			_tr = makeTr(ms);
-			[
-				C.bg,
-				C.eG,
-				C.nG,
-				C.oG
-			].forEach((g) => g.selectAll("*").remove());
-			C.root.selectAll(".vlbl").remove();
-			fn();
-			_tr = null;
-		};
-		const flow = (fn, ms = 500) => {
-			_tr = makeTr(ms);
-			_seenIds = /* @__PURE__ */ new Set();
-			C.root.selectAll(".vlbl").remove();
-			fn();
-			[
-				C.bg,
-				C.nG,
-				C.eG,
-				C.oG
-			].forEach((g) => {
-				g.selectAll("[data-id]").filter(function() {
-					if (!(this instanceof Element)) return false;
-					return !_seenIds.has(this.getAttribute("data-id"));
-				}).interrupt().transition(_tr).attr("opacity", 0).remove();
-			});
-			_tr = null;
-			_seenIds = null;
-		};
-		const render = (fn, ms = 500) => {
-			if (_first) {
-				show(fn, ms);
-				_first = false;
-			} else flow(fn, ms);
-		};
-		const node = (n, o = {}) => {
-			if (_seenIds) _seenIds.add(n.id);
-			const exist = C.nG.select(`[data-id="${n.id}"]`);
-			if (!exist.empty()) {
-				const tr = _tr ?? makeTr(250);
-				const shape = exist.select(".shp");
-				const shapeNode = shape.node();
-				if (shapeNode instanceof Element) {
-					let t = shape.interrupt().transition(tr);
-					if (shapeNode.tagName === "circle") t = t.attr("cx", n.x).attr("cy", n.y);
-					else t = t.attr("x", n.x - g.nW / 2).attr("y", n.y - g.nH / 2);
-					if (o.stroke) t = t.attr("stroke", o.stroke);
-					if (o.fill) t = t.attr("fill", o.fill);
-				}
-				exist.select("text").interrupt().transition(tr).attr("x", n.x).attr("y", n.y);
-				return exist;
-			}
-			C.nG.selectAll(`[data-id="${n.id}"]`).remove();
-			const grp = C.nG.append("g").attr("data-id", n.id);
-			drawNodeContent(grp, n, {
-				w: g.nW,
-				h: g.nH,
-				dR: g.dR,
-				rx: g.rx,
-				...o
-			});
-			return fadeIn(grp);
-		};
-		node.emph = (n, o = {}) => node(n, {
-			...o,
-			stroke: p.accent.fg,
-			fill: p.accent.bg
-		});
-		node.r = (n, o = {}) => node(n, {
-			...o,
-			stroke: p.danger.fg,
-			fill: p.danger.bg
-		});
-		const dummy = (n, o = {}) => {
-			if (_seenIds) _seenIds.add(n.id);
-			const layer = o.layer === "overlay" ? C.oG : o.layer === "edges" ? C.eG : C.nG;
-			const exist = layer.select(`[data-id="${n.id}"]`);
-			if (!exist.empty()) {
-				const tr = _tr ?? (_seenIds ? makeTr(250) : null);
-				if (tr) {
-					let t = exist.select(".shp").transition(tr).attr("cx", n.x).attr("cy", n.y);
-					if (o.fill) t = t.attr("fill", o.fill);
-					if (o.stroke) t = t.attr("stroke", o.stroke);
-					const ls = o.labelSide || "left", lg = o.labelGap ?? 8;
-					const tx = ls === "left" ? n.x - (g.dR + lg) : ls === "right" ? n.x + (g.dR + lg) : n.x;
-					exist.select("text").transition(tr).attr("x", tx);
-				}
-				return exist;
-			}
-			layer.selectAll(`[data-id="${n.id}"]`).remove();
-			return fadeIn(drawDummy(layer, n, {
-				dR: g.dR,
-				...o
-			}));
-		};
-		const edge = (from, to, o = {}) => {
-			const eid = (from.id || "") + "→" + (to.id || "");
-			if (_seenIds) _seenIds.add(eid);
-			const opts = {
-				nW: g.nW,
-				nH: g.nH,
-				dR: g.dR,
-				gap: g.gap,
-				strokeW: 2,
-				stroke: p.dim.fg,
-				...o
-			};
-			if (!opts.markerUrl) opts.markerUrl = markerFor(opts.stroke);
-			const ep = exitPt(from, to.x, to.y, {
-				nW: o.nW ?? g.nW,
-				nH: o.nH ?? g.nH,
-				dR: g.dR
-			});
-			const ip = entryPt(to, from.x, from.y, {
-				nW: o.nW ?? g.nW,
-				nH: o.nH ?? g.nH,
-				dR: g.dR,
-				gap: 0
-			});
-			const exist = C.eG.select(`[data-id="${eid}"]`);
-			if (!exist.empty()) {
-				const existNode = exist.node();
-				if (existNode instanceof Element && existNode.tagName === "line") {
-					const tr = _tr ?? makeTr(250);
-					exist.interrupt().transition(tr).attr("x1", ep.x).attr("y1", ep.y).attr("x2", ip.x).attr("y2", ip.y).attr("stroke", opts.stroke).attr("stroke-width", opts.strokeW).attr("marker-end", opts.markerUrl).attr("color", opts.stroke);
-					return exist;
-				}
-				exist.remove();
-			}
-			C.eG.selectAll(`[data-id="${eid}"]`).remove();
-			return fadeIn(C.eG.append("line").attr("data-id", eid).attr("x1", ep.x).attr("y1", ep.y).attr("x2", ip.x).attr("y2", ip.y).attr("stroke", opts.stroke).attr("stroke-width", opts.strokeW).attr("stroke-dasharray", opts.dash || "").attr("marker-end", opts.markerUrl).attr("stroke-linecap", "round").style("color", opts.stroke));
-		};
-		const path = (from, to, o = {}) => {
-			const eid = (from.id || "") + "→" + (to.id || "");
-			if (_seenIds) _seenIds.add(eid);
-			const opts = {
-				nW: g.nW,
-				nH: g.nH,
-				dR: g.dR,
-				gap: g.gap,
-				strokeW: 2,
-				stroke: p.dim.fg,
-				...o
-			};
-			if (!opts.markerUrl) opts.markerUrl = markerFor(opts.stroke);
-			const ep = exitPt(from, to.x, to.y, {
-				nW: g.nW,
-				nH: g.nH,
-				dR: g.dR
-			});
-			const ip = entryPt(to, from.x, from.y, {
-				nW: g.nW,
-				nH: g.nH,
-				dR: g.dR,
-				gap: g.gap
-			});
-			const my = ep.y + (ip.y - ep.y) / 2;
-			const d = `M${ep.x},${ep.y} L${ep.x},${my} L${ip.x},${my} L${ip.x},${ip.y}`;
-			const exist = C.eG.select(`[data-id="${eid}"]`);
-			if (!exist.empty()) {
-				const existNode = exist.node();
-				if (existNode instanceof Element && existNode.tagName === "path") {
-					const tr = _tr ?? makeTr(250);
-					exist.interrupt().transition(tr).attr("d", d).attr("stroke", opts.stroke).attr("stroke-width", opts.strokeW).attr("marker-end", opts.markerUrl).attr("color", opts.stroke);
-					return exist;
-				}
-				exist.remove();
-			}
-			C.eG.selectAll(`[data-id="${eid}"]`).remove();
-			return fadeIn(C.eG.append("path").attr("data-id", eid).attr("d", d).attr("fill", "none").attr("stroke", opts.stroke).attr("stroke-width", opts.strokeW).attr("stroke-dasharray", opts.dash || "").attr("marker-end", opts.markerUrl).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").style("color", opts.stroke));
-		};
-		const lBend$1 = (from, to, bx, o = {}) => {
-			const autoId = o.id || `${from.id || from.x}-${to.id || to.x}`;
-			if (_seenIds) _seenIds.add(autoId);
-			return lBend(C.eG, from, to, bx, {
-				markerFor,
-				id: autoId,
-				...o
-			});
-		};
-		const halo$1 = (cx, cy, o = {}) => {
-			see(`halo-${o.id || "h"}`);
-			return fadeIn(halo(C.nG, cx, cy, g.nW, g.nH, g.rx, o));
-		};
-		const block$1 = (rect, o) => {
-			const id = o?.id || "blk";
-			see(`block-${id}`);
-			if (o?.label) see(`label-block-label-${id}`);
-			return block(C.bg, rect, o);
-		};
-		const compound = (rect, o) => {
-			const id = o?.id || "c";
-			see(`compound-${id}`);
-			if (o?.label) {
-				see(`compound-pill-${id}`);
-				see(`compound-lbl-${id}`);
-			}
-			return compoundRect(C.bg, rect, o);
-		};
-		const pipeline$1 = (x, y, stages, o) => {
-			stages.forEach((_, i) => {
-				see(`pipe-${i}`);
-				if (i < stages.length - 1) see(`pipe-cn-${i}`);
-			});
-			return pipeline(C.bg, x, y, stages, o);
-		};
-		const group$1 = (nodes, o) => {
-			const id = o?.id || "g";
-			see(`group-${id}`);
-			if (o?.label) see(`label-group-label-${id}`);
-			return group(C.bg, nodes, o);
-		};
-		const crossEdge$1 = (opts) => {
-			const id = opts?.id || "ce";
-			see(id);
-			if (opts?.mode === "split") {
-				see(`${id}-p0`);
-				see(`${id}-p1`);
-				see(`${id}-p2`);
-				see(`${id}-p3`);
-				see(`${id}-s1`);
-				see(`${id}-s2`);
-				see(`${id}-s3`);
-			}
-			return crossEdge(C.oG, {
-				from: {
-					x: 0,
-					y: 0
-				},
-				to: {
-					x: 0,
-					y: 0
-				},
-				fromRect: {
-					x: 0,
-					y: 0,
-					w: 0,
-					h: 0
-				},
-				toRect: {
-					x: 0,
-					y: 0,
-					w: 0,
-					h: 0
-				},
-				markerFor,
-				dR: g.dR,
-				...opts
-			});
-		};
-		const label = (text, { at, ...o } = {}) => {
-			see(`label-${o.id || "lbl"}`);
-			return svgLabel(C.bg, at?.x ?? 0, at?.y ?? 0, text, o);
-		};
 		const callout = (anchor, html, o = {}) => domLabel(C.root, anchor, html, o);
+		const halo$1 = (cx, cy, o = {}) => halo(C.nG, cx, cy, g.nW, g.nH, g.rx, o);
+		const block$1 = (rect, o) => block(C.bg, rect, o);
+		const compound = (rect, o) => compoundRect(C.bg, rect, o);
+		const pipeline$1 = (x, y, stages, o) => pipeline(C.bg, x, y, stages, o);
+		const group$1 = (nodes, o) => group(C.bg, nodes, o);
+		const crossEdge$1 = (opts) => crossEdge(C.oG, {
+			from: {
+				x: 0,
+				y: 0
+			},
+			to: {
+				x: 0,
+				y: 0
+			},
+			fromRect: {
+				x: 0,
+				y: 0,
+				w: 0,
+				h: 0
+			},
+			toRect: {
+				x: 0,
+				y: 0,
+				w: 0,
+				h: 0
+			},
+			markerFor,
+			dR: g.dR,
+			...opts
+		});
+		const label = (text, { at, ...o } = {}) => svgLabel(C.bg, at?.x ?? 0, at?.y ?? 0, text, o);
 		const bounds = (nodes, o) => getBounds(nodes, {
 			nW: g.nW,
 			nH: g.nH,
@@ -3839,44 +3993,26 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				dR: g.dR
 			});
 			if (!b) return;
-			see(`bbox-${o.id || "bb"}`);
 			boundBox(C.oG, b, o);
 			return b;
 		};
 		const layerBg = (layers, { h = 52, bgFill = p.accent.a(12), rx: grx = 8 } = {}) => {
-			layers.forEach((y, i) => {
-				see(`ly-${i}`);
-				C.bg.append("rect").attr("data-id", `ly-${i}`).attr("class", "ly").attr("x", margin).attr("y", y - h / 2).attr("width", width - margin * 2).attr("height", h).attr("fill", bgFill).attr("rx", grx);
-			});
+			layers.forEach((y, i) => C.bg.append("rect").attr("data-id", `ly-${i}`).attr("class", "ly").attr("x", margin).attr("y", y - h / 2).attr("width", width - margin * 2).attr("height", h).attr("fill", bgFill).attr("rx", grx));
 		};
-		const guides = (layers, o = {}) => {
-			for (let i = 1; i < layers.length; i++) see(`guide-${i}`);
-			return createLayerGuides(C.bg, layers, {
-				x1: margin + 20,
-				x2: width - margin - 20,
-				...o
-			});
-		};
-		const connect$1 = (from, to, o) => {
-			see(o?.id || "cn");
-			return connect(C.bg, from, to, {
-				markerFor,
-				...o
-			});
-		};
-		const eLabel = (f, t, p, text, o = {}) => {
-			const id = o.id || "el";
-			see(`elabel-bg-${id}`);
-			see(`label-elabel-${id}`);
-			return edgeLabel(C.eG, f, t, p, text, {
-				...o,
-				id
-			});
-		};
-		const bboxRect = (b, o = {}) => {
-			see(`bbox-${o.id || "bb"}`);
-			return boundBox(C.oG, b, o);
-		};
+		const guides = (layers, o = {}) => createLayerGuides(C.bg, layers, {
+			x1: margin + 20,
+			x2: width - margin - 20,
+			...o
+		});
+		const connect$1 = (from, to, o) => connect(C.bg, from, to, {
+			markerFor,
+			...o
+		});
+		const eLabel = (f, t, p, text, o = {}) => edgeLabel(C.eG, f, t, p, text, {
+			...o,
+			id: o.id || "el"
+		});
+		const bboxRect = (b, o = {}) => boundBox(C.oG, b, o);
 		return {
 			svg: C.svg,
 			W: C.W,
@@ -3891,24 +4027,18 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			root: C.root,
 			palette: p,
 			geom: g,
-			node,
-			dummy,
-			edge,
-			path,
-			lBend: lBend$1,
+			callout,
 			halo: halo$1,
-			bbox,
-			bboxRect,
 			block: block$1,
 			compound,
 			pipeline: pipeline$1,
 			group: group$1,
-			connect: connect$1,
 			crossEdge: crossEdge$1,
 			label,
-			callout,
 			eLabel,
 			katexify,
+			bbox,
+			bboxRect,
 			bounds,
 			distribute: (count, container, o) => distribute(count, container, {
 				itemW: g.nW,
@@ -3916,15 +4046,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				...o
 			}),
 			centerIn,
-			show,
-			flow,
-			render,
 			markerFor,
 			layerBg,
 			guides,
+			connect: connect$1,
 			exitPt,
-			entryPt,
-			stepper: (opts) => steps(opts.length ?? 1, { ...opts })
+			entryPt
 		};
 	};
 
@@ -4166,8 +4293,6 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region vis/elements.ts
-	let _counter = 0;
-	const autoId = () => `a${_counter++}`;
 	const xy = (a, b) => Array.isArray(a) ? {
 		x: a[0],
 		y: a[1]
@@ -4175,96 +4300,90 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		x: a,
 		y: b
 	};
-	function createElements(ctx, p, schedule, _els) {
+	let _counter = 0;
+	function createElements(fm, ctx, p) {
 		function resolve(c) {
 			const col = p[c];
-			return col && col.fg ? col : null;
+			if (col) return {
+				stroke: col.fg,
+				fill: col.bg
+			};
+			return {
+				stroke: c,
+				fill: c
+			};
 		}
-		function makeEl(type, px, py) {
-			const id = autoId();
-			const self = {
+		function dot(x, y) {
+			const pos = xy(x, y);
+			const id = `dot:e${_counter++}`;
+			const { stroke, fill } = resolve(p.primary.fg);
+			fm.declare(id, {
+				type: "dot",
+				x: pos.x,
+				y: pos.y,
+				stroke,
+				fill,
+				r: 5,
+				label: ""
+			});
+			return {
 				_id: id,
-				_type: type,
-				_x: px,
-				_y: py,
+				_type: "dot",
+				_x: pos.x,
+				_y: pos.y,
 				_opts: {},
 				_text: "",
-				_rect: null,
-				_from: null,
-				_delta: null,
-				_to: null,
-				_labelEl: void 0,
-				color(c) {
-					const col = resolve(c);
-					if (col) {
-						this._opts.stroke = col.fg;
-						this._opts.fill = col.bg;
-					} else if (typeof c === "string") this._opts.stroke = c;
-					return this;
-				},
-				fill(v) {
-					this._opts.fill = v;
-					return this;
-				},
-				stroke(v, w) {
-					this._opts.stroke = v;
-					if (w != null) this._opts.strokeW = w;
-					return this;
-				},
-				size(s) {
-					this._opts.textSize = s;
-					return this;
-				},
-				dash(v) {
-					this._opts.dash = v;
-					return this;
-				},
-				label(t) {
-					this._text = t;
-					this._opts.text = t;
-					return this;
-				},
-				to(nx, ny) {
-					const pt = xy(nx, ny);
-					this._x = pt.x;
-					this._y = pt.y;
-					schedule();
-					return this;
-				},
 				pos() {
 					return {
 						x: this._x,
 						y: this._y
 					};
 				},
-				from(el) {
-					this._from = el;
-					return this;
-				},
-				offset(ox, oy) {
-					const o = xy(ox, oy);
-					this._delta = {
-						dx: o.x,
-						dy: o.y
-					};
-					schedule();
-					return this;
-				},
-				move(x, y) {
-					const pt = xy(x, y);
+				move(nx, ny) {
+					const pt = xy(nx, ny);
 					this._x = pt.x;
 					this._y = pt.y;
-					schedule();
+					fm.declare(id, {
+						type: "dot",
+						x: pt.x,
+						y: pt.y,
+						stroke,
+						fill
+					});
 					return this;
 				},
 				dx(dx, dy) {
 					this._x += dx;
 					this._y += dy;
-					schedule();
+					fm.declare(id, {
+						type: "dot",
+						x: this._x,
+						y: this._y,
+						stroke,
+						fill
+					});
 					return this;
 				},
-				font(f, v) {
-					this._opts.font = v;
+				color(c) {
+					const r = resolve(c);
+					fm.declare(id, {
+						type: "dot",
+						x: this._x,
+						y: this._y,
+						stroke: r.stroke,
+						fill: r.fill
+					});
+					return this;
+				},
+				size(s) {
+					fm.declare(id, {
+						type: "dot",
+						x: this._x,
+						y: this._y,
+						stroke,
+						fill,
+						r: s
+					});
 					return this;
 				},
 				opacity(v) {
@@ -4273,158 +4392,222 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				},
 				text(t) {
 					this._text = t;
-					this._opts.text = t;
+					fm.declare(id, {
+						type: "dot",
+						x: this._x,
+						y: this._y,
+						stroke,
+						fill,
+						label: t
+					});
+					return this;
+				},
+				font(_k, _v) {
 					return this;
 				},
 				show() {
-					schedule();
-				},
-				glyph(g) {
-					this._opts.glyph = g;
 					return this;
 				},
-				rectDef(rx, ry, rw, rh, rrx) {
-					this._rect = {
-						x: rx,
-						y: ry,
-						w: rw,
-						h: rh,
-						rx: rrx ?? 10
-					};
+				glyph(_g) {
 					return this;
-				},
-				_draw() {
-					switch (this._type) {
-						case "dot":
-							ctx.node({
-								id: this._id,
-								x: this._x,
-								y: this._y
-							}, {
-								...this._opts,
-								text: this._text || ""
-							});
-							break;
-						case "rect":
-							if (!this._rect) break;
-							ctx.block(this._rect, {
-								id: this._id,
-								label: this._text || void 0,
-								labelPos: "tl",
-								fill: this._opts.fill,
-								stroke: this._opts.stroke || p.dim.fg,
-								strokeW: this._opts.strokeW || 1.2,
-								textSize: this._opts.textSize || 11,
-								textFill: this._opts.textFill || this._opts.stroke || p.dim.fg
-							});
-							break;
-						case "arrow": {
-							if (!this._from || !this._delta) break;
-							const fp = this._from.pos();
-							const tx = fp.x + this._delta.dx, ty = fp.y + this._delta.dy;
-							const tipId = `${this._id}-tip`;
-							ctx.dummy({
-								id: tipId,
-								x: tx,
-								y: ty
-							}, {
-								dR: 3.5,
-								fill: this._opts.fill || p.danger.a(70),
-								stroke: this._opts.stroke || p.danger.fg,
-								strokeW: 1,
-								text: "",
-								textSize: 0
-							});
-							ctx.edge({
-								id: this._from._id,
-								x: fp.x,
-								y: fp.y
-							}, {
-								id: tipId,
-								x: tx,
-								y: ty
-							}, {
-								stroke: this._opts.stroke || p.danger.a(65),
-								strokeW: this._opts.strokeW || 1.4
-							});
-							break;
-						}
-						case "line":
-							if (!this._to) break;
-							ctx.edge({
-								id: `${this._id}-a`,
-								x: this._x,
-								y: this._y
-							}, {
-								id: `${this._id}-b`,
-								x: this._to.x,
-								y: this._to.y
-							}, {
-								stroke: this._opts.stroke || p.dim.a(50),
-								strokeW: this._opts.strokeW || 1,
-								dash: this._opts.dash || ""
-							});
-							break;
-					}
-					if (this._labelEl) this._labelEl._draw(this.pos());
 				}
 			};
-			_els.set(id, self);
-			schedule();
-			return self;
-		}
-		function dot(nx, ny) {
-			const pos = xy(nx, ny);
-			const el = makeEl("dot", pos.x, pos.y);
-			el._opts = {
-				fill: p.primary.bg,
-				stroke: p.primary.fg,
-				text: "",
-				textSize: 10
-			};
-			return el;
 		}
 		function zone(x, y, w, h, label, color) {
-			const col = resolve(color) || p.dim;
-			const el = makeEl("rect", x, y);
-			el._opts = {
-				fill: col.a(5),
-				stroke: col.a(22)
+			const id = `zone:e${_counter++}`;
+			const { stroke, fill } = resolve(color);
+			fm.declare(id, {
+				type: "zone",
+				x,
+				y,
+				w,
+				h,
+				stroke,
+				fill,
+				label
+			});
+			return {
+				_id: id,
+				_type: "zone",
+				_x: x,
+				_y: y,
+				_opts: {},
+				_text: label,
+				pos() {
+					return {
+						x: this._x,
+						y: this._y
+					};
+				},
+				move(nx, ny) {
+					this._x = nx;
+					this._y = ny;
+					return this;
+				},
+				dx(dx, dy) {
+					this._x += dx;
+					this._y += dy;
+					return this;
+				},
+				color(_c) {
+					return this;
+				},
+				size(_s) {
+					return this;
+				},
+				opacity(_v) {
+					return this;
+				},
+				text(_t) {
+					return this;
+				},
+				font(_k, _v) {
+					return this;
+				},
+				show() {
+					return this;
+				},
+				glyph(_g) {
+					return this;
+				}
 			};
-			el.rectDef(x, y, w, h, 10);
-			if (label) el._text = label;
-			return el;
 		}
 		function arrow(from, dx, dy) {
+			const id = `arrow:e${_counter++}`;
 			const o = xy(dx, dy);
-			const el = makeEl("arrow", 0, 0);
-			el._from = from;
-			el._delta = {
-				dx: o.x,
-				dy: o.y
+			const fp = from.pos();
+			const tx = fp.x + o.x, ty = fp.y + o.y;
+			fm.declare(id + "-tip", {
+				type: "point",
+				x: tx,
+				y: ty,
+				r: 3.5,
+				stroke: p.danger.fg,
+				fill: p.danger.a(70)
+			});
+			fm.declare(id + "-line", {
+				type: "edge",
+				from: from._id,
+				to: id + "-tip",
+				x1: fp.x,
+				y1: fp.y,
+				x2: tx,
+				y2: ty,
+				stroke: p.danger.a(65),
+				strokeW: 1.4,
+				dash: "",
+				directed: true
+			});
+			return {
+				_id: id,
+				_type: "arrow",
+				_x: tx,
+				_y: ty,
+				_opts: {},
+				_text: "",
+				pos() {
+					return {
+						x: this._x,
+						y: this._y
+					};
+				},
+				move(_nx, _ny) {
+					return this;
+				},
+				dx(_dx, _dy) {
+					return this;
+				},
+				color(_c) {
+					return this;
+				},
+				size(_s) {
+					return this;
+				},
+				opacity(_v) {
+					return this;
+				},
+				text(_t) {
+					return this;
+				},
+				font(_k, _v) {
+					return this;
+				},
+				show() {
+					return this;
+				},
+				glyph(_g) {
+					return this;
+				}
 			};
-			return el;
 		}
-		function line(x1, y1, x2, y2) {
-			const a = xy(x1, y1), b = xy(x2, y2);
-			const el = makeEl("line", a.x, a.y);
-			el._to = {
-				x: b.x,
-				y: b.y
+		function tag(target, html) {
+			const pt = "_id" in target ? target.pos() : target.pos();
+			ctx.callout(pt, html, {
+				place: "above",
+				gap: 8
+			});
+			return {
+				above(gap) {
+					return this;
+				},
+				below(gap) {
+					return this;
+				},
+				left(gap) {
+					return this;
+				},
+				right(gap) {
+					return this;
+				},
+				gap(g) {
+					return this;
+				},
+				color(c) {
+					return this;
+				},
+				text(t) {
+					return this;
+				},
+				size(s) {
+					return this;
+				},
+				bold() {
+					return this;
+				}
 			};
-			return el;
 		}
 		function path(pts, opts) {
+			const id = `path:e${_counter++}`;
 			const dots = pts.map(([px, py]) => {
-				const el = makeEl("dot", px, py);
-				el._opts = {
-					fill: "var(--bg-node)",
-					stroke: "var(--text-dim)",
-					strokeW: .8,
-					text: "",
-					textSize: 0
+				const did = `${id}-d${_counter++}`;
+				fm.declare(did, {
+					type: "point",
+					x: px,
+					y: py,
+					r: 2,
+					stroke: p.dim.fg,
+					fill: "var(--bg-node)"
+				});
+				return {
+					_id: did,
+					_type: "dot",
+					_x: px,
+					_y: py,
+					_opts: {},
+					_text: "",
+					pos() {
+						return {
+							x: px,
+							y: py
+						};
+					},
+					color() {
+						return this;
+					},
+					size() {
+						return this;
+					}
 				};
-				return el;
 			});
 			ctx.stage.edges.append("polyline").attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", "none").attr("stroke", opts?.stroke || p.dim.a(25)).attr("stroke-width", 1).attr("stroke-dasharray", opts?.dash || "5 4").attr("stroke-linecap", "round");
 			return dots;
@@ -4433,140 +4616,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			dot,
 			zone,
 			arrow,
-			line,
+			tag,
 			path
 		};
-	}
-
-//#endregion
-//#region vis/tag.ts
-/** Create a standalone tag (no target). Used by axes labels etc. */
-	function createStandaloneTag(callout, pos, html) {
-		let _html = html, _place = "above", _gap = 12;
-		const _style = {};
-		const self = {
-			above(g) {
-				_place = "above";
-				if (g != null) _gap = g;
-				return self;
-			},
-			below(g) {
-				_place = "below";
-				if (g != null) _gap = g;
-				return self;
-			},
-			left(g) {
-				_place = "left";
-				if (g != null) _gap = g;
-				return self;
-			},
-			right(g) {
-				_place = "right";
-				if (g != null) _gap = g;
-				return self;
-			},
-			gap(g) {
-				_gap = g;
-				return self;
-			},
-			color(c) {
-				_style.color = c;
-				return self;
-			},
-			text(t) {
-				_html = t;
-				return self;
-			},
-			size(s) {
-				_style.fontSize = s + "px";
-				return self;
-			},
-			bold() {
-				_style.fontWeight = "700";
-				return self;
-			},
-			_draw(at) {
-				const p = at || pos;
-				callout({
-					x: p.x,
-					y: p.y
-				}, _html, {
-					place: _place,
-					gap: _gap,
-					style: {
-						fontSize: "11px",
-						fontFamily: "JetBrains Mono,monospace",
-						..._style
-					}
-				});
-			}
-		};
-		self._draw();
-		return self;
-	}
-	/** Create a tag bound to an element. Redrawn when the element's _draw() runs. */
-	function createBoundTag(callout, target, html) {
-		let _html = html, _place = "above", _gap = 12;
-		const _style = {};
-		const self = {
-			above(g) {
-				_place = "above";
-				if (g != null) _gap = g;
-				return self;
-			},
-			below(g) {
-				_place = "below";
-				if (g != null) _gap = g;
-				return self;
-			},
-			left(g) {
-				_place = "left";
-				if (g != null) _gap = g;
-				return self;
-			},
-			right(g) {
-				_place = "right";
-				if (g != null) _gap = g;
-				return self;
-			},
-			gap(g) {
-				_gap = g;
-				return self;
-			},
-			color(c) {
-				_style.color = c;
-				return self;
-			},
-			text(t) {
-				_html = t;
-				return self;
-			},
-			size(s) {
-				_style.fontSize = s + "px";
-				return self;
-			},
-			bold() {
-				_style.fontWeight = "700";
-				return self;
-			},
-			_draw(at) {
-				const p = at || target.pos();
-				callout({
-					x: p.x,
-					y: p.y
-				}, _html, {
-					place: _place,
-					gap: _gap,
-					style: {
-						fontSize: "11px",
-						fontFamily: "JetBrains Mono,monospace",
-						..._style
-					}
-				});
-			}
-		};
-		target._labelEl = self;
-		return self;
 	}
 
 //#endregion
@@ -4636,668 +4688,620 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	}
 
 //#endregion
+//#region vis/mixins.ts
+	function resolveColor$1(p, c) {
+		if (!c) return {
+			stroke: p.primary.fg,
+			fill: p.primary.bg
+		};
+		const col = p[c];
+		if (col) return {
+			stroke: col.fg,
+			fill: col.bg
+		};
+		return {
+			stroke: c,
+			fill: c
+		};
+	}
+	function patch(eid, fm, props) {
+		fm.patch(eid, props);
+	}
+	const mixColor = (eid, fm, p) => ({ color(c) {
+		const r = resolveColor$1(p, c);
+		patch(eid, fm, {
+			stroke: r.stroke,
+			fill: r.fill
+		});
+		return this;
+	} });
+	const mixStroke = (eid, fm, p) => ({ color(c) {
+		patch(eid, fm, { stroke: resolveColor$1(p, c).stroke });
+		return this;
+	} });
+	const mixStrokeW = (eid, fm) => ({ strokeW(n) {
+		patch(eid, fm, { strokeW: n });
+		return this;
+	} });
+	const mixFill = (eid, fm, p) => ({ fill(c) {
+		patch(eid, fm, { fill: resolveColor$1(p, c).fill });
+		return this;
+	} });
+	const mixOpacity = (eid, fm) => ({ opacity(v) {
+		patch(eid, fm, { opacity: v });
+		return this;
+	} });
+	const mixDashed = (eid, fm) => ({ dashed(d = "5 4") {
+		patch(eid, fm, { dash: d });
+		return this;
+	} });
+	const mixLabel = (eid, fm) => ({ label(t) {
+		patch(eid, fm, { label: t });
+		return this;
+	} });
+	const mixLabelPos = (eid, fm, defaults) => ({ label(t, place, gap) {
+		patch(eid, fm, {
+			label: t,
+			labelPlace: place ?? defaults.labelPlace,
+			labelGap: gap ?? defaults.labelGap
+		});
+		return this;
+	} });
+	const mixTransform = (eid, fm, getKey) => ({
+		rotate(a, cx, cy) {
+			applyTransform("rotate", eid, fm, getKey, a, cx, cy);
+			return this;
+		},
+		translate(dx, dy) {
+			applyTransform("translate", eid, fm, getKey, dx, dy);
+			return this;
+		},
+		scale(s) {
+			applyTransform("scale", eid, fm, getKey, s);
+			return this;
+		}
+	});
+	function applyTransform(type, eid, fm, getKey, a, b, c) {
+		const e = fm.entities.get(eid);
+		if (!e) return;
+		const d = e.desired;
+		let pf, pt = null;
+		if (getKey === "vector") {
+			pf = d.from || [0, 0];
+			pt = d.to || [0, 0];
+		} else if (getKey === "polygon") {
+			const vs = d.vertices || [];
+			if (vs.length === 0) return;
+			const mx = vs.reduce((s, v) => s + v[0], 0) / vs.length;
+			const my = vs.reduce((s, v) => s + v[1], 0) / vs.length;
+			if (type === "rotate") {
+				const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
+				patch(eid, fm, { vertices: vs.map(([px, py]) => [b + (px - b) * cos - (py - c) * sin, c + (px - b) * sin + (py - c) * cos]) });
+			} else if (type === "scale") patch(eid, fm, { vertices: vs.map(([px, py]) => [mx + (px - mx) * a, my + (py - my) * a]) });
+			else if (type === "translate") patch(eid, fm, { vertices: vs.map(([px, py]) => [px + a, py + b]) });
+			return;
+		}
+		if (!pf || !pt) return;
+		let nf = [...pf], nt = [...pt];
+		if (type === "rotate") {
+			const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
+			const rot = (px, py) => [b + (px - b) * cos - (py - c) * sin, c + (px - b) * sin + (py - c) * cos];
+			nf = rot(pf[0], pf[1]);
+			nt = rot(pt[0], pt[1]);
+		} else if (type === "scale") {
+			const dx = pt[0] - pf[0], dy = pt[1] - pf[1];
+			nt = [pf[0] + dx * a, pf[1] + dy * a];
+		} else if (type === "translate") {
+			nf = [pf[0] + a, pf[1] + b];
+			nt = [pt[0] + a, pt[1] + b];
+		}
+		patch(eid, fm, {
+			from: nf,
+			to: nt
+		});
+	}
+
+//#endregion
 //#region vis/math.ts
-	let _oid = 0;
-	const oid = () => "m" + _oid++;
-	const _markers = {};
-	function ensureMarker(svg, color) {
-		if (_markers[color]) return _markers[color];
-		const id = "mk" + Object.keys(_markers).length;
-		let defs = svg.select("defs");
-		if (defs.empty()) defs = svg.append("defs");
-		defs.append("marker").attr("id", id).attr("viewBox", "0 0 12 10").attr("refX", MARKER.refX).attr("refY", MARKER.refY).attr("markerWidth", MARKER.sw * 7).attr("markerHeight", MARKER.sw * 7).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto-start-reverse").append("path").attr("d", "M0,0.5 L12,5 L0,9.5 Z").attr("fill", color);
-		_markers[color] = id;
-		return id;
+	function resolveColor(p, c) {
+		if (!c) return {
+			stroke: p.primary.fg,
+			fill: p.primary.bg
+		};
+		const col = p[c];
+		if (col) return {
+			stroke: col.fg,
+			fill: col.bg
+		};
+		return {
+			stroke: c,
+			fill: c
+		};
 	}
 	const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
-	const vecNorm = (dx, dy, l) => [dx / l, dy / l];
-	function vector(stage, schedule, from, to, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "vector",
-			_from: [...from],
-			_to: [...to],
-			_stroke: opts.stroke || p.primary.fg,
-			strokeW: opts.strokeW ?? 2,
-			dash: opts.dash || "",
-			_label: opts.label || "",
-			labelPlace: opts.labelPlace || "above",
-			labelGap: opts.labelGap ?? 10,
-			_opacity: opts.opacity ?? 1,
-			move(fx, fy, tx, ty) {
-				if (Array.isArray(fx)) {
-					this._from = [...fx];
-					if (fy != null && tx != null) this._to = [fy, tx];
-				} else if (fy != null) {
-					this._from = [fx, fy];
-					if (tx != null) this._to = [tx, ty];
+	function createMathRenderer(fm, ctx, palette) {
+		const p = palette;
+		function point(id, pos, opts = {}) {
+			const eid = `point:${id}`;
+			const { stroke, fill } = resolveColor(p, opts.color);
+			const r = opts.size ?? 4;
+			const label = opts.label ?? "";
+			fm.declare(eid, {
+				type: "point",
+				x: pos[0],
+				y: pos[1],
+				r,
+				stroke,
+				fill,
+				label,
+				labelPlace: opts.labelPlace,
+				labelGap: opts.labelGap
+			});
+			return {
+				pos() {
+					return [pos[0], pos[1]];
+				},
+				...mixColor(eid, fm, p),
+				...mixLabelPos(eid, fm, {
+					labelPlace: opts.labelPlace,
+					labelGap: opts.labelGap
+				}),
+				size(r) {
+					fm.patch(eid, { r });
+					return this;
+				},
+				...mixFill(eid, fm, p),
+				...mixOpacity(eid, fm)
+			};
+		}
+		function vector(id, from, to, opts = {}) {
+			const eid = `vector:${id}`;
+			const { stroke } = resolveColor(p, opts.color);
+			const strokeW = opts.strokeW ?? 1.6;
+			const dash = opts.dash ?? "";
+			const label = opts.label ?? "";
+			const labelGap = opts.labelGap ?? 10;
+			const labelPlace = opts.labelPlace ?? "above";
+			const marker = opts.marker ?? null;
+			const a = offsetLine(from, to, 4, 4 + markerHalf(marker), true);
+			fm.declare(eid, {
+				type: "vector",
+				from: [a.x1, a.y1],
+				to: [a.x2, a.y2],
+				stroke,
+				strokeW,
+				dash,
+				label,
+				labelPlace,
+				labelGap,
+				marker
+			});
+			return {
+				...mixStroke(eid, fm, p),
+				...mixLabelPos(eid, fm, {
+					labelPlace,
+					labelGap
+				}),
+				...mixStrokeW(eid, fm),
+				...mixDashed(eid, fm),
+				...mixOpacity(eid, fm),
+				...mixTransform(eid, fm, "vector")
+			};
+		}
+		function segment(id, a, b, opts = {}) {
+			const eid = `segment:${id}`;
+			const { stroke } = resolveColor(p, opts.color);
+			const strokeW = opts.strokeW ?? 1.5;
+			const dash = opts.dash ?? "";
+			const label = opts.label ?? "";
+			const labelGap = opts.labelGap ?? 10;
+			fm.declare(eid, {
+				type: "segment",
+				a,
+				b,
+				stroke,
+				strokeW,
+				dash,
+				label,
+				labelGap
+			});
+			return {
+				...mixStroke(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixDashed(eid, fm),
+				...mixLabel(eid, fm)
+			};
+		}
+		function circle(id, center, radius, opts = {}) {
+			const eid = `circle:${id}`;
+			const { stroke, fill } = resolveColor(p, opts.color);
+			const strokeW = opts.strokeW ?? 1.2;
+			const dash = opts.dash ?? "";
+			const opacity = opts.opacity ?? 1;
+			const finalFill = opts.fill ?? p.accent.a(8);
+			fm.declare(eid, {
+				type: "circle",
+				cx: center[0],
+				cy: center[1],
+				r: radius,
+				stroke,
+				fill: finalFill,
+				strokeW,
+				dash,
+				opacity
+			});
+			return {
+				...mixColor(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixFill(eid, fm, p),
+				...mixDashed(eid, fm),
+				...mixOpacity(eid, fm)
+			};
+		}
+		function polygon(id, vertices, opts = {}) {
+			const eid = `polygon:${id}`;
+			const r = resolveColor(p, opts.color);
+			const strokeW = opts.strokeW ?? 1.5;
+			const opacity = opts.opacity ?? 1;
+			const finalFill = opts.fill ?? r.fill;
+			fm.declare(eid, {
+				type: "polygon",
+				vertices,
+				stroke: r.stroke,
+				fill: finalFill,
+				strokeW,
+				opacity
+			});
+			return {
+				...mixColor(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixFill(eid, fm, p),
+				...mixDashed(eid, fm),
+				...mixOpacity(eid, fm),
+				...mixTransform(eid, fm, "polygon")
+			};
+		}
+		function rightAngle(id, vertex, ray1, ray2, opts = {}) {
+			const eid = `angle:${id}`;
+			const { stroke } = resolveColor(p, opts.color ?? "dim");
+			const sz = opts.size ?? 8;
+			const [vx, vy] = vertex;
+			const d1 = vecLen(ray1[0] - vx, ray1[1] - vy) || 1;
+			const d2 = vecLen(ray2[0] - vx, ray2[1] - vy) || 1;
+			const u1x = (ray1[0] - vx) / d1, u1y = (ray1[1] - vy) / d1;
+			const u2x = (ray2[0] - vx) / d2, u2y = (ray2[1] - vy) / d2;
+			const ptsStr = [
+				[vx + u1x * sz, vy + u1y * sz],
+				[vx + (u1x + u2x) * sz, vy + (u1y + u2y) * sz],
+				[vx + u2x * sz, vy + u2y * sz]
+			].map((p) => p.join(",")).join(" ");
+			fm.declare(eid, {
+				type: "path",
+				d: `M${ptsStr}`,
+				x: 0,
+				y: 0,
+				stroke,
+				fill: "none",
+				strokeW: 1.5
+			});
+			return {
+				color(c) {
+					fm.patch(eid, { stroke: resolveColor(p, c).stroke });
+					return this;
+				},
+				size(n) {
+					return this;
 				}
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			dashed(d = "5 4") {
-				this.dash = d;
-				schedule();
-				return this;
-			},
-			label(t, place, gap) {
-				this._label = t;
-				if (place) this.labelPlace = place;
-				if (gap != null) this.labelGap = gap;
-				schedule();
-				return this;
-			},
-			opacity(v) {
-				this._opacity = v;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function point(stage, schedule, pos, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "point",
-			pos: [...pos],
-			_stroke: opts.stroke || p.primary.fg,
-			r: opts.size ?? 4,
-			_fill: opts.fill || p.primary.bg,
-			_label: opts.label || "",
-			labelPlace: opts.labelPlace || "above",
-			labelGap: opts.labelGap ?? 8,
-			move(x, y) {
-				this.pos = Array.isArray(x) ? [...x] : [x, y];
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			fill(c) {
-				this._fill = c;
-				schedule();
-				return this;
-			},
-			label(t, place, gap) {
-				this._label = t;
-				if (place) this.labelPlace = place;
-				if (gap != null) this.labelGap = gap;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function segment(stage, schedule, a, b, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "segment",
-			a: [...a],
-			b: [...b],
-			_stroke: opts.stroke || p.dim.fg,
-			strokeW: opts.strokeW ?? 1.5,
-			dash: opts.dash || "",
-			_label: opts.label || "",
-			labelGap: opts.labelGap ?? 10,
-			move(a, b) {
-				this.a = [...a];
-				this.b = [...b];
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			dashed(d = "5 4") {
-				this.dash = d;
-				schedule();
-				return this;
-			},
-			label(t, gap) {
-				this._label = t;
-				if (gap != null) this.labelGap = gap;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function circle(stage, schedule, center, radius, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "circle",
-			c: [...center],
-			r: radius,
-			_stroke: opts.stroke || p.accent.fg,
-			strokeW: opts.strokeW ?? 1.2,
-			dash: opts.dash || "",
-			_opacity: opts.opacity ?? 1,
-			_fill: opts.fill || p.accent.a(8),
-			move(c, r) {
-				this.c = [...c];
-				if (r != null) this.r = r;
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			fill(c) {
-				this._fill = c;
-				schedule();
-				return this;
-			},
-			dashed(d = "5 4") {
-				this.dash = d;
-				schedule();
-				return this;
-			},
-			opacity(v) {
-				this._opacity = v;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function polygon(stage, schedule, vertices, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "polygon",
-			v: vertices.map((v) => [...v]),
-			_stroke: opts.stroke || p.primary.fg,
-			strokeW: opts.strokeW ?? 1.5,
-			dash: opts.dash || "",
-			_opacity: opts.opacity ?? 1,
-			_fill: "",
-			move(vertices) {
-				this.v = vertices.map((v) => [...v]);
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			fill(c) {
-				this._fill = c;
-				schedule();
-				return this;
-			},
-			dashed(d = "5 4") {
-				this.dash = d;
-				schedule();
-				return this;
-			},
-			opacity(v) {
-				this._opacity = v;
-				schedule();
-				return this;
-			}
-		};
-		self._fill = opts.fill || p.primary.a(10);
-		schedule();
-		return self;
-	}
-	function angle(stage, schedule, vertex, ray1, ray2, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "angle",
-			v: [...vertex],
-			r1: [...ray1],
-			r2: [...ray2],
-			_stroke: opts.stroke || p.warning.fg,
-			strokeW: opts.strokeW ?? 1,
-			_label: opts.label || "",
-			arcR: opts.size ?? 30,
-			_fill: opts.fill || p.warning.a(15),
-			move(vertex, ray1, ray2) {
-				this.v = [...vertex];
-				this.r1 = [...ray1];
-				this.r2 = [...ray2];
-				schedule();
-				return this;
-			},
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			fill(c) {
-				this._fill = c;
-				schedule();
-				return this;
-			},
-			label(t) {
-				this._label = t;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function fn(stage, schedule, f, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "fn",
-			f,
-			domain: opts.domain || [0, 10],
-			range: opts.range,
-			ox: opts.x ?? 0,
-			oy: opts.y ?? stage.ctx.H,
-			pw: opts.width ?? stage.ctx.W,
-			ph: opts.height ?? stage.ctx.H,
-			samples: opts.samples ?? 200,
-			_stroke: opts.stroke || p.primary.fg,
-			strokeW: opts.strokeW ?? 1,
-			dash: opts.dash || "",
-			_opacity: opts.opacity ?? 1,
-			_label: opts.label || "",
-			color(c) {
-				this._stroke = c;
-				schedule();
-				return this;
-			},
-			stroke(c, w) {
-				this._stroke = c;
-				if (w != null) this.strokeW = w;
-				schedule();
-				return this;
-			},
-			dashed(d = "5 4") {
-				this.dash = d;
-				schedule();
-				return this;
-			},
-			opacity(v) {
-				this._opacity = v;
-				schedule();
-				return this;
-			},
-			label(t) {
-				this._label = t;
-				schedule();
-				return this;
-			}
-		};
-		schedule();
-		return self;
-	}
-	function grid(stage, schedule, origin, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "grid",
-			ox: origin[0],
-			oy: origin[1],
-			w: opts.width ?? 400,
-			h: opts.height ?? 300,
-			sp: opts.spacing ?? 40,
-			_stroke: opts.stroke || p.dim.a(10),
-			strokeW: opts.strokeW ?? .3
-		};
-		schedule();
-		return self;
-	}
-	function axes(stage, schedule, origin, opts = {}) {
-		const p = stage.palette;
-		const self = {
-			_id: oid(),
-			_type: "axes",
-			ox: origin[0],
-			oy: origin[1],
-			xl: opts.xLen ?? 300,
-			yl: opts.yLen ?? 200,
-			xLabel: opts.xLabel,
-			yLabel: opts.yLabel,
-			_stroke: opts.stroke || p.dim.a(45),
-			strokeW: opts.strokeW ?? 1.4
-		};
-		schedule();
-		return self;
-	}
-	function createMathRenderer(stage) {
-		const objects = [];
-		let first = true;
-		let scheduled = false;
-		let drawing = false;
-		function schedule() {
-			if (scheduled || drawing) return;
-			scheduled = true;
-			queueMicrotask(() => {
-				scheduled = false;
-				render();
+			};
+		}
+		function angle(id, vertex, ray1, ray2, opts = {}) {
+			const eid = `angle:${id}`;
+			const { stroke, fill } = resolveColor(p, opts.color);
+			const label = opts.label ?? "";
+			const arcR = opts.size ?? 30;
+			const finalFill = opts.fill ?? p.warning.a(15);
+			fm.declare(eid, {
+				type: "angle",
+				vertex,
+				ray1,
+				ray2,
+				stroke,
+				fill: finalFill,
+				label,
+				arcR
+			});
+			return {
+				...mixColor(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixFill(eid, fm, p),
+				...mixLabel(eid, fm)
+			};
+		}
+		function fn(id, f, opts = {}) {
+			const eid = `fn:${id}`;
+			const { stroke } = resolveColor(p, opts.color);
+			const strokeW = opts.strokeW ?? 1.5;
+			const dash = opts.dash ?? "";
+			const opacity = opts.opacity ?? 1;
+			const label = opts.label ?? "";
+			const domain = opts.domain ?? [0, 10];
+			const samples = opts.samples ?? 200;
+			const ox = opts.x ?? 0;
+			const oy = opts.y ?? 300;
+			const pw = opts.width ?? 780;
+			const ph = opts.height ?? 460;
+			fm.declare(eid, {
+				type: "fn",
+				f: f.toString(),
+				domain,
+				range: opts.range,
+				x: ox,
+				y: oy,
+				width: pw,
+				height: ph,
+				samples,
+				stroke,
+				strokeW,
+				dash,
+				opacity,
+				label
+			});
+			return {
+				...mixStroke(eid, fm, p),
+				...mixStrokeW(eid, fm),
+				...mixDashed(eid, fm),
+				...mixOpacity(eid, fm),
+				...mixLabel(eid, fm)
+			};
+		}
+		function grid(id, origin, opts = {}) {
+			const eid = `grid:${id}`;
+			const { stroke } = resolveColor(p, opts.color);
+			fm.declare(eid, {
+				type: "grid",
+				ox: origin[0],
+				oy: origin[1],
+				w: opts.width ?? 400,
+				h: opts.height ?? 300,
+				sp: opts.spacing ?? 40,
+				stroke,
+				strokeW: opts.strokeW ?? .3
 			});
 		}
-		function render() {
-			drawing = true;
-			if (first) {
-				stage.ctx.show(drawAll);
-				first = false;
-			} else stage.ctx.flow(drawAll, 600);
-			drawing = false;
+		function axes(id, origin, opts = {}) {
+			const eid = `axes:${id}`;
+			const { stroke } = resolveColor(p, opts.color);
+			fm.declare(eid, {
+				type: "axes",
+				ox: origin[0],
+				oy: origin[1],
+				xl: opts.xLen ?? 300,
+				yl: opts.yLen ?? 200,
+				xLabel: opts.xLabel,
+				yLabel: opts.yLabel,
+				stroke,
+				strokeW: opts.strokeW ?? 1.4
+			});
 		}
-		function drawAll() {
-			const g = stage.ctx.stage.edges;
-			const bg = stage.ctx.stage.bg;
-			for (const obj of objects) {
-				const id = obj._id;
-				switch (obj._type) {
-					case "vector": {
-						const [fx, fy] = obj._from, [tx, ty] = obj._to;
-						const mid = ensureMarker(stage.ctx.svg, obj._stroke);
-						g.append("line").attr("data-id", id).attr("x1", fx).attr("y1", fy).attr("x2", tx).attr("y2", ty).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW).attr("stroke-dasharray", obj.dash).attr("opacity", obj._opacity).attr("marker-end", `url(#${mid})`);
-						if (obj._label) {
-							const mx = (fx + tx) / 2, my = (fy + ty) / 2;
-							const [dx, dy] = [tx - fx, ty - fy];
-							const [nx, ny] = vecNorm(dx, dy, vecLen(dx, dy));
-							let lx = mx, ly = my, off = obj.labelGap;
-							if (obj.labelPlace === "above") {
-								lx -= ny * off;
-								ly += nx * off;
-							} else if (obj.labelPlace === "below") {
-								lx += ny * off;
-								ly -= nx * off;
-							} else if (obj.labelPlace === "right") {
-								lx += nx * off;
-								ly += ny * off;
-							} else {
-								lx -= nx * off;
-								ly -= ny * off;
-							}
-							stage.ctx.callout({
-								x: lx,
-								y: ly
-							}, obj._label, {
-								place: obj.labelPlace,
-								gap: 4,
-								style: {
-									fontSize: "13px",
-									fontFamily: "serif",
-									fontStyle: "italic",
-									color: obj._stroke,
-									fontWeight: "600"
-								}
-							});
-						}
-						break;
-					}
-					case "point":
-						stage.ctx.dummy({
-							id,
-							x: obj.pos[0],
-							y: obj.pos[1]
-						}, {
-							dR: obj.r,
-							fill: obj._fill,
-							stroke: obj._stroke,
-							strokeW: 1.5,
-							text: "",
-							textSize: 0
-						});
-						if (obj._label) stage.ctx.callout({
-							x: obj.pos[0],
-							y: obj.pos[1]
-						}, obj._label, {
-							place: obj.labelPlace,
-							gap: obj.labelGap,
-							style: {
-								fontSize: "12px",
-								fontFamily: "serif",
-								fontStyle: "italic",
-								color: obj._stroke,
-								fontWeight: "600"
-							}
-						});
-						break;
-					case "segment":
-						g.append("line").attr("data-id", id).attr("x1", obj.a[0]).attr("y1", obj.a[1]).attr("x2", obj.b[0]).attr("y2", obj.b[1]).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW).attr("stroke-dasharray", obj.dash);
-						if (obj._label) {
-							const mx = (obj.a[0] + obj.b[0]) / 2, my = (obj.a[1] + obj.b[1]) / 2;
-							stage.ctx.callout({
-								x: mx,
-								y: my
-							}, obj._label, {
-								place: "above",
-								gap: obj.labelGap,
-								style: {
-									fontSize: "11px",
-									fontFamily: "JetBrains Mono,monospace",
-									color: obj._stroke
-								}
-							});
-						}
-						break;
-					case "circle":
-						bg.append("circle").attr("data-id", id).attr("cx", obj.c[0]).attr("cy", obj.c[1]).attr("r", obj.r).attr("fill", obj._fill).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW).attr("stroke-dasharray", obj.dash).attr("opacity", obj._opacity);
-						break;
-					case "polygon":
-						bg.append("polygon").attr("data-id", id).attr("points", obj.v.map((v) => v.join(",")).join(" ")).attr("fill", obj._fill).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW).attr("stroke-dasharray", obj.dash).attr("opacity", obj._opacity);
-						break;
-					case "angle": {
-						const [vx, vy] = obj.v;
-						const a1 = Math.atan2(obj.r1[1] - vy, obj.r1[0] - vx);
-						const a2 = Math.atan2(obj.r2[1] - vy, obj.r2[0] - vx);
-						const large = Math.abs(a2 - a1) > Math.PI ? 1 : 0;
-						const sweep = a2 > a1 ? 1 : 0;
-						const x1 = vx + obj.arcR * Math.cos(a1), y1 = vy + obj.arcR * Math.sin(a1);
-						const x2 = vx + obj.arcR * Math.cos(a2), y2 = vy + obj.arcR * Math.sin(a2);
-						const d = `M${x1},${y1} A${obj.arcR},${obj.arcR} 0 ${large},${sweep} ${x2},${y2} L${vx},${vy} Z`;
-						const arcD = `M${x1},${y1} A${obj.arcR},${obj.arcR} 0 ${large},${sweep} ${x2},${y2}`;
-						bg.append("path").attr("data-id", id + "-f").attr("d", d).attr("fill", obj._fill).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						bg.append("path").attr("data-id", id + "-a").attr("d", arcD).attr("fill", "none").attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW * 1.5);
-						if (obj._label) {
-							const ma = (a1 + a2) / 2 + (large ? Math.PI : 0);
-							stage.ctx.callout({
-								x: vx + (obj.arcR + 16) * Math.cos(ma),
-								y: vy + (obj.arcR + 16) * Math.sin(ma)
-							}, obj._label, {
-								place: "above",
-								gap: 2,
-								style: {
-									fontSize: "12px",
-									fontFamily: "serif",
-									fontStyle: "italic",
-									color: obj._stroke,
-									fontWeight: "600"
-								}
-							});
-						}
-						break;
-					}
-					case "fn": {
-						const [d0, d1] = obj.domain;
-						const n = obj.samples, step = (d1 - d0) / (n - 1);
-						let r0 = 0, r1 = 1;
-						if (obj.range) [r0, r1] = obj.range;
-						else {
-							let yMin = Infinity, yMax = -Infinity;
-							for (let i = 0; i < n; i++) {
-								const y = obj.f(d0 + i * step);
-								if (y < yMin) yMin = y;
-								if (y > yMax) yMax = y;
-							}
-							r0 = yMin;
-							r1 = yMax;
-							if (r0 === r1) {
-								r0 -= 1;
-								r1 += 1;
-							}
-						}
-						const sx = (x) => obj.ox + (x - d0) / (d1 - d0) * obj.pw;
-						const sy = (y) => obj.oy - (y - r0) / (r1 - r0) * obj.ph;
-						const pts = [];
-						for (let i = 0; i < n; i++) {
-							const x = d0 + i * step;
-							pts.push([sx(x), sy(obj.f(x))]);
-						}
-						g.append("polyline").attr("data-id", id).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", "none").attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW).attr("stroke-dasharray", obj.dash).attr("opacity", obj._opacity);
-						if (obj._label) {
-							const mx = sx((d0 + d1) / 2), my = sy(obj.f((d0 + d1) / 2));
-							stage.ctx.callout({
-								x: mx,
-								y: my
-							}, obj._label, {
-								place: "above",
-								gap: 14,
-								style: {
-									fontSize: "13px",
-									fontFamily: "serif",
-									fontStyle: "italic",
-									color: obj._stroke,
-									fontWeight: "600"
-								}
-							});
-						}
-						break;
-					}
-					case "grid":
-						for (let x = obj.ox; x <= obj.ox + obj.w; x += obj.sp) bg.append("line").attr("x1", x).attr("y1", obj.oy).attr("x2", x).attr("y2", obj.oy - obj.h).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						for (let y = obj.oy; y >= obj.oy - obj.h; y -= obj.sp) bg.append("line").attr("x1", obj.ox).attr("y1", y).attr("x2", obj.ox + obj.w).attr("y2", y).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						break;
-					case "axes": {
-						const as = 6;
-						bg.append("line").attr("data-id", id + "x").attr("x1", obj.ox).attr("y1", obj.oy).attr("x2", obj.ox + obj.xl + as + 4).attr("y2", obj.oy).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						bg.append("polygon").attr("data-id", id + "xt").attr("points", `${obj.ox + obj.xl + as + 4},${obj.oy} ${obj.ox + obj.xl},${obj.oy - as} ${obj.ox + obj.xl},${obj.oy + as}`).attr("fill", obj._stroke);
-						bg.append("line").attr("data-id", id + "y").attr("x1", obj.ox).attr("y1", obj.oy).attr("x2", obj.ox).attr("y2", obj.oy - obj.yl - as - 4).attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						bg.append("polygon").attr("data-id", id + "yt").attr("points", `${obj.ox},${obj.oy - obj.yl - as - 4} ${obj.ox - as},${obj.oy - obj.yl} ${obj.ox + as},${obj.oy - obj.yl}`).attr("fill", obj._stroke);
-						bg.append("circle").attr("data-id", id + "o").attr("cx", obj.ox).attr("cy", obj.oy).attr("r", 3).attr("fill", "#fff").attr("stroke", obj._stroke).attr("stroke-width", obj.strokeW);
-						if (obj.xLabel) stage.ctx.callout({
-							x: obj.ox + obj.xl / 2,
-							y: obj.oy
-						}, obj.xLabel, {
-							place: "below",
-							gap: 22,
-							style: {
-								fontSize: "12px",
-								color: obj._stroke
-							}
-						});
-						if (obj.yLabel) stage.ctx.callout({
-							x: obj.ox - 32,
-							y: obj.oy - obj.yl / 2
-						}, obj.yLabel, {
-							place: "left",
-							gap: 4,
-							style: {
-								fontSize: "12px",
-								color: obj._stroke
-							}
-						});
-						break;
-					}
-				}
+		function rect(id, cx, cy, w, h) {
+			const hw = w / 2, hh = h / 2;
+			return polygon(id, [
+				[cx - hw, cy - hh],
+				[cx + hw, cy - hh],
+				[cx + hw, cy + hh],
+				[cx - hw, cy + hh]
+			]);
+		}
+		function ngon(id, cx, cy, r, sides) {
+			const verts = [];
+			for (let i = 0; i < sides; i++) {
+				const a = 2 * Math.PI * i / sides - Math.PI / 2;
+				verts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
 			}
+			return polygon(id, verts);
+		}
+		function ellipse(id, cx, cy, rx, ry, n = 32) {
+			const verts = [];
+			for (let i = 0; i < n; i++) {
+				const a = 2 * Math.PI * i / n;
+				verts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
+			}
+			return polygon(id, verts);
+		}
+		function symbol(id, pos, opts = {}) {
+			const eid = `path:${id}`;
+			const t = {
+				circle: circle_default,
+				cross: cross_default,
+				diamond: diamond_default,
+				square: square_default,
+				star: star_default,
+				triangle: triangle_default,
+				wye: wye_default
+			}[opts.type ?? "circle"] ?? circle_default;
+			const sy = Symbol$1().type(t).size((opts.size ?? 8) ** 2)();
+			const d = sy ? `${sy}` : "";
+			const r = resolveColor(p, opts.color);
+			const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
+			fm.declare(eid, {
+				type: "path",
+				d,
+				x: pos[0],
+				y: pos[1],
+				stroke: r.stroke,
+				fill: rf,
+				strokeW: 1.2
+			});
+			return {
+				...mixStroke(eid, fm, p),
+				size(n) {
+					fm.patch(eid, { pathSize: n });
+					return this;
+				},
+				...mixFill(eid, fm, p),
+				...mixOpacity(eid, fm)
+			};
+		}
+		function arc(id, center, opts) {
+			const eid = `path:${id}`;
+			const a = arc_default()({
+				innerRadius: opts.innerR ?? 0,
+				outerRadius: opts.outerR,
+				startAngle: opts.startAngle,
+				endAngle: opts.endAngle
+			}) || "";
+			const r = resolveColor(p, opts.color);
+			const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
+			fm.declare(eid, {
+				type: "path",
+				d: `${a}`,
+				x: center[0],
+				y: center[1],
+				stroke: r.stroke,
+				fill: rf,
+				strokeW: opts.strokeW ?? 1.2
+			});
+			return {
+				...mixStroke(eid, fm, p),
+				size(n) {
+					fm.patch(eid, { pathSize: n });
+					return this;
+				},
+				...mixFill(eid, fm, p),
+				...mixOpacity(eid, fm)
+			};
+		}
+		function projection(id, pt, lf, lt, opts = {}) {
+			const eidSeg = `segment:${id}`;
+			const eidPt = `point:${id}-p`;
+			const { stroke } = resolveColor(p, opts.color);
+			const dash = opts.dash ?? "4 3";
+			const pc = opts.pointColor ?? stroke;
+			const [px, py] = pt, [x1, y1] = lf, [x2, y2] = lt;
+			const dx = x2 - x1, dy = y2 - y1;
+			const t = dx === 0 && dy === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
+			const fx = x1 + t * dx, fy = y1 + t * dy;
+			fm.declare(eidSeg, {
+				type: "segment",
+				a: pt,
+				b: [fx, fy],
+				stroke,
+				strokeW: 1.2,
+				dash,
+				label: "",
+				labelGap: 0
+			});
+			fm.declare(eidPt, {
+				type: "point",
+				x: fx,
+				y: fy,
+				r: 3,
+				stroke: pc,
+				fill: pc,
+				label: "",
+				labelPlace: void 0,
+				labelGap: void 0
+			});
+			return {
+				color(c) {
+					const r = resolveColor(p, c);
+					fm.patch(eidSeg, { stroke: r.stroke });
+					return this;
+				},
+				dash(d) {
+					fm.patch(eidSeg, { dash: d });
+					return this;
+				},
+				strokeW(n) {
+					fm.patch(eidSeg, { strokeW: n });
+					return this;
+				}
+			};
+		}
+		function fill(id, pts, opts = {}) {
+			const eid = `fill:${id}`;
+			const r = resolveColor(p, opts.color);
+			fm.declare(eid, {
+				type: "fill",
+				pts,
+				fill: r.fill,
+				opacity: opts.opacity
+			});
+			return {
+				color(c) {
+					fm.patch(eid, { fill: resolveColor(p, c).fill });
+					return this;
+				},
+				opacity(v) {
+					fm.patch(eid, { opacity: v });
+					return this;
+				}
+			};
+		}
+		function fillFn(id, f, opts = {}) {
+			const eid = `fill:${id}`;
+			const domain = opts.domain ?? [0, 10];
+			const samples = opts.samples ?? 200;
+			const ox = opts.x ?? 0, oy = opts.y ?? 300;
+			const pw = opts.width ?? 780, ph = opts.height ?? 460;
+			const r = resolveColor(p, opts.color);
+			const baseline = opts.baseline ?? 0;
+			const [d0, d1] = domain;
+			const step = (d1 - d0) / (samples - 1);
+			let yMin = Infinity, yMax = -Infinity;
+			for (let i = 0; i < samples; i++) {
+				const y = f(d0 + i * step);
+				if (y < yMin) yMin = y;
+				if (y > yMax) yMax = y;
+			}
+			let r0 = yMin, r1 = yMax;
+			if (opts.range) [r0, r1] = opts.range;
+			if (r0 === r1) {
+				r0 -= 1;
+				r1 += 1;
+			}
+			const sx = (x) => ox + (x - d0) / (d1 - d0) * pw;
+			const sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
+			const pts = [];
+			pts.push([sx(d0), sy(baseline)]);
+			for (let i = 0; i < samples; i++) pts.push([sx(d0 + i * step), sy(f(d0 + i * step))]);
+			pts.push([sx(d1), sy(baseline)]);
+			fm.declare(eid, {
+				type: "fill",
+				pts,
+				fill: r.fill,
+				opacity: opts.opacity ?? .45
+			});
+			return {
+				color(c) {
+					fm.patch(eid, { fill: resolveColor(p, c).fill });
+					return this;
+				},
+				opacity(v) {
+					fm.patch(eid, { opacity: v });
+					return this;
+				}
+			};
 		}
 		return {
-			vector(a, b, o) {
-				const v = vector(stage, schedule, a, b, o);
-				objects.push(v);
-				return v;
-			},
-			point(p, o) {
-				const pt = point(stage, schedule, p, o);
-				objects.push(pt);
-				return pt;
-			},
-			segment(a, b, o) {
-				const s = segment(stage, schedule, a, b, o);
-				objects.push(s);
-				return s;
-			},
-			circle(c, r, o) {
-				const ci = circle(stage, schedule, c, r, o);
-				objects.push(ci);
-				return ci;
-			},
-			polygon(v, o) {
-				const pg = polygon(stage, schedule, v, o);
-				objects.push(pg);
-				return pg;
-			},
-			angle(v, r1, r2, o) {
-				const ag = angle(stage, schedule, v, r1, r2, o);
-				objects.push(ag);
-				return ag;
-			},
-			grid(o, opts) {
-				const gr = grid(stage, schedule, o, opts);
-				objects.push(gr);
-				return gr;
-			},
-			axes(o, opts) {
-				const ax = axes(stage, schedule, o, opts);
-				objects.push(ax);
-				return ax;
-			},
-			fn(f, o) {
-				const fnObj = fn(stage, schedule, f, o);
-				objects.push(fnObj);
-				return fnObj;
-			},
-			remove(obj) {
-				const i = objects.indexOf(obj);
-				if (i >= 0) objects.splice(i, 1);
-				schedule();
-				return this;
-			},
-			render,
-			_objects: objects
+			point,
+			vector,
+			segment,
+			circle,
+			polygon,
+			angle,
+			rightAngle,
+			projection,
+			fill,
+			fillFn,
+			fn,
+			grid,
+			axes,
+			rect,
+			ngon,
+			ellipse,
+			symbol,
+			arc
 		};
 	}
 
@@ -5367,220 +5371,126 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region vis/graph.ts
-	function createGraph(stage) {
-		const p = stage.palette;
+	function createGraph(fm, ctx, palette) {
+		const p = palette;
+		function resolveColor(c) {
+			const col = p[c];
+			if (col) return {
+				stroke: col.fg,
+				fill: col.bg
+			};
+			return {
+				stroke: c,
+				fill: c
+			};
+		}
 		const _vertices = /* @__PURE__ */ new Map();
-		const _edgeDefs = [];
-		function drawAll() {
-			const edgeAngles = /* @__PURE__ */ new Map();
-			for (const { a, b } of _edgeDefs) {
-				const angA = Math.atan2(b.y - a.y, b.x - a.x);
-				const angB = Math.atan2(a.y - b.y, a.x - b.x);
-				if (!edgeAngles.has(a.id)) edgeAngles.set(a.id, []);
-				if (!edgeAngles.has(b.id)) edgeAngles.set(b.id, []);
-				edgeAngles.get(a.id).push(angA);
-				edgeAngles.get(b.id).push(angB);
-			}
-			const labelDirs = [
-				{
-					place: "above",
-					angle: -Math.PI / 2
-				},
-				{
-					place: "below",
-					angle: Math.PI / 2
-				},
-				{
-					place: "right",
-					angle: 0
-				},
-				{
-					place: "left",
-					angle: Math.PI
-				}
-			];
-			function angleDiff(a, b) {
-				let d = Math.abs(a - b);
-				if (d > Math.PI) d = 2 * Math.PI - d;
-				return d;
-			}
-			function pickLabelPlace(vertexId) {
-				const angles = edgeAngles.get(vertexId);
-				if (!angles || angles.length === 0) return "above";
-				for (const dir of labelDirs) if (angles.every((a) => angleDiff(a, dir.angle) >= Math.PI / 4)) return dir.place;
-				return "above";
-			}
-			for (const v of _vertices.values()) {
-				if (!_currentVertices.has(v.id)) continue;
-				stage.ctx.dummy({
-					id: "gv-" + v.id,
-					x: v.x,
-					y: v.y
-				}, {
-					dR: v._r,
-					fill: v._fill,
-					stroke: v._stroke,
-					strokeW: 1.5,
-					text: "",
-					textSize: 0
-				});
-				const place = pickLabelPlace(v.id);
-				stage.ctx.callout({
-					x: v.x,
-					y: v.y
-				}, v._label, {
-					place,
-					gap: 6,
-					style: {
-						fontSize: "11px",
-						fontFamily: "JetBrains Mono,monospace",
-						color: v._stroke,
-						fontWeight: "600"
-					}
-				});
-			}
-			for (const { a, b, opts } of _edgeDefs) {
-				const eid = a.id + "-" + b.id;
-				if (!_currentEdges.has(eid)) continue;
-				const sw = opts.strokeW ?? 1.8, color = opts.stroke || p.dim.fg;
-				const ar = a._r, br = b._r, gap = opts.gap ?? 4;
-				const dx = b.x - a.x, dy = b.y - a.y;
-				const len = Math.sqrt(dx * dx + dy * dy) || 1;
-				const geid = "ge-" + a.id + "-" + b.id;
-				const x1 = a.x + dx / len * (ar + gap);
-				const y1 = a.y + dy / len * (ar + gap);
-				const mt = markerTip();
-				const toOffset = opts.directed !== false ? br + gap + mt : br + gap;
-				const x2 = b.x - dx / len * toOffset;
-				const y2 = b.y - dy / len * toOffset;
-				if (opts.directed !== false) stage.ctx.edge({
-					id: geid + "-f",
-					x: x1,
-					y: y1
-				}, {
-					id: geid + "-t",
-					x: x2,
-					y: y2
-				}, {
-					stroke: color,
-					strokeW: sw,
-					nW: 0,
-					nH: 0,
-					gap: 0
-				});
-				else stage.ctx.edge({
-					id: geid + "-f",
-					x: x1,
-					y: y1
-				}, {
-					id: geid + "-t",
-					x: x2,
-					y: y2
-				}, {
-					stroke: color,
-					strokeW: sw,
-					nW: 0,
-					nH: 0,
-					gap: 0,
-					dash: "",
-					markerUrl: "none"
-				});
-				if (opts.weight != null || opts.label) {
-					const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
-					const mlx = mx - dy / len * (Math.max(ar, br) + 8);
-					const mly = my + dx / len * (Math.max(ar, br) + 8);
-					const label = opts.label || String(opts.weight);
-					stage.ctx.callout({
-						x: mlx,
-						y: mly
-					}, label, {
-						place: "above",
-						gap: 2,
-						style: {
-							fontSize: "10px",
-							fontFamily: "JetBrains Mono,monospace",
-							color,
-							fontWeight: "600"
-						}
-					});
-				}
-			}
-		}
-		let _firstDraw = true;
-		let _drawing = false;
-		let _scheduled = false;
-		let _seenVertices = /* @__PURE__ */ new Set();
-		let _seenEdges = /* @__PURE__ */ new Set();
-		let _currentVertices = /* @__PURE__ */ new Set();
-		let _currentEdges = /* @__PURE__ */ new Set();
-		function scheduleDraw() {
-			if (_scheduled) return;
-			_scheduled = true;
-			queueMicrotask(() => {
-				_scheduled = false;
-				redraw();
+		function vertex(id, pos) {
+			const eid = `vertex:${id}`;
+			const r = 10;
+			const stroke = p.primary.fg;
+			const fill = p.primary.a(15);
+			fm.declare(eid, {
+				type: "vertex",
+				x: pos[0],
+				y: pos[1],
+				r,
+				stroke,
+				fill,
+				_label: id
 			});
-		}
-		function redraw() {
-			_drawing = true;
-			_scheduled = false;
-			_currentVertices = new Set(_seenVertices);
-			_currentEdges = new Set(_seenEdges);
-			_seenVertices.clear();
-			_seenEdges.clear();
-			if (_firstDraw) {
-				stage.ctx.show(drawAll, 300);
-				_firstDraw = false;
-			} else stage.ctx.flow(drawAll, 500);
-			_drawing = false;
-			for (const id of _vertices.keys()) if (!_currentVertices.has(id)) _vertices.delete(id);
-			for (let i = _edgeDefs.length - 1; i >= 0; i--) {
-				const eid = _edgeDefs[i].a.id + "-" + _edgeDefs[i].b.id;
-				if (!_currentEdges.has(eid)) _edgeDefs.splice(i, 1);
-			}
-		}
-		function vertex(id, pos, opts = {}) {
-			const r = opts.r ?? 10;
 			const v = {
 				id,
 				x: pos[0],
 				y: pos[1],
 				_r: r,
-				_stroke: opts.stroke || p.primary.fg,
-				_fill: opts.fill || p.primary.a(15),
-				_label: opts.label || id,
+				_stroke: stroke,
+				_fill: fill,
+				_label: id,
 				pos() {
 					return [this.x, this.y];
+				},
+				color(c) {
+					const resolved = resolveColor(c);
+					this._stroke = resolved.stroke;
+					this._fill = resolved.fill;
+					fm.patch(eid, {
+						stroke: this._stroke,
+						fill: this._fill
+					});
+					return this;
+				},
+				label(t) {
+					this._label = t;
+					fm.patch(eid, { _label: t });
+					return this;
+				},
+				size(r) {
+					this._r = r;
+					fm.patch(eid, { r });
+					return this;
+				},
+				fill(c) {
+					this._fill = c;
+					fm.patch(eid, { fill: c });
+					return this;
 				}
 			};
 			_vertices.set(id, v);
-			_seenVertices.add(id);
-			if (!_drawing) scheduleDraw();
 			return v;
 		}
-		function edge(a, b, opts = {}) {
-			const idx = _edgeDefs.findIndex((e) => e.a.id === a.id && e.b.id === b.id);
-			if (idx >= 0) _edgeDefs[idx] = {
-				a,
-				b,
-				opts
-			};
-			else _edgeDefs.push({
-				a,
-				b,
-				opts
+		function edge(a, b, opts) {
+			const eid = `edge:${a.id}:${b.id}`;
+			const stroke = p.dim.fg;
+			const strokeW = 1.8;
+			const directed = opts?.directed !== false;
+			const gap = opts?.gap ?? 4;
+			const marker = opts?.marker;
+			const { x1, y1, x2, y2 } = offsetLine([a.x, a.y], [b.x, b.y], a._r + gap, b._r + markerHalf(marker), directed);
+			fm.declare(eid, {
+				type: "edge",
+				from: a.id,
+				to: b.id,
+				x1,
+				y1,
+				x2,
+				y2,
+				stroke,
+				strokeW,
+				dash: "",
+				directed,
+				marker: marker ?? null
 			});
-			_seenEdges.add(a.id + "-" + b.id);
-			if (!_drawing) scheduleDraw();
+			return {
+				color(c) {
+					const resolved = resolveColor(c);
+					fm.patch(eid, { stroke: resolved.stroke });
+					return this;
+				},
+				strokeW(n) {
+					fm.patch(eid, { strokeW: n });
+					return this;
+				},
+				dashed(d = "5 4") {
+					fm.patch(eid, { dash: d });
+					return this;
+				},
+				label(t) {
+					return this;
+				},
+				weight(n) {
+					return this;
+				}
+			};
 		}
-		function layout(type, vertices, edges, opts = {}) {
+		function layout(type, vertices, edges, opts) {
 			const n = vertices.length;
 			if (n === 0) return;
-			const cx = opts.center?.[0] ?? stage.ctx.W / 2;
-			const cy = opts.center?.[1] ?? stage.ctx.H / 2;
+			const cx = opts?.center?.[0] ?? ctx.W / 2;
+			const cy = opts?.center?.[1] ?? ctx.H / 2;
 			switch (type) {
 				case "circular": {
-					const r = opts.radius ?? Math.min(stage.ctx.W, stage.ctx.H) * .35;
+					const r = opts?.radius ?? Math.min(ctx.W, ctx.H) * .35;
 					vertices.forEach((v, i) => {
 						const angle = 2 * Math.PI * i / n - Math.PI / 2;
 						v.x = cx + r * Math.cos(angle);
@@ -5602,37 +5512,579 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					break;
 				}
 			}
-			scheduleDraw();
+			for (const v of vertices) fm.declare(`vertex:${v.id}`, {
+				type: "vertex",
+				x: v.x,
+				y: v.y,
+				r: v._r,
+				stroke: v._stroke,
+				fill: v._fill,
+				_label: v._label
+			});
 		}
 		return {
 			vertex,
 			edge,
-			layout,
-			redraw
+			layout
 		};
 	}
 
 //#endregion
-//#region vis/stage.ts
-/** Inject default stepper CSS once */
-	let _cssInjected = false;
-	function injectCSS() {
-		if (_cssInjected || typeof document === "undefined") return;
-		const s = document.createElement("style");
-		s.textContent = `
-    .vis-stepper{display:flex;gap:6px;margin-bottom:1rem;flex-wrap:wrap}
-    .vis-stepper button{border:1px solid var(--border,oklch(0 0 0/0.12));background:var(--card,oklch(0.96 0.008 78/0.85));color:var(--text-dim,oklch(0.55 0.02 65));font-family:var(--font-mono,JetBrains Mono,monospace);font-size:0.78rem;padding:4px 14px;border-radius:6px;cursor:pointer;transition:all 0.15s}
-    .vis-stepper button:hover{border-color:var(--blue,oklch(0.62 0.18 68));color:var(--blue,oklch(0.62 0.18 68))}
-    .vis-stepper button.active{background:var(--blue-05,oklch(0.62 0.18 68/0.05));border-color:var(--blue,oklch(0.62 0.18 68));color:var(--blue,oklch(0.62 0.18 68));font-weight:600}
-  `;
-		document.head.appendChild(s);
-		_cssInjected = true;
+//#region vis/renderer/svg.ts
+	var SVGRenderer = class {
+		constructor(ctx) {
+			this.handles = /* @__PURE__ */ new Map();
+			this._markerCache = {};
+			this.ctx = ctx;
+		}
+		beginFrame() {
+			this.ctx.root.selectAll(".vlbl").remove();
+		}
+		commitFrame(_opts) {
+			this._repositionLabels();
+		}
+		create(id, state) {
+			const h = new SVGHandle(this.ctx, id, state, this._markerCache);
+			this.handles.set(id, h);
+			return h;
+		}
+		dispose() {
+			this.handles.clear();
+		}
+		_repositionLabels() {
+			const edgeAngles = /* @__PURE__ */ new Map();
+			for (const [id, h] of this.handles) {
+				if (h.state.type !== "edge") continue;
+				const d = h.state;
+				const dx = d.x2 - d.x1, dy = d.y2 - d.y1;
+				const ang = Math.atan2(dy, dx);
+				const rev = ang > 0 ? ang - Math.PI : ang + Math.PI;
+				const from = d.from, to = d.to;
+				if (!edgeAngles.has(from)) edgeAngles.set(from, []);
+				if (!edgeAngles.has(to)) edgeAngles.set(to, []);
+				edgeAngles.get(from).push(ang);
+				edgeAngles.get(to).push(rev);
+			}
+			const dirs = [
+				{
+					place: "above",
+					angle: -Math.PI / 2,
+					dx: 0,
+					dy: -1,
+					anchor: "middle",
+					dyAttr: null
+				},
+				{
+					place: "below",
+					angle: Math.PI / 2,
+					dx: 0,
+					dy: 1,
+					anchor: "middle",
+					dyAttr: "0.6em"
+				},
+				{
+					place: "right",
+					angle: 0,
+					dx: 1,
+					dy: 0,
+					anchor: "start",
+					dyAttr: "0.35em"
+				},
+				{
+					place: "left",
+					angle: Math.PI,
+					dx: -1,
+					dy: 0,
+					anchor: "end",
+					dyAttr: "0.35em"
+				}
+			];
+			function angleDiff(a, b) {
+				let d = Math.abs(a - b);
+				if (d > Math.PI) d = 2 * Math.PI - d;
+				return d;
+			}
+			for (const [id, h] of this.handles) {
+				if (h.state.type !== "vertex") continue;
+				const d = h.state;
+				if (!(d._label || d.label || "")) continue;
+				const angles = edgeAngles.get(d._label || d.label || "") ?? [];
+				let place = dirs[0];
+				for (const dir of dirs) if (angles.every((a) => angleDiff(a, dir.angle) >= Math.PI / 4)) {
+					place = dir;
+					break;
+				}
+				const r = d.r ?? 10;
+				const gap = 6;
+				const tx = d.x + place.dx * (r + gap);
+				const ty = d.y + place.dy * (r + gap);
+				h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
+			}
+		}
+	};
+	var SVGHandle = class {
+		constructor(ctx, id, state, markerCache) {
+			this.svg = null;
+			this._text = null;
+			this.ctx = ctx;
+			this._cache = markerCache;
+			this.state = { ...state };
+			this._clean(id);
+			const result = drawEntity(ctx, id, state, markerCache);
+			this.svg = result.group;
+			this._text = result.text;
+		}
+		update(state, opts) {
+			this.state = { ...state };
+			if (!this.svg) return;
+			if (opts?.transition) transitionEntity(this.svg, this._text, state, opts.transition, this._cache, this.ctx.svg);
+			else updateEntityImmediate(this.svg, this._text, state);
+		}
+		setTextPosition(x, y, anchor, dyAttr) {
+			if (!this._text) return;
+			this._text.attr("x", x).attr("y", y).attr("text-anchor", anchor);
+			if (dyAttr) this._text.attr("dy", dyAttr);
+			else this._text.attr("dy", null);
+		}
+		remove() {
+			this.svg?.remove();
+			this._text?.remove();
+			this.svg = null;
+			this._text = null;
+		}
+		_clean(id) {
+			[
+				this.ctx.stage.bg,
+				this.ctx.stage.nodes,
+				this.ctx.stage.edges,
+				this.ctx.stage.overlay
+			].forEach((g) => g.selectAll("[data-id]").filter(function() {
+				const did = this.getAttribute("data-id");
+				return did === id || did.startsWith(id + "-");
+			}).remove());
+		}
+	};
+	function markerFor(stroke, cache, svg, config) {
+		if (!stroke) return void 0;
+		const size = config?.size ?? 10;
+		const w = config?.width ?? size;
+		const h = config?.height ?? size;
+		const offset = config?.offset ?? 0;
+		const open = config?.open ?? false;
+		const key = `${stroke}|${size}|${w}|${h}|${offset}|${open}`;
+		if (!cache[key]) {
+			let defs = svg.select("defs");
+			if (defs.empty()) defs = svg.append("defs");
+			const id = "fm" + Object.keys(cache).length;
+			const vbW = w + offset + 2;
+			const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
+			if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", "none").attr("stroke", stroke).attr("stroke-width", 1.5);
+			else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", stroke);
+			cache[key] = id;
+		}
+		return `url(#${cache[key]})`;
 	}
+	function applyCommon(svg, d) {
+		if (d.opacity != null) svg.attr("opacity", d.opacity);
+	}
+	function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
+		let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
+		if (a1 < 0) a1 += 2 * Math.PI;
+		if (a2 < 0) a2 += 2 * Math.PI;
+		if (a2 < a1) a2 += 2 * Math.PI;
+		if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
+		const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
+		const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
+		const large = a2 - a1 > Math.PI ? 1 : 0;
+		return {
+			a1,
+			a2,
+			sweep: 1,
+			path: `M${x1},${y1} A${arcR},${arcR} 0 ${large},1 ${x2},${y2}`
+		};
+	}
+	function drawEntity(ctx, id, d, markerCache) {
+		const bg = ctx.stage.bg, nodes = ctx.stage.nodes, edges = ctx.stage.edges;
+		switch (d.type) {
+			case "vertex": {
+				const r = d.r ?? 10;
+				const g = nodes.append("g").attr("data-id", id);
+				g.append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", r).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", 1.5);
+				applyCommon(g, d);
+				const label = d._label || d.label || "";
+				let text = null;
+				if (label) text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke).attr("font-weight", "600").text(label);
+				return {
+					group: g,
+					text
+				};
+			}
+			case "point": {
+				const g = nodes.append("g").attr("data-id", id);
+				g.append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 4).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", 1.5);
+				applyCommon(g, d);
+				return {
+					group: g,
+					text: null
+				};
+			}
+			case "edge": {
+				const line = edges.append("line").attr("data-id", id).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.8).attr("stroke-dasharray", d.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", d.directed !== false ? markerFor(d.stroke, markerCache, ctx.svg, d.marker) ?? null : null);
+				applyCommon(line, d);
+				return {
+					group: line,
+					text: null
+				};
+			}
+			case "vector":
+			case "segment": {
+				const [fx, fy] = d.from || d.a;
+				const [tx, ty] = d.to || d.b;
+				const isVector = d.type === "vector";
+				const hasMarker = isVector && !d.dash;
+				const line = edges.append("line").attr("data-id", id).attr("x1", fx).attr("y1", fy).attr("x2", tx).attr("y2", ty).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? (isVector ? 1.6 : 1.5)).attr("stroke-dasharray", d.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(d.stroke, markerCache, ctx.svg, d.marker) ?? null : null);
+				applyCommon(line, d);
+				return {
+					group: line,
+					text: null
+				};
+			}
+			case "circle": {
+				const el = bg.append("circle").attr("data-id", id).attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.2).attr("stroke-dasharray", d.dash ?? "");
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			case "polygon": {
+				const el = bg.append("polygon").attr("data-id", id).attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			case "angle": {
+				const [vx, vy] = d.vertex, [r1x, r1y] = d.ray1, [r2x, r2y] = d.ray2;
+				const arcR = d.arcR;
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR);
+				const g = ctx.stage.overlay.append("g").attr("data-id", id);
+				g.append("path").attr("d", arc.path).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+				let text = null;
+				const label = d.label;
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const ma = (arc.a1 + arc.a2) / 2, lr = arcR + 12;
+					text = g.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke).text(label);
+				}
+				return {
+					group: g,
+					text
+				};
+			}
+			case "fill": {
+				const pts = d.pts.map((p) => p.join(",")).join(" ");
+				const el = bg.append("polygon").attr("data-id", id).attr("points", pts).attr("fill", d.fill ?? "oklch(0.5 0.1 240)").attr("stroke", "none");
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			case "path": {
+				const el = bg.append("path").attr("data-id", id).attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.2);
+				applyCommon(el, d);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			default: return {
+				group: drawStaticEntity(ctx, id, d),
+				text: null
+			};
+		}
+	}
+	function drawStaticEntity(ctx, id, d) {
+		const bg = ctx.stage.bg, nodes = ctx.stage.nodes, edges = ctx.stage.edges;
+		switch (d.type) {
+			case "fn": {
+				const [d0, d1] = d.domain || [0, 10], n = d.samples ?? 200;
+				const step = (d1 - d0) / (n - 1), ox = d.x ?? 0, oy = d.y ?? 0;
+				const pw = d.width ?? 780, ph = d.height ?? 460;
+				const fn = new Function("x", `return (${d.f})(x)`);
+				let yMin = Infinity, yMax = -Infinity;
+				for (let i = 0; i < n; i++) {
+					const y = fn(d0 + i * step);
+					if (y < yMin) yMin = y;
+					if (y > yMax) yMax = y;
+				}
+				let r0 = yMin, r1 = yMax;
+				if (d.range) [r0, r1] = d.range;
+				if (r0 === r1) {
+					r0 -= 1;
+					r1 += 1;
+				}
+				const sx = (x) => ox + (x - d0) / (d1 - d0) * pw, sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
+				const pts = Array.from({ length: n }, (_, i) => {
+					const xv = d0 + i * step;
+					return [sx(xv), sy(fn(xv))].join(",");
+				}).join(" ");
+				const el = edges.append("polyline").attr("data-id", id).attr("points", pts).attr("fill", "none").attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5).attr("stroke-dasharray", d.dash ?? "");
+				applyCommon(el, d);
+				return el;
+			}
+			case "grid": {
+				const ox = d.ox, oy = d.oy, w = d.w, h = d.h, sp = d.sp;
+				const g = bg.append("g").attr("data-id", id);
+				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("data-id", id + "-v" + x).attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy - h).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+				for (let y = oy; y >= oy - h; y -= sp) g.append("line").attr("data-id", id + "-h" + y).attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+				applyCommon(g, d);
+				return g;
+			}
+			case "axes": {
+				const ox = d.ox, oy = d.oy, xl = d.xl, yl = d.yl, sw = d.strokeW ?? 1.4;
+				const g = bg.append("g").attr("data-id", id);
+				g.append("line").attr("data-id", id + "-x").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", d.stroke).attr("stroke-width", sw);
+				g.append("polygon").attr("data-id", id + "-xt").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", d.stroke);
+				g.append("line").attr("data-id", id + "-y").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", d.stroke).attr("stroke-width", sw);
+				g.append("polygon").attr("data-id", id + "-yt").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", d.stroke);
+				g.append("circle").attr("data-id", id + "-o").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", "#fff").attr("stroke", d.stroke).attr("stroke-width", sw);
+				applyCommon(g, d);
+				return g;
+			}
+			case "dot": return nodes.append("g").attr("data-id", id).append("circle").attr("class", "shp").attr("cx", d.x).attr("cy", d.y).attr("r", d.r ?? 5).attr("fill", d.fill ?? "").attr("stroke", d.stroke ?? "");
+			case "line": return edges.append("line").attr("data-id", id).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1).attr("stroke-dasharray", d.dash ?? "");
+			default: throw new Error(`Unknown entity type: ${d.type}`);
+		}
+	}
+	function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
+		switch (d.type) {
+			case "vertex":
+				svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
+				break;
+			case "point":
+				svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
+				break;
+			case "edge":
+				svg.interrupt().transition(tr).attr("x1", d.x1).attr("y1", d.y1).attr("x2", d.x2).attr("y2", d.y2).attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("marker-end", d.directed !== false ? markerFor(d.stroke, markerCache, svgRoot, d.marker) ?? null : null);
+				if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+				break;
+			case "vector":
+				svg.interrupt().transition(tr).attr("x1", d.x1 ?? d.from?.[0]).attr("y1", d.y1 ?? d.from?.[1]).attr("x2", d.x2 ?? d.to?.[0]).attr("y2", d.y2 ?? d.to?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW).attr("marker-end", !d.dash ? markerFor(d.stroke, markerCache, svgRoot, d.marker) ?? null : null);
+				if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+				break;
+			case "segment":
+			case "line":
+				svg.interrupt().transition(tr).attr("x1", d.x1 ?? d.from?.[0] ?? d.a?.[0]).attr("y1", d.y1 ?? d.from?.[1] ?? d.a?.[1]).attr("x2", d.x2 ?? d.to?.[0] ?? d.b?.[0]).attr("y2", d.y2 ?? d.to?.[1] ?? d.b?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				break;
+			case "circle":
+				svg.interrupt().transition(tr).attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("stroke", d.stroke).attr("fill", d.fill);
+				break;
+			case "polygon":
+				svg.interrupt().transition(tr).attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+				break;
+			case "fill":
+				svg.interrupt().transition(tr).attr("points", d.pts.map((v) => v.join(",")).join(" ")).attr("fill", d.fill ?? "oklch(0.5 0.1 240)");
+				if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+				break;
+			case "path":
+				svg.interrupt().transition(tr).attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				if (d.opacity != null) svg.transition(tr).attr("opacity", d.opacity);
+				break;
+			case "angle": {
+				const [vx, vy] = d.vertex;
+				const [r1x, r1y] = d.ray1;
+				const [r2x, r2y] = d.ray2;
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+				if (text && Math.abs(arc.a2 - arc.a1) > .02) {
+					const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+					text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("fill", d.stroke).text(d.label ?? "");
+				}
+				break;
+			}
+			case "dot":
+				svg.select(".shp").interrupt().transition(tr).attr("cx", d.x).attr("cy", d.y);
+				break;
+		}
+	}
+	function updateEntityImmediate(svg, text, d) {
+		switch (d.type) {
+			case "vertex":
+				svg.select(".shp").attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
+				applyCommon(svg, d);
+				break;
+			case "point":
+				svg.select(".shp").attr("cx", d.x).attr("cy", d.y).attr("stroke", d.stroke).attr("fill", d.fill);
+				applyCommon(svg, d);
+				break;
+			case "edge":
+			case "vector":
+			case "segment":
+			case "line":
+				svg.attr("x1", d.x1 ?? d.from?.[0] ?? d.a?.[0]).attr("y1", d.y1 ?? d.from?.[1] ?? d.a?.[1]).attr("x2", d.x2 ?? d.to?.[0] ?? d.b?.[0]).attr("y2", d.y2 ?? d.to?.[1] ?? d.b?.[1]).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				applyCommon(svg, d);
+				break;
+			case "circle":
+				svg.attr("cx", d.cx).attr("cy", d.cy).attr("r", d.r).attr("stroke", d.stroke).attr("fill", d.fill);
+				applyCommon(svg, d);
+				break;
+			case "polygon":
+				svg.attr("points", d.vertices.map((v) => v.join(",")).join(" ")).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				applyCommon(svg, d);
+				break;
+			case "fill":
+				svg.attr("points", d.pts.map((v) => v.join(",")).join(" ")).attr("fill", d.fill ?? "oklch(0.5 0.1 240)");
+				applyCommon(svg, d);
+				break;
+			case "path":
+				svg.attr("d", d.d).attr("transform", `translate(${d.x},${d.y})`).attr("fill", d.fill).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
+				applyCommon(svg, d);
+				break;
+			case "angle": {
+				const [vx, vy] = d.vertex;
+				const [r1x, r1y] = d.ray1;
+				const [r2x, r2y] = d.ray2;
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+				svg.select("path").attr("d", arc.path).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? 1.5);
+				if (text && Math.abs(arc.a2 - arc.a1) > .02) {
+					const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+					text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("fill", d.stroke).text(d.label ?? "");
+				}
+				break;
+			}
+			case "dot":
+				svg.select(".shp").attr("cx", d.x).attr("cy", d.y);
+				break;
+		}
+	}
+
+//#endregion
+//#region vis/frame.ts
+	const defaultAnimation = {
+		duration: 500,
+		enter: {
+			ratio: .6,
+			easing: cubicOut
+		},
+		update: {
+			ratio: 1,
+			easing: cubicOut
+		},
+		exit: {
+			ratio: .4,
+			easing: cubicIn
+		}
+	};
+	var FrameManager = class {
+		constructor(ctx, animation, renderer) {
+			this.store = /* @__PURE__ */ new Map();
+			this.handles = /* @__PURE__ */ new Map();
+			this.current = /* @__PURE__ */ new Set();
+			this.previous = /* @__PURE__ */ new Set();
+			this._uncommitted = false;
+			this.animation = {
+				...defaultAnimation,
+				...animation
+			};
+			this.renderer = renderer ?? new SVGRenderer(ctx);
+		}
+		begin() {
+			if (this._uncommitted) throw new Error("commit() required before begin()");
+			this._uncommitted = true;
+			this.previous = new Set(this.current);
+			this.current.clear();
+			this.renderer.beginFrame();
+		}
+		declare(id, state) {
+			this.current.add(id);
+			const existing = this.store.get(id);
+			if (existing) {
+				Object.assign(existing.desired, state);
+				return existing;
+			}
+			const entity = {
+				id,
+				desired: { ...state },
+				svg: null
+			};
+			this.store.set(id, entity);
+			return entity;
+		}
+		patch(id, partial) {
+			const entity = this.store.get(id);
+			if (!entity) throw new Error(`Entity not found: ${id}`);
+			Object.assign(entity.desired, partial);
+		}
+		commit(opts) {
+			if (!this._uncommitted) throw new Error("begin() required before commit()");
+			this._uncommitted = false;
+			if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
+				this._commitStatic();
+				this.renderer.commitFrame({ animate: false });
+				return;
+			}
+			const dur = opts?.ms ?? this.animation.duration;
+			const enterTr = transition().duration(dur * this.animation.enter.ratio).ease(this.animation.enter.easing);
+			const updateTr = transition().duration(dur * this.animation.update.ratio).ease(this.animation.update.easing);
+			transition().duration(dur * this.animation.exit.ratio).ease(this.animation.exit.easing);
+			for (const id of this.previous) if (!this.current.has(id)) {
+				this.handles.get(id)?.remove();
+				this.store.delete(id);
+				this.handles.delete(id);
+			}
+			for (const id of this.current) if (!this.previous.has(id)) {
+				const e = this.store.get(id);
+				const h = this.renderer.create(id, e.desired);
+				this.handles.set(id, h);
+				e.svg = h.svg ?? null;
+				const to = e.desired.opacity ?? 1;
+				h.svg?.attr?.("opacity", 0)?.transition?.(enterTr)?.attr?.("opacity", to);
+			}
+			for (const id of this.current) if (this.previous.has(id)) {
+				const e = this.store.get(id);
+				this.handles.get(id)?.update(e.desired, {
+					animate: true,
+					transition: updateTr
+				});
+			}
+			for (const id of this.previous) if (!this.current.has(id)) {}
+			this.renderer.commitFrame({
+				animate: true,
+				ms: dur
+			});
+		}
+		_commitStatic() {
+			for (const id of this.previous) if (!this.current.has(id)) {
+				this.handles.get(id)?.remove();
+				this.store.delete(id);
+				this.handles.delete(id);
+			}
+			for (const id of this.current) {
+				const e = this.store.get(id);
+				if (!this.previous.has(id)) {
+					const h = this.renderer.create(id, e.desired);
+					this.handles.set(id, h);
+					e.svg = h.svg ?? null;
+				} else this.handles.get(id)?.update(e.desired);
+			}
+		}
+		get entities() {
+			return this.store;
+		}
+		get frameIds() {
+			return this.current;
+		}
+	};
+
+//#endregion
+//#region vis/stage.ts
 	const _stages = /* @__PURE__ */ new Map();
 	let _observer = null;
 	function stage(selector, opts = {}) {
-		const { width = 780, height = 460, margin = 48, geom, ms = 600, theme = "warm" } = opts;
-		injectCSS();
+		const { width = 780, height = 460, margin = 48, geom, theme = "warm", animation, renderer } = opts;
 		const prev = _stages.get(selector);
 		if (prev) prev[Symbol.dispose]();
 		const ctx = create(selector, {
@@ -5641,6 +6093,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			margin,
 			geom
 		});
+		const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
 		const _theme = resolveTheme(theme);
 		const p = { ...ctx.palette };
 		if (_theme.palette) {
@@ -5657,73 +6110,55 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				};
 			}
 		}
-		const _els = /* @__PURE__ */ new Map();
-		const _tags = [];
-		let _dirty = false, _drawing = false;
-		function schedule() {
-			if (_dirty || _drawing) return;
-			_dirty = true;
-			queueMicrotask(() => {
-				if (!_dirty) return;
-				_dirty = false;
-				draw();
-			});
-		}
-		const elements = createElements(ctx, p, schedule, _els);
-		function tag(target, html) {
-			if ("_id" in target) {
-				const t = createBoundTag(ctx.callout, target, html);
-				schedule();
-				return t;
-			}
-			const t = createStandaloneTag(ctx.callout, target.pos(), html);
-			_tags.push(t);
-			schedule();
-			return t;
-		}
-		const { axes, _axes } = createAxes(ctx.stage.bg, p, (pos, html) => {
-			const t = createStandaloneTag(ctx.callout, pos, html);
-			_tags.push(t);
-			return t;
-		}, schedule);
-		let _first = true;
-		function draw(dur) {
-			_dirty = false;
-			_drawing = true;
-			const duration = dur ?? ms;
-			const fn = () => {
-				for (const el of _els.values()) el._draw();
-				for (const t of _tags) t._draw();
-				for (const a of _axes) a();
-			};
-			if (_first) {
-				ctx.show(fn, duration);
-				_first = false;
-			} else ctx.flow(fn, duration);
-			_drawing = false;
-		}
-		function animate(count, stepFn, opts = {}) {
-			const { container = ".vis-stepper:not(.vis-init)", labels = [], texts = [], panel, start = 0 } = opts;
-			let ct = typeof container === "string" ? document.querySelector(container) : container;
-			if (!ct) {
-				ct = document.createElement("div");
-				ct.className = "vis-stepper vis-init";
-				const stageEl = document.querySelector(selector);
-				if (stageEl?.parentNode) stageEl.parentNode.insertBefore(ct, stageEl);
-			}
-			return steps(count, {
-				container: ct.className ? `.${ct.className.split(" ").join(".")}` : container,
-				labels,
-				start,
-				draw: (s) => {
-					if (panel) {
-						const el = typeof panel === "string" ? document.querySelector(panel) : panel;
-						if (el && texts[s] !== void 0) el.innerHTML = texts[s];
-					}
-					stepFn(s);
-					draw();
+		const elements = createElements(fm, ctx, p);
+		const { axes } = createAxes(ctx.stage.bg, p, () => {}, () => {});
+		function steps(defs, opts) {
+			const { start = 0 } = opts ?? {};
+			const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
+			let current = -1;
+			let busy = false;
+			const listeners = [];
+			function go(i) {
+				if (i === current || busy || i < 0 || i >= normalized.length) return;
+				busy = true;
+				try {
+					fm.begin();
+					normalized[i].frame(api);
+					fm.commit();
+					current = i;
+				} finally {
+					busy = false;
 				}
+				listeners.forEach((fn) => fn(i));
+			}
+			go(start);
+			return {
+				go,
+				get current() {
+					return current;
+				},
+				onChange(fn) {
+					listeners.push(fn);
+					return () => {
+						const idx = listeners.indexOf(fn);
+						if (idx >= 0) listeners.splice(idx, 1);
+					};
+				},
+				destroy() {
+					listeners.length = 0;
+				}
+			};
+		}
+		function frame(frameFn, opts) {
+			return new Promise((resolve) => {
+				fm.begin();
+				frameFn(api);
+				fm.commit({ ms: opts?.ms });
+				setTimeout(resolve, opts?.ms ?? 500);
 			});
+		}
+		async function play(fns, opts) {
+			for (const fn of fns) await frame(fn, opts);
 		}
 		const api = {
 			ctx,
@@ -5733,18 +6168,14 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			dot: elements.dot,
 			zone: elements.zone,
 			arrow: elements.arrow,
-			line: elements.line,
 			path: elements.path,
-			tag,
+			tag: elements.tag,
 			axes,
-			draw,
-			animate,
+			steps,
+			frame,
+			play,
+			frames: fm,
 			theme: _theme,
-			raw: {
-				show: ctx.show,
-				flow: ctx.flow,
-				render: ctx.render
-			},
 			math: void 0,
 			graph: void 0,
 			layout: void 0,
@@ -5766,10 +6197,17 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			});
 		}
 		_stages.set(selector, api);
-		api.math = createMathRenderer(api);
-		api.graph = createGraph(api);
+		api.math = createMathRenderer(fm, ctx, p);
+		api.graph = createGraph(fm, ctx, p);
 		api.layout = createLayout(width, height, margin);
 		return api;
+	}
+	/** 3D stage (placeholder — requires three.js renderer) */
+	function stage3D(selector, opts) {
+		return stage(selector, {
+			...opts,
+			renderer: opts.renderer
+		});
 	}
 
 //#endregion
@@ -5778,7 +6216,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
+exports.FrameManager = FrameManager;
 exports.MARKER = MARKER;
+exports.SVGRenderer = SVGRenderer;
 exports.TOKENS = TOKENS;
 exports.alpha = alpha;
 exports.block = block;
@@ -5804,13 +6244,12 @@ exports.katexify = katexify;
 exports.lBend = lBend;
 exports.len = len;
 exports.markerTip = markerTip;
-exports.pages = pages;
 exports.palette = palette;
 exports.pipeline = pipeline;
 exports.resolveTheme = resolveTheme;
 exports.stage = stage;
+exports.stage3D = stage3D;
 exports.stepper = stepper;
-exports.steps = steps;
 exports.svgLabel = svgLabel;
 exports.themes = themes;
 return exports;

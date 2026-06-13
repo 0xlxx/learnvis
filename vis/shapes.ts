@@ -11,7 +11,7 @@ interface Nd {
   nW?: number; nH?: number; w?: number; h?: number; r?: number;
 }
 
-interface Rect {
+export interface Rect {
   x: number; y: number; w: number; h: number; rx?: number;
 }
 
