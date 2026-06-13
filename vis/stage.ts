@@ -147,6 +147,10 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     math: undefined,
     graph: undefined,
     layout: undefined,
+    [Symbol.dispose]() {
+      ctx.svg.remove();
+      ctx.root.selectAll('*').remove();
+    },
   };
   api.math = createMathRenderer(api as unknown as AgentStage);
   api.graph = createGraph(api as unknown as AgentStage);

@@ -2,19 +2,28 @@
 
 ## 入口
 
-```js
-const s = LearnVis.stage('#selector', {
-  width: 780,    // SVG viewBox 宽度
-  height: 460,   // SVG viewBox 高度
-  margin: 48,    // 内边距（影响 create() 但不影响 stage()）
-  ms: 600,       // 默认动画时长
-  theme: 'warm', // 主题：warm | cool | dark | paper | vivid | soft
-})
+```ts
+// TypeScript — using 自动清理
+function demo() {
+  using s = LearnVis.stage('#app', { theme: 'warm' });
+  // 作用域退出 → SVG 自动移除
+}
 ```
 
-- 返回 `AgentStage` 对象，包含所有高阶 API
-- `s.ctx` — 低层 create 上下文
-- `s.palette` — 调色板 `{ primary: {fg,bg,a()}, accent, danger, ... }`
+```js
+// JavaScript / HTML inline
+const s = LearnVis.stage('#selector', {
+  width: 780, height: 460,
+  margin: 48, ms: 500,
+  theme: 'warm', // warm | cool | dark | paper | vivid | soft
+});
+// 手动清理: s[Symbol.dispose]()
+```
+
+- `AgentStage` 实现 `Disposable`，支持 `using` 声明
+- `[Symbol.dispose]()` 移除 SVG 及所有 DOM 子节点
+- `s.ctx` — 低层上下文（不推荐 agent 直接使用，用高阶 API）
+- `s.palette` — 调色板 `{ primary, accent, danger, warning, info, success, dim, muted }`，每个有 `.fg` / `.bg` / `.a(pct)` 
 - `s.theme` — 当前主题元数据
 
 ## animate — 步骤动画
@@ -45,6 +54,6 @@ s.draw(500)  // 手动触发渲染，通常不需要（自动 microtask）
 ## 自动渲染
 
 `stage()` 创建的元素自动通过 microtask 批量渲染：
-- 首次调用 `show()` — 全清重绘
-- 后续调用 `flow()` — 平滑过渡，保留 data-id
+- 首次调用 `show(300)` — 全清重绘
+- 后续调用 `flow(500)` — 平滑过渡，保留 data-id 做插值
 - `.to()` `.offset()` `.text()` 等操作自动触发 schedule → draw

@@ -80,7 +80,7 @@ git diff HEAD -- vis/
 
 | Date       | Changes                                              |
 |------------|------------------------------------------------------|
-| 2026-06-13 | Initial structure: 6 api-* refs, SKILL.md, GENERATION.md |
+| 2026-06-13 | Added `using` syntax support, `AgentStage extends Disposable`, polyfill |
 
 ---
 

@@ -5743,13 +5743,22 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			},
 			math: void 0,
 			graph: void 0,
-			layout: void 0
+			layout: void 0,
+			[Symbol.dispose]() {
+				ctx.svg.remove();
+				ctx.root.selectAll("*").remove();
+			}
 		};
 		api.math = createMathRenderer(api);
 		api.graph = createGraph(api);
 		api.layout = createLayout(width, height, margin);
 		return api;
 	}
+
+//#endregion
+//#region vis/index.ts
+	if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispose");
+	if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
 exports.MARKER = MARKER;

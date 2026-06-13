@@ -50,12 +50,14 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 | 签名 | 说明 |
 |------|------|
-| `LearnVis.stage('#sel',{width,height,theme,ms})` | 入口 |
+| `LearnVis.stage('#sel',{width,height,theme,ms})` | 入口。支持 `using` 自动清理 |
 | `s.animate(n, stepFn, {labels,texts,panel})` | 步骤动画 |
 | `s.draw(ms?)` | 手动渲染（通常自动） |
 | `s.layout.hsplit([0.3,0.7])` / `.vsplit()` / `.grid(2,2)` | 画布分割 |
 
 **主题：** `stage({theme:'warm'|'cool'|'dark'|'paper'|'vivid'|'soft'})`
+
+**using 清理（仅 TS）：** `using s = LearnVis.stage('#sel',{...})` → 作用域退出自动移除 SVG
 
 > 详见 `references/api-controlflow.md`
 

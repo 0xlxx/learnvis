@@ -86,7 +86,7 @@ export interface StageCtx {
 }
 
 // ── Agent Stage (high-level) ──
-export interface AgentStage {
+export interface AgentStage extends Disposable {
   ctx: StageCtx;
   palette: Palette;
   stage: { bg: S; nodes: S; edges: S; overlay: S };

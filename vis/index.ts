@@ -1,3 +1,6 @@
+if (typeof Symbol.dispose === 'undefined') (Symbol as unknown as Record<string, symbol>).dispose = Symbol('Symbol.dispose');
+if (typeof Symbol.asyncDispose === 'undefined') (Symbol as unknown as Record<string, symbol>).asyncDispose = Symbol('Symbol.asyncDispose');
+
 export { TOKENS, alpha, palette } from './tokens';
 export { len, exitPt, entryPt, getBounds, distribute, centerIn } from './geometry';
 export { halo, svgLabel, defineArrows, createCanvas, domLabel, MARKER, markerTip } from './primitives';
