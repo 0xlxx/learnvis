@@ -4685,7 +4685,7 @@ function createAxes(bg, p, tagFn, schedule) {
 
 //#endregion
 //#region vis/mixins.ts
-function resolveColor$1(p, c) {
+function resolveColor(p, c) {
 	if (!c) return {
 		stroke: p.primary.fg,
 		fill: p.primary.bg
@@ -4704,7 +4704,7 @@ function patch(eid, fm, props) {
 	fm.patch(eid, props);
 }
 const mixColor = (eid, fm, p) => ({ color(c) {
-	const r = resolveColor$1(p, c);
+	const r = resolveColor(p, c);
 	patch(eid, fm, {
 		stroke: r.stroke,
 		fill: r.fill
@@ -4712,7 +4712,7 @@ const mixColor = (eid, fm, p) => ({ color(c) {
 	return this;
 } });
 const mixStroke = (eid, fm, p) => ({ color(c) {
-	patch(eid, fm, { stroke: resolveColor$1(p, c).stroke });
+	patch(eid, fm, { stroke: resolveColor(p, c).stroke });
 	return this;
 } });
 const mixStrokeW = (eid, fm) => ({ strokeW(n) {
@@ -4720,11 +4720,18 @@ const mixStrokeW = (eid, fm) => ({ strokeW(n) {
 	return this;
 } });
 const mixFill = (eid, fm, p) => ({ fill(c) {
-	patch(eid, fm, { fill: resolveColor$1(p, c).fill });
+	patch(eid, fm, { fill: resolveColor(p, c).fill });
 	return this;
 } });
 const mixOpacity = (eid, fm) => ({ opacity(v) {
 	patch(eid, fm, { opacity: v });
+	return this;
+} });
+const mixSize = (eid, fm) => ({ size(n) {
+	patch(eid, fm, {
+		r: n,
+		pathSize: n
+	});
 	return this;
 } });
 const mixDashed = (eid, fm) => ({ dashed(d = "5 4") {
@@ -4799,21 +4806,6 @@ function applyTransform(type, eid, fm, getKey, a, b, c) {
 
 //#endregion
 //#region vis/math.ts
-function resolveColor(p, c) {
-	if (!c) return {
-		stroke: p.primary.fg,
-		fill: p.primary.bg
-	};
-	const col = p[c];
-	if (col) return {
-		stroke: col.fg,
-		fill: col.bg
-	};
-	return {
-		stroke: c,
-		fill: c
-	};
-}
 const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
 function createMathRenderer(fm, ctx, palette) {
 	const p = palette;
@@ -4842,10 +4834,7 @@ function createMathRenderer(fm, ctx, palette) {
 				labelPlace: opts.labelPlace,
 				labelGap: opts.labelGap
 			}),
-			size(r) {
-				fm.patch(eid, { r });
-				return this;
-			},
+			...mixSize(eid, fm),
 			...mixFill(eid, fm, p),
 			...mixOpacity(eid, fm)
 		};
@@ -4985,9 +4974,7 @@ function createMathRenderer(fm, ctx, palette) {
 				fm.patch(eid, { stroke: resolveColor(p, c).stroke });
 				return this;
 			},
-			size(n) {
-				return this;
-			}
+			...mixSize(eid, fm)
 		};
 	}
 	function angle(id, vertex, ray1, ray2, opts = {}) {
@@ -5130,10 +5117,7 @@ function createMathRenderer(fm, ctx, palette) {
 		});
 		return {
 			...mixStroke(eid, fm, p),
-			size(n) {
-				fm.patch(eid, { pathSize: n });
-				return this;
-			},
+			...mixSize(eid, fm),
 			...mixFill(eid, fm, p),
 			...mixOpacity(eid, fm)
 		};
@@ -5159,10 +5143,7 @@ function createMathRenderer(fm, ctx, palette) {
 		});
 		return {
 			...mixStroke(eid, fm, p),
-			size(n) {
-				fm.patch(eid, { pathSize: n });
-				return this;
-			},
+			...mixSize(eid, fm),
 			...mixFill(eid, fm, p),
 			...mixOpacity(eid, fm)
 		};
@@ -5279,6 +5260,64 @@ function createMathRenderer(fm, ctx, palette) {
 			}
 		};
 	}
+	function coords(id, origin, opts = {}) {
+		const ox = origin[0], oy = origin[1];
+		const xLen = opts.xLen ?? 300, yLen = opts.yLen ?? 200;
+		const xd = opts.xDomain ?? [0, 10], yd = opts.yDomain ?? [-5, 5];
+		const sx = (x) => ox + (x - xd[0]) / (xd[1] - xd[0]) * xLen;
+		const sy = (y) => oy - (y - yd[0]) / (yd[1] - yd[0]) * yLen;
+		return {
+			axes(aOpts = {}) {
+				axes(id + "-ax", origin, {
+					xLen,
+					yLen,
+					xLabel: opts.xLabel,
+					yLabel: opts.yLabel,
+					color: aOpts.color,
+					strokeW: aOpts.strokeW
+				});
+			},
+			grid(gOpts = {}) {
+				grid(id + "-g", origin, {
+					width: xLen,
+					height: yLen,
+					spacing: gOpts.spacing ?? 40,
+					color: gOpts.color
+				});
+			},
+			fn(fid, f, fOpts = {}) {
+				return fn(fid, f, {
+					domain: fOpts.domain ?? xd,
+					range: fOpts.range,
+					x: ox,
+					y: oy,
+					width: xLen,
+					height: yLen,
+					color: fOpts.color,
+					label: fOpts.label,
+					samples: fOpts.samples,
+					strokeW: fOpts.strokeW,
+					dash: fOpts.dash,
+					opacity: fOpts.opacity
+				});
+			},
+			fillFn(fid, f, fOpts = {}) {
+				return fillFn(fid, f, {
+					domain: xd,
+					x: ox,
+					y: oy,
+					width: xLen,
+					height: yLen,
+					color: fOpts.color,
+					opacity: fOpts.opacity,
+					baseline: fOpts.baseline
+				});
+			},
+			point(pid, x, y, pOpts = {}) {
+				return point(pid, [sx(x), sy(y)], pOpts);
+			}
+		};
+	}
 	return {
 		point,
 		vector,
@@ -5290,6 +5329,7 @@ function createMathRenderer(fm, ctx, palette) {
 		projection,
 		fill,
 		fillFn,
+		coords,
 		fn,
 		grid,
 		axes,

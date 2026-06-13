@@ -126,10 +126,8 @@ var cells = [
 
   /* ── FN ── */
   { name: 'fn · sin', render: function(s) {
-    s.math.axes('ax', [40,100], { xLen:200, yLen:80, xLabel:'x', yLabel:'y', color:'dim' });
-    s.math.fn('sin', function(x) { return Math.sin(x) * 1.5; }, {
-      domain: [0, 2*Math.PI], x:40, y:100, width:200, height:80,
-    }).color('primary');
+    var cs = s.math.coords('cs', [40,100], { xLen:200, yLen:80, xDomain:[0,2*Math.PI], yDomain:[-1.5,1.5], xLabel:'x', yLabel:'y' });
+    cs.axes(); cs.fn('sin', function(x){return Math.sin(x)*1.5}).color('primary');
   }},
 
   /* ── FN · parabola ── */

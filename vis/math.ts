@@ -5,7 +5,7 @@ import type { Vec2, Palette, Place, D3S, MarkerConfig } from './types';
 import type { FrameManager } from './frame';
 import { offsetLine, markerHalf } from './geometry';
 import { symbol as d3Symbol, symbolCircle, symbolCross, symbolDiamond, symbolSquare, symbolStar, symbolTriangle, symbolWye, arc as d3Arc } from 'd3-shape';
-import { mixColor, mixStroke, mixStrokeW, mixFill, mixOpacity, mixDashed, mixLabel, mixLabelPos, mixTransform } from './mixins';
+import { mixColor, mixStroke, mixStrokeW, mixFill, mixOpacity, mixDashed, mixLabel, mixLabelPos, mixTransform, mixSize, resolveColor } from './mixins';
 
 // ── Marker cache ──
 const _markers: Record<string, string> = {};
@@ -22,12 +22,7 @@ function ensureMarker(svg: D3S, color: string): string {
   return id;
 }
 
-function resolveColor(p: Palette, c?: string) {
-  if (!c) return { stroke: p.primary.fg, fill: p.primary.bg };
-  const col = (p as Record<string, { fg: string; bg: string }>)[c];
-  if (col) return { stroke: col.fg, fill: col.bg };
-  return { stroke: c, fill: c };
-}
+export { resolveColor };
 
 const vecLen = (dx: number, dy: number) => Math.sqrt(dx * dx + dy * dy);
 
@@ -42,6 +37,7 @@ export interface MathAPI {
   projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: { color?: string; dash?: string; pointColor?: string }): MathProjection;
   fill(id: string, pts: Vec2[], opts?: { color?: string; opacity?: number }): MathFill;
   fillFn(id: string, f: (x: number) => number, opts?: { domain?: [number, number]; range?: [number, number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number }): MathFill;
+  coords(id: string, origin: Vec2, opts?: CoordsOpts): MathCoords;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   grid(id: string, origin: Vec2, opts?: GridOpts): void;
   axes(id: string, origin: Vec2, opts?: AxesOpts): void;
@@ -148,6 +144,20 @@ interface FnOpts {
 interface GridOpts { width?: number; height?: number; spacing?: number; color?: string; strokeW?: number }
 interface AxesOpts { xLen?: number; yLen?: number; xLabel?: string; yLabel?: string; color?: string; strokeW?: number }
 
+interface CoordsOpts {
+  xLen?: number; yLen?: number;
+  xDomain?: [number, number]; yDomain?: [number, number];
+  xLabel?: string; yLabel?: string;
+}
+
+export interface MathCoords {
+  axes(opts?: { color?: string; strokeW?: number }): void;
+  grid(opts?: { spacing?: number; color?: string }): void;
+  fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
+  fillFn(id: string, f: (x: number) => number, opts?: { color?: string; opacity?: number; baseline?: number }): MathFill;
+  point(id: string, x: number, y: number, opts?: { color?: string; label?: string; size?: number; fill?: string }): MathPoint;
+}
+
 export function createMathRenderer(fm: FrameManager, ctx: import('./types').StageCtx, palette: Palette): MathAPI {
   const p = palette;
 
@@ -163,7 +173,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       pos() { return [pos[0], pos[1]]; },
       ...mixColor(eid, fm, p),
       ...mixLabelPos(eid, fm, { labelPlace: opts.labelPlace, labelGap: opts.labelGap }),
-      size(r: number) { fm.patch(eid, { r }); return this; },
+      ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
     };
@@ -265,7 +275,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     ];
     const ptsStr = pts.map(p => p.join(',')).join(' ');
     fm.declare(eid, { type: 'path' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
-    return { color(c: string) { fm.patch(eid, { stroke: resolveColor(p, c).stroke }); return this; }, size(n: number) { return this; } };
+    return { color(c: string) { fm.patch(eid, { stroke: resolveColor(p, c).stroke }); return this; }, ...mixSize(eid, fm) };
   }
 
   function angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts: { color?: string; fill?: string; label?: string; size?: number } = {}): MathAngle {
@@ -366,7 +376,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eid, { type: 'path', d, x: pos[0], y: pos[1], stroke: r.stroke, fill: rf, strokeW: 1.2 });
     return {
       ...mixStroke(eid, fm, p),
-      size(n: number) { fm.patch(eid, { pathSize: n }); return this; },
+      ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
     };
@@ -380,7 +390,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     fm.declare(eid, { type: 'path', d: `${a}`, x: center[0], y: center[1], stroke: r.stroke, fill: rf, strokeW: opts.strokeW ?? 1.2 });
     return {
       ...mixStroke(eid, fm, p),
-      size(n: number) { fm.patch(eid, { pathSize: n }); return this; },
+      ...mixSize(eid, fm),
       ...mixFill(eid, fm, p),
       ...mixOpacity(eid, fm),
     };
@@ -451,7 +461,32 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     };
   }
 
-  return { point, vector, segment, circle, polygon, angle, rightAngle, projection, fill, fillFn, fn, grid, axes, rect, ngon, ellipse, symbol, arc };
+  function coords(id: string, origin: Vec2, opts: CoordsOpts = {}): MathCoords {
+    const ox = origin[0], oy = origin[1];
+    const xLen = opts.xLen ?? 300, yLen = opts.yLen ?? 200;
+    const xd = opts.xDomain ?? [0, 10], yd = opts.yDomain ?? [-5, 5];
+    const sx = (x: number) => ox + ((x - xd[0]) / (xd[1] - xd[0])) * xLen;
+    const sy = (y: number) => oy - ((y - yd[0]) / (yd[1] - yd[0])) * yLen;
+    return {
+      axes(aOpts = {}) {
+        axes(id + '-ax', origin, { xLen, yLen, xLabel: opts.xLabel, yLabel: opts.yLabel, color: aOpts.color, strokeW: aOpts.strokeW });
+      },
+      grid(gOpts = {}) {
+        grid(id + '-g', origin, { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+      },
+      fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
+        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: ox, y: oy, width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
+      },
+      fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number } = {}) {
+        return fillFn(fid, f, { domain: xd, x: ox, y: oy, width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
+      },
+      point(pid: string, x: number, y: number, pOpts: { color?: string; label?: string; size?: number; fill?: string } = {}) {
+        return point(pid, [sx(x), sy(y)], pOpts);
+      },
+    };
+  }
+
+  return { point, vector, segment, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc };
 }
 
 // Legacy renderer (kept for backward compat — delegates to FrameManager internally)

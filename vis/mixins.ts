@@ -5,9 +5,9 @@
 import type { FrameManager } from './frame';
 import type { Palette, Place } from './types';
 
-// ── Private: shared utilities ──
+// ── Shared utilities ──
 
-function resolveColor(p: Palette, c?: string) {
+export function resolveColor(p: Palette, c?: string) {
   if (!c) return { stroke: p.primary.fg, fill: p.primary.bg };
   const col = (p as Record<string, { fg: string; bg: string }>)[c];
   if (col) return { stroke: col.fg, fill: col.bg };
@@ -46,6 +46,10 @@ export const mixFill = (eid: string, fm: FrameManager, p: Palette) => ({
 
 export const mixOpacity = (eid: string, fm: FrameManager) => ({
   opacity(v: number) { patch(eid, fm, { opacity: v }); return this; },
+});
+
+export const mixSize = (eid: string, fm: FrameManager) => ({
+  size(n: number) { patch(eid, fm, { r: n, pathSize: n }); return this; },
 });
 
 export const mixDashed = (eid: string, fm: FrameManager) => ({
