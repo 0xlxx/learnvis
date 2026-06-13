@@ -9,17 +9,32 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 ## math — 数学原语
 
+所有原语第一个参数为显式 `id`，返回链式 Builder。
+
 | 签名 | 说明 |
 |------|------|
-| `s.math.vector([x1,y1],[x2,y2]).color('primary').label('v⃗')` | 向量（箭头+标记+标签） |
-| `s.math.point([x,y]).color('danger').label('P')` | 标注点 |
-| `s.math.segment(A,B).stroke('dim',1.5).dashed()` | 线段 |
-| `s.math.circle([cx,cy],r).stroke('accent',1.2)` | 圆（默认淡色填充） |
-| `s.math.polygon([A,B,C]).color('primary')` | 多边形（默认淡色填充+描边） |
-| `s.math.angle(vertex,ray1,ray2).color('warning').label('θ')` | 角度弧 |
-| `s.math.grid([ox,oy],{width,height,spacing})` | 坐标网格 |
-| `s.math.axes([ox,oy],{xLen,yLen,xLabel,yLabel})` | 坐标轴（箭头+标记） |
-| `s.math.fn(f,{domain,range,x,y,width,height})` | 函数曲线（自动缩放） |
+| `s.math.point('P',[x,y]).color('danger').label('P').size(6)` | 标注点 |
+| `s.math.vector('v',[x1,y1],[x2,y2]).color('primary').label('v⃗')` | 向量（箭头+标记+标签） |
+| `s.math.segment('AB',A,B).color('dim').dashed('5 3')` | 线段 |
+| `s.math.circle('c',[cx,cy],r).color('accent')` | 圆（默认淡色填充） |
+| `s.math.polygon('tri',[A,B,C]).color('info').opacity(0.6)` | 多边形 |
+| `s.math.rect('box',cx,cy,w,h)` | 矩形（= polygon 糖） |
+| `s.math.ngon('hex',cx,cy,r,6)` | 正 n 边形 |
+| `s.math.ellipse('e',cx,cy,rx,ry)` | 椭圆（= polygon 糖） |
+| `s.math.angle('θ',vertex,ray1,ray2).color('warning').label('45°')` | 角度弧（纯描边，无填充） |
+| `s.math.rightAngle('R',vertex,ray1,ray2,{size:10}).color('danger')` | 直角标记 L 型 |
+| `s.math.grid('g',[ox,oy],{width,height,spacing})` | 坐标网格 |
+| `s.math.axes('ax',[ox,oy],{xLen,yLen,xLabel,yLabel})` | 坐标轴（箭头+标记） |
+| `s.math.fn('sin',f,{domain,range,x,y,width,height}).color('primary')` | 函数曲线（自动缩放） |
+| `s.math.symbol('s',[x,y],{type:'star',size:12,color:'danger'})` | d3 symbol（7 种） |
+| `s.math.arc('a',[cx,cy],{outerR,startAngle,endAngle})` | d3 arc（扇形/环形） |
+| `s.math.projection('p',pt,lineFrom,lineTo).color('danger')` | 垂足（自动计算+虚线+垂足点） |
+| `s.math.fill('f',pts,{color:'info',opacity:0.3})` | 填充多边形 |
+| `s.math.fillFn('area',f,{domain,range,x,y,width,height,color,baseline})` | 函数定积分填充 |
+
+**通用链式方法**（组合自 mixins）：`.color()` `.label()` `.opacity()` `.strokeW()` `.dashed()` `.fill()`
+
+**变换方法**（vector/polygon）：`.rotate(deg,cx,cy)` `.scale(s)` `.translate(dx,dy)` — 纯数学修改坐标
 
 > 详见 `references/api-math.md`
 
@@ -38,9 +53,9 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 | 签名 | 说明 |
 |------|------|
 | `s.zone(x,y,w,h,label,color)` | 彩色区域 |
-| `s.dot(x,y).label(t).color(c).to([x,y])` | 可移动点（自动插值） |
-| `s.arrow(from,[dx,dy]).color(c).offset([dx,dy])` | 向量箭头 |
-| `s.tag(target,html).above(gap).color(c).text(t)` | 绑定标签（自动跟随目标） |
+| `s.dot(x,y).label(t).color(c).to([x,y])` | 可移动点 |
+| `s.arrow(from,[dx,dy]).color(c)` | 向量箭头 |
+| `s.tag(target,html).above(gap).color(c)` | 绑定标签 |
 | `s.line(x1,y1,x2,y2).stroke(c,w).dash(v)` | 直线 |
 | `s.path([[x,y],...],{stroke,dash})` | 路径折线 |
 
@@ -50,14 +65,13 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 | 签名 | 说明 |
 |------|------|
-| `LearnVis.stage('#sel',{width,height,theme,ms})` | 入口。支持 `using` 自动清理 |
-| `s.animate(n, stepFn, {labels,texts,panel})` | 步骤动画 |
-| `s.draw(ms?)` | 手动渲染（通常自动） |
-| `s.layout.hsplit([0.3,0.7])` / `.vsplit()` / `.grid(2,2)` | 画布分割 |
+| `LearnVis.stage('#sel',{width,height,theme})` | 入口 |
+| `s.steps([{label,frame(s){...}}])` | 声明式步骤动画 |
+| `s.frame(s => { ... })` | 单帧渲染 |
+| `s.play(frames, opts?)` | 程序式动画 |
+| `LearnVis.stepper(container, labels, onChange)` | 独立步骤控件 |
 
 **主题：** `stage({theme:'warm'|'cool'|'dark'|'paper'|'vivid'|'soft'})`
-
-**using 清理（仅 TS）：** `using s = LearnVis.stage('#sel',{...})` → 作用域退出自动移除 SVG
 
 > 详见 `references/api-controlflow.md`
 
@@ -65,12 +79,23 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 | 签名 | 说明 |
 |------|------|
-| `LearnVis.create('#sel',{width,height})` | 低层入口 |
-| `ctx.render(()=>{...})` | 统一渲染（首次show，后续flow） |
-| `ctx.node({id,x,y},{stroke,fill,text})` | 节点 |
-| `ctx.edge(from,to,{stroke,strokeW,dash})` | 边 |
-| `ctx.block({x,y,w,h,rx},{label,fill,stroke})` | 矩形块 |
-| `ctx.compound({x,y,w,h,rx},{label,emph})` | 复合节点 |
-| `ctx.callout({x,y},html,{place,gap,style})` | DOM标签 |
+| `LearnVis.create('#sel',{width,height})` | 低层入口（FrameManager） |
 
 > 详见 `references/api-atomic.md`
+
+## 架构
+
+- **FrameManager** — ECS 风格声明式管线：`begin() → declare() → commit()`
+- **mixins** — 可组合 Builder 特征工厂（`mixColor/mixStrokeW/mixOpacity/...`）
+- **Renderer** — 策略模式，SVGRenderer 为默认实现
+- **EntityId** — 模板字面量类型：`point:A`, `vector:v`, `angle:θ`, `fill:area`
+- **纯数学变换** — `.rotate()/.scale()/.translate()` 修改坐标，不用 SVG transform
+
+## 构建
+
+```
+npm run build    # IIFE (dist/learnvis.js) + ESM (dist/learnvis.mjs) + .d.ts
+npm test         # vitest, 130 tests
+```
+
+**CLI：** `cat data.json \| npx tsx cli.ts --svg > out.svg`

@@ -1,96 +1,193 @@
 # math — 数学原语
 
-所有数学原语共享链式 API：`.color(c)` `.stroke(c,w)` `.fill(c)` `.dashed(d)` `.opacity(v)` `.label(t)` `.remove()`
+所有数学原语第一个参数为显式 `id`，返回链式 Builder。共享混入方法来自 `vis/mixins.ts`。
+
+**通用链式方法**：`.color(c)` `.strokeW(n)` `.fill(c)` `.dashed(d)` `.opacity(v)` `.label(t)`
+**变换**（vector/polygon）：`.rotate(deg,cx,cy)` `.scale(s)` `.translate(dx,dy)` — 纯数学修改坐标
 
 ## vector
 
 ```js
-s.math.vector([x1,y1], [x2,y2]).color('primary').label('v⃗')
+s.math.vector('v', [x1,y1], [x2,y2]).color('primary').label('v⃗')
 ```
 
-- 默认：primary 色，strokeW 2，classic 实心箭头 marker
-- 标签：midpoint，垂直偏移，italic serif 字体
-- 支线：raw line 精确坐标，不经过 exitPt 偏移
-- 重绘时 remove() 防重叠
+- 默认：primary 色，strokeW 1.6，classic 实心箭头 marker
+- 起点偏移 4px（point radius），终点偏移 4px + marker height
+- 变换修改 from/to 坐标
+- EntityId: `vector:v`
 
 ## point
 
 ```js
-s.math.point([x,y]).color('danger').label('P')
+s.math.point('P', [x,y]).color('danger').label('P').size(6)
 ```
 
 - 默认：filled circle (r=4)，primary 色填充
-- 链式可用 `.fill('#fff')` 做空心点
+- `.fill(c)` 改填充色，`.opacity(v)` 改透明度
+- EntityId: `point:P`
 
 ## segment
 
 ```js
-s.math.segment([x1,y1], [x2,y2]).stroke('dim', 1.5).dashed('5 4')
+s.math.segment('AB', [x1,y1], [x2,y2]).color('dim').dashed('5 3')
 ```
 
 - 默认：dim 灰色，strokeW 1.5
-- raw line，不经过 exitPt
+- raw line，不经过偏移
+- EntityId: `segment:AB`
 
 ## circle
 
 ```js
-s.math.circle([cx,cy], r).stroke('accent', 1.2)
+s.math.circle('c', [cx,cy], r).color('accent')
 ```
 
 - 默认：accent 色描边 (1.2)，淡色填充 `accent.a(8)`
 - `.fill('none')` 去填充
+- EntityId: `circle:c`
 
 ## polygon
 
 ```js
-s.math.polygon([[x1,y1],[x2,y2],[x3,y3]]).color('primary')
+s.math.polygon('tri', [[x1,y1],[x2,y2],[x3,y3]]).color('info').opacity(0.6)
 ```
 
-- 默认：primary 色描边 (1.5)，淡色填充 `primary.a(10)`
-- `.fill('none')` 仅描边
+- 默认：primary 色描边 (1.5)，淡色填充
+- 变换修改 vertices 坐标
+- EntityId: `polygon:tri`
+
+## rect / ngon / ellipse
+
+```js
+s.math.rect('box', cx, cy, w, h)        // 矩形
+s.math.ngon('hex', cx, cy, r, 6)        // 正六边形
+s.math.ellipse('e', cx, cy, rx, ry)     // 椭圆
+```
+
+- 均为 polygon 的便捷封装，返回 MathPolygon
 
 ## angle
 
 ```js
-s.math.angle([vx,vy], [rx1,ry1], [rx2,ry2]).color('warning').label('θ')
+s.math.angle('θ', vertex, ray1, ray2, { size: 30 }).color('danger').label('45°')
 ```
 
-- 默认：warning 色弧线 (1.0)，淡色填充 `warning.a(15)`
-- 弧线加粗 (`strokeW*1.5`) 的 arc path 在填充上方
-- 标签在弧外侧 16px 处
+- 纯描边弧线（无填充），画在 overlay 层
+- label 在弧外侧 12px 处，角度 < 1.15° 时隐藏
+- 默认 arc radius 30px
+- EntityId: `angle:θ`
+
+## rightAngle
+
+```js
+s.math.rightAngle('R', vertex, ray1, ray2, { size: 10 }).color('danger')
+```
+
+- 直角标记 L 型（polyline，3 点）
+- size 默认 8px
+- EntityId: `angle:R`
+
+## projection
+
+```js
+s.math.projection('p', pt, lineFrom, lineTo).color('danger').dash('4 3')
+```
+
+- 自动计算垂足坐标，绘制虚线段（pt → 垂足）+ 小圆点
+- 创建两个 entity：`segment:p` + `point:p-p`
+- EntityId: `segment:p`, `point:p-p`
+
+## fill
+
+```js
+s.math.fill('f', [[x1,y1],[x2,y2],...], { color: 'info', opacity: 0.3 })
+```
+
+- 填充多边形，无描边
+- opacity 默认 0.25
+- EntityId: `fill:f`
+
+## fillFn — 函数积分
+
+```js
+s.math.fillFn('area', x => Math.sin(x), {
+  domain: [0, Math.PI],   // 积分区间
+  x: 40, y: 150,          // SVG 原点
+  width: 200, height: 130,
+  color: 'accent',
+  baseline: 0,            // 基线 y 值，默认 0（x 轴）
+})
+```
+
+- 计算函数曲线下的填充多边形
+- 配合 `.axes()` + `.fn()` 使用同组 x,y,width,height
+- 填充色为 palette bg（pastel），默认 opacity 0.45
+- EntityId: `fill:area`
 
 ## grid
 
 ```js
-s.math.grid([ox,oy], { width: 400, height: 300, spacing: 40 })
+s.math.grid('g', [ox,oy], { width: 400, height: 300, spacing: 40 })
 ```
 
 - 默认：dim 色，0.3px 线宽
 - 线段范围 `[ox, ox+width]` × `[oy-height, oy]`
+- EntityId: `grid:g`
 
 ## axes
 
 ```js
-s.math.axes([ox,oy], { xLen: 300, yLen: 200, xLabel: 'x', yLabel: 'y' })
+s.math.axes('ax', [ox,oy], { xLen: 300, yLen: 200, xLabel: 'x', yLabel: 'y' })
 ```
 
-- 默认：dim 色 (a=45)，strokeW 1.4，箭头尖端 6px
+- 默认：dim 色，strokeW 1.4，箭头尖端 10px
 - 标记原点小圆
+- EntityId: `axes:ax`
 
 ## fn — 函数曲线
 
 ```js
-s.math.fn(x => Math.sin(x), {
-  domain: [0, 6.28],  // x 数据范围
-  range: [-1, 1],     // y 数据范围（自动推断）
-  x: 60, y: 180,      // SVG 原点位置
-  width: 240, height: 140,  // SVG 轴尺寸
+s.math.fn('sin', x => Math.sin(x), {
+  domain: [0, 6.28],      // x 数据范围
+  range: [-1, 1],         // y 数据范围（自动推断）
+  x: 60, y: 180,          // SVG 原点位置
+  width: 240, height: 140,
   samples: 200,
 }).color('primary').label('sin(x)')
 ```
 
 - domain 默认 [0, 10]，range 自动采样 200 点取 min/max
-- x, y 默认用 stage 全宽高
+- x, y 默认 stage 宽高
 - 标签在曲线中点上方
-- 重绘时 remove() 防重叠
-- **坐标系对齐**：配合 `s.math.grid()` + `s.math.axes()` 使用同一组 x,y,width,height
+- 坐标系对齐：配合 `grid()` + `axes()` 使用同一组 x,y,width,height
+- EntityId: `fn:sin`
+
+## symbol
+
+```js
+s.math.symbol('s', [130,100], { type: 'star', size: 12, color: 'danger', fill: 'warning' })
+```
+
+- 7 种类型：circle/cross/diamond/square/star/triangle/wye
+- 基于 d3-shape `d3Symbol`
+- EntityId: `path:s`
+
+## arc
+
+```js
+s.math.arc('a', [cx,cy], {
+  innerR: 30, outerR: 60,
+  startAngle: 0, endAngle: Math.PI,
+  color: 'primary', fill: 'primary'
+})
+```
+
+- 基于 d3-shape `d3Arc`
+- innerR=0 为扇形，innerR>0 为环形
+- EntityId: `path:a`
+
+## 颜色
+
+预设调色板：`primary` / `danger` / `warning` / `success` / `info` / `accent` / `dim`
+
+每个颜色解构成 `{ stroke: oklch(低L), fill: oklch(高L) }` 用于描边和填充。
