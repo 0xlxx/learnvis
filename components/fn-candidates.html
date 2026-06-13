@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>fn Curve — Style Candidates</title>
+  <link rel="stylesheet" href="../theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1.5rem}
+    section{margin-bottom:2rem}
+    section h2{font-size:0.9rem;margin:0 0 6px}
+    section .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:8px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center}
+    .card .name{font-size:0.7rem;color:var(--text-dim);margin-bottom:4px}
+    .card .stage{width:200px;height:140px;display:block}
+  </style>
+</head>
+<body>
+
+<h1>fn Curve — Style Candidates</h1>
+<p class="sub">Pick stroke width, dash, label position</p>
+
+<div id="sections"></div>
+
+<script src="../dist/learnvis.js"></script>
+<script>
+const fn = x => 20 + Math.sin(x * 2) * 40 + Math.cos(x * 0.7) * 20;
+const domain = [0, 6];
+const range = [-40, 100];
+const BOX = { x: 20, y: 130, width: 160, height: 110 };
+
+const sections = [
+  {
+    name: 'Stroke width',
+    desc: '1.0 / 1.5 / 2.0 / 3.0',
+    candidates: [
+      { label:'1.0', draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.0); }},
+      { label:'1.5', draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5); }},
+      { label:'2.0', draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',2.0); }},
+      { label:'3.0', draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',3.0); }},
+    ]
+  },
+  {
+    name: 'Dash style',
+    desc: 'solid / dashed / dotted / dash-dot',
+    candidates: [
+      { label:'solid',   draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5); }},
+      { label:'dashed',  draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5).dashed('6 4'); }},
+      { label:'dotted',  draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.2).dashed('1 6'); }},
+      { label:'dash-dot',draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5).dashed('10 4 2 4'); }},
+    ]
+  },
+  {
+    name: 'Label position',
+    desc: 'above / below / none',
+    candidates: [
+      { label:'above', draw(s){ s.math.fn(fn,{domain,range,...BOX}).color('primary').label('f(x)'); }},
+      { label:'below', draw(s){ s.math.fn(x=>Math.sin(x*3)*40+60,{domain,range:[0,100],...BOX}).stroke('#888',1.5).label('g(x)','below'); }},
+      { label:'none',  draw(s){ s.math.fn(fn,{domain,range,...BOX}).color('primary'); }},
+    ]
+  },
+  {
+    name: 'Opacity',
+    desc: '1.0 / 0.6 / 0.3 / 0.1',
+    candidates: [
+      { label:'full',   draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5); }},
+      { label:'0.6',    draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5).opacity(0.6); }},
+      { label:'0.3',    draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5).opacity(0.3); }},
+      { label:'0.1',    draw(s){ s.math.fn(fn,{domain,range,...BOX}).stroke('#555',1.5).opacity(0.1); }},
+    ]
+  },
+  {
+    name: 'With grid + axes',
+    desc: 'raw / with grid / grid+axes / axes only',
+    candidates: [
+      { label:'raw',       draw(s){ s.math.fn(fn,{domain,range,...BOX}).color('primary'); }},
+      { label:'+grid',     draw(s){ s.math.grid([20,130],{width:160,height:110,spacing:40}); s.math.fn(fn,{domain,range,...BOX}).color('primary'); }},
+      { label:'+axes',     draw(s){ s.math.axes([20,130],{xLen:160,yLen:110}); s.math.fn(fn,{domain,range,...BOX}).color('primary'); }},
+      { label:'grid+axes', draw(s){
+        s.math.grid([20,120],{width:160,height:90,spacing:40});
+        s.math.axes([20,120],{xLen:160,yLen:90});
+        s.math.fn(fn,{domain,range,...BOX}).color('primary');
+      }},
+    ]
+  },
+  {
+    name: 'Multi-function overlay',
+    desc: 'one / two / three curves',
+    candidates: [
+      { label:'one',  draw(s){ s.math.fn(fn,{domain,range,...BOX}).color('primary'); }},
+      { label:'two',  draw(s){
+        s.math.fn(fn,{domain,range,...BOX}).color('primary');
+        s.math.fn(x=>80+Math.sin(x*4)*30,{domain,range,...BOX}).color('accent');
+      }},
+      { label:'three', draw(s){
+        s.math.fn(fn,{domain,range,...BOX}).color('primary');
+        s.math.fn(x=>80+Math.sin(x*4)*30,{domain,range,...BOX}).color('accent');
+        s.math.fn(x=>40+Math.cos(x*3)*25,{domain,range,...BOX}).stroke('#999',1.2).dashed();
+      }},
+    ]
+  },
+];
+
+const container = document.getElementById('sections');
+let stageId = 0;
+sections.forEach(sec => {
+  const el = document.createElement('section');
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="row" id="r${stageId}"></div>`;
+  container.appendChild(el);
+
+  const row = document.getElementById('r' + stageId);
+  sec.candidates.forEach((c, j) => {
+    const id = 'st' + stageId + '_' + j;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `<div class="name">${c.label}</div><div class="stage" id="${id}"></div>`;
+    row.appendChild(card);
+
+    const s = LearnVis.stage('#' + id, { width: 200, height: 140, theme: 'warm' });
+    c.draw(s);
+  });
+  stageId++;
+});
+</script>
+</body>
+</html>

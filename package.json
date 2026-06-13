@@ -1,12 +1,21 @@
 {
-  "name": "vis",
+  "name": "learnvis",
   "version": "3.0.0",
-  "description": "D3 visualization primitives for ELK layered algorithm lessons",
+  "description": "D3 visualization primitives + agent-friendly API for algorithm lessons",
   "type": "module",
   "scripts": {
-    "build": "tsdown && mv dist/vis.iife.js dist/vis.js"
+    "build": "tsdown && mv dist/learnvis.iife.js dist/learnvis.js",
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
-    "tsdown": "latest"
+    "@types/d3": "^7.4.3",
+    "tsdown": "latest",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
+  },
+  "dependencies": {
+    "d3": "^7.9.0"
   }
 }

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Theme Candidates — learnvis</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1.5rem}
+    .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;max-width:1100px}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 12px}
+    .card h2{font-size:0.9rem;margin:0 0 2px}
+    .card .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:6px}
+    .card svg{width:100%;display:block}
+  </style>
+</head>
+<body>
+
+<h1>Theme Candidates</h1>
+<p class="sub">6 color palettes — pick 3–4 to integrate into <code>stage({ theme })</code></p>
+
+<div class="grid" id="grid"></div>
+
+<script src="dist/learnvis.js"></script>
+<script>
+const themes = [
+  {
+    name: 'warm',
+    desc: '暖色调 · 教学友好 · 琥珀+青',
+    colors: {
+      primary:  { fg:'oklch(0.55 0.20 55)',  bg:'oklch(0.88 0.08 55)' },
+      accent:   { fg:'oklch(0.57 0.15 180)', bg:'oklch(0.88 0.06 180)' },
+      danger:   { fg:'oklch(0.48 0.18 22)',  bg:'oklch(0.88 0.04 22)' },
+      warning:  { fg:'oklch(0.58 0.20 85)',  bg:'oklch(0.90 0.08 85)' },
+      info:     { fg:'oklch(0.50 0.12 240)', bg:'oklch(0.88 0.04 240)' },
+      dim:      { fg:'oklch(0.50 0.02 60)',  bg:'oklch(0.90 0.01 75)' },
+    }
+  },
+  {
+    name: 'cool',
+    desc: '冷色调 · 科技感 · 蓝+薄荷',
+    colors: {
+      primary:  { fg:'oklch(0.52 0.14 250)', bg:'oklch(0.88 0.05 250)' },
+      accent:   { fg:'oklch(0.55 0.11 160)', bg:'oklch(0.88 0.05 160)' },
+      danger:   { fg:'oklch(0.50 0.16 10)',  bg:'oklch(0.88 0.04 10)' },
+      warning:  { fg:'oklch(0.58 0.18 90)',  bg:'oklch(0.90 0.06 90)' },
+      info:     { fg:'oklch(0.48 0.10 250)', bg:'oklch(0.88 0.04 250)' },
+      dim:      { fg:'oklch(0.50 0.02 250)', bg:'oklch(0.90 0.01 250)' },
+    }
+  },
+  {
+    name: 'dark',
+    desc: '暗色 · 终端风 · 亮色前景',
+    bg:   'oklch(0.18 0.01 260)',
+    colors: {
+      primary:  { fg:'oklch(0.72 0.16 65)',  bg:'oklch(0.28 0.05 65)' },
+      accent:   { fg:'oklch(0.68 0.13 155)', bg:'oklch(0.24 0.05 155)' },
+      danger:   { fg:'oklch(0.62 0.16 25)',  bg:'oklch(0.24 0.04 25)' },
+      warning:  { fg:'oklch(0.72 0.18 85)',  bg:'oklch(0.26 0.05 85)' },
+      info:     { fg:'oklch(0.62 0.12 240)', bg:'oklch(0.24 0.04 240)' },
+      dim:      { fg:'oklch(0.50 0.03 260)', bg:'oklch(0.22 0.01 260)' },
+    }
+  },
+  {
+    name: 'paper',
+    desc: '学术风 · 极简 · 墨色+白',
+    colors: {
+      primary:  { fg:'oklch(0.38 0.03 60)',  bg:'oklch(0.92 0.01 80)' },
+      accent:   { fg:'oklch(0.42 0.06 150)', bg:'oklch(0.90 0.02 150)' },
+      danger:   { fg:'oklch(0.35 0.06 20)',  bg:'oklch(0.90 0.02 20)' },
+      warning:  { fg:'oklch(0.45 0.08 80)',  bg:'oklch(0.92 0.02 80)' },
+      info:     { fg:'oklch(0.40 0.06 240)', bg:'oklch(0.90 0.02 240)' },
+      dim:      { fg:'oklch(0.45 0.01 80)',  bg:'oklch(0.94 0.01 80)' },
+    }
+  },
+  {
+    name: 'vivid',
+    desc: '高饱和 · 演示/演讲 · 亮色',
+    colors: {
+      primary:  { fg:'oklch(0.62 0.22 68)',  bg:'oklch(0.88 0.10 68)' },
+      accent:   { fg:'oklch(0.58 0.18 180)', bg:'oklch(0.86 0.08 180)' },
+      danger:   { fg:'oklch(0.55 0.22 22)',  bg:'oklch(0.86 0.08 22)' },
+      warning:  { fg:'oklch(0.65 0.24 85)',  bg:'oklch(0.90 0.10 85)' },
+      info:     { fg:'oklch(0.52 0.16 250)', bg:'oklch(0.86 0.06 250)' },
+      dim:      { fg:'oklch(0.52 0.03 80)',  bg:'oklch(0.90 0.01 80)' },
+    }
+  },
+  {
+    name: 'soft',
+    desc: '低对比 · 柔和 · 灰绿基调',
+    colors: {
+      primary:  { fg:'oklch(0.50 0.06 140)', bg:'oklch(0.90 0.02 140)' },
+      accent:   { fg:'oklch(0.48 0.05 200)', bg:'oklch(0.90 0.02 200)' },
+      danger:   { fg:'oklch(0.42 0.08 30)',  bg:'oklch(0.88 0.02 30)' },
+      warning:  { fg:'oklch(0.50 0.08 90)',  bg:'oklch(0.90 0.03 90)' },
+      info:     { fg:'oklch(0.45 0.05 240)', bg:'oklch(0.90 0.02 240)' },
+      dim:      { fg:'oklch(0.48 0.02 100)', bg:'oklch(0.92 0.01 100)' },
+    }
+  },
+];
+
+const L = 80;
+const names = ['primary','accent','danger','warning','info','dim'];
+
+const grid = document.getElementById('grid');
+
+themes.forEach(t => {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `<h2>${t.name}</h2><div class="desc">${t.desc}</div><div id="st-${t.name}"></div>`;
+  if (t.bg) {
+    card.style.background = t.bg;
+    card.style.borderColor = 'oklch(0.30 0.01 260)';
+    card.style.color = 'oklch(0.85 0.01 260)';
+  }
+  grid.appendChild(card);
+
+  const W = 320, H = names.length * 42 + 10;
+  const s = LearnVis.stage('#st-' + t.name, { width: W, height: H, ms: 0 });
+
+  names.forEach((c, i) => {
+    const y = 24 + i * 42;
+    const col = t.colors[c];
+    s.dot(16, y).fill(col.bg).stroke(col.fg, 1.5).size(0);
+    s.arrow({ _id: 'a'+i, pos: () => ({ x: 16, y }) }, [L, 0]).stroke(col.fg, 2);
+    s.tag({ pos: () => ({ x: 120, y }) }, c).right(4).size(10);
+  });
+  s.draw();
+});
+</script>
+</body>
+</html>

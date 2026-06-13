@@ -1,16 +1,13 @@
 import { defineConfig } from 'tsdown';
 
 export default defineConfig({
-  entry: { 'vis': 'vis/index.js' },
+  entry: { 'learnvis': 'vis/index.ts' },
   format: ['iife'],
-  globalName: 'Vis',
-  platform: 'browser',
+  globalName: 'LearnVis',
   outDir: 'dist',
-  deps: {
-    neverBundle: ['d3'],
-  },
   target: 'es2020',
   clean: true,
   minify: false,
   sourcemap: false,
+  deps: { alwaysBundle: ['d3'] },
 });

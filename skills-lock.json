@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "d3-viz": {
+      "source": "chrisvoncsefalvay/claude-d3js-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "f16b782976ac2df47f91839385b4458944d90f23f109ff32a8f450bbdaf6431d"
+    }
+  }
+}

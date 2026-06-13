@@ -19,11 +19,10 @@
 
 <div id="d3-stage"></div>
 
-<script src="https://d3js.org/d3.v7.min.js"></script>
-<script src="dist/vis.js"></script>
+<script src="dist/learnvis.js"></script>
 <script>
 const W = 780, H = 400;
-const ctx = Vis.create('#d3-stage', { width: W, height: H, margin: 48 });
+const ctx = LearnVis.create('#d3-stage', { width: W, height: H, margin: 48 });
 const { palette, show, node, edge, group, callout } = ctx;
 const p = palette;
 

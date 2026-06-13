@@ -1,0 +1,185 @@
+// vis/elements.ts — dot, zone, arrow, line, path builders
+import type { El, Point, Rect, Delta, SemColor } from './types';
+import type { Selection } from 'd3';
+
+let _counter = 0;
+const autoId = () => `a${_counter++}`;
+
+interface Ctx {
+  node(n: { id: string; x: number; y: number }, o?: Record<string, unknown>): unknown;
+  block(r: Rect, o?: Record<string, unknown>): unknown;
+  dummy(n: { id: string; x: number; y: number }, o?: Record<string, unknown>): unknown;
+  edge(from: { id: string; x: number; y: number }, to: { id: string; x: number; y: number }, o?: Record<string, unknown>): unknown;
+  stage: { edges: Selection<any, any, any, any> };
+}
+
+interface InternalEl extends El {
+  _type: string;
+  _opts: Record<string, unknown>;
+  _text: string;
+  _rect: Rect | null;
+  _from: El | null;
+  _delta: Delta | null;
+  _to: Point | null;
+  _labelEl: { _draw(at?: Point): void } | undefined;
+  _draw(): void;
+  rectDef(rx: number, ry: number, rw: number, rh: number, rrx?: number): InternalEl;
+}
+
+const xy = (a: number | [number, number], b?: number): Point =>
+  Array.isArray(a) ? { x: a[0], y: a[1] } : { x: a, y: b! };
+
+export interface ElementsAPI {
+  dot(x: number | [number, number], y?: number): El;
+  zone(x: number, y: number, w: number, h: number, label: string, color: string): El;
+  arrow(from: El, dx: number | [number, number], dy?: number): El;
+  line(x1: number | [number, number], y1: number | [number, number], x2?: number, y2?: number): El;
+  path(pts: [number, number][], opts?: { stroke?: string; dash?: string }): El[];
+}
+
+export function createElements(
+  ctx: Ctx, p: Record<string, SemColor>, schedule: () => void, _els: Map<string, El>,
+): ElementsAPI {
+  function resolve(c: string) {
+    const col = p[c];
+    return col && col.fg ? col : null;
+  }
+
+  function makeEl(type: string, px: number, py: number): InternalEl {
+    const id = autoId();
+    const self: InternalEl = {
+      _id: id, _type: type, _x: px, _y: py,
+      _opts: {} as Record<string, unknown>, _text: '', _rect: null, _from: null, _delta: null, _to: null,
+      _labelEl: undefined,
+
+      color(c: string) {
+        const col = resolve(c);
+        if (col) { this._opts.stroke = col.fg; this._opts.fill = col.bg; }
+        else if (typeof c === 'string') this._opts.stroke = c;
+        return this;
+      },
+      fill(v: string)  { this._opts.fill = v; return this; },
+      stroke(v: string, w?: number) { this._opts.stroke = v; if (w != null) this._opts.strokeW = w; return this; },
+      size(s: number)  { this._opts.textSize = s; return this; },
+      dash(v: string)  { this._opts.dash = v; return this; },
+      label(t: string) { this._text = t; this._opts.text = t; return this; },
+
+      to(nx: number | [number, number], ny?: number) {
+        const p = xy(nx, ny);
+        this._x = p.x; this._y = p.y;
+        schedule();
+        return this;
+      },
+      pos(): Point { return { x: this._x, y: this._y }; },
+
+      from(el: El) { this._from = el; return this; },
+      offset(ox: number | [number, number], oy?: number) {
+        const o = xy(ox, oy);
+        this._delta = { dx: o.x, dy: o.y };
+        schedule();
+        return this;
+      },
+
+      rectDef(rx: number, ry: number, rw: number, rh: number, rrx?: number) {
+        this._rect = { x: rx, y: ry, w: rw, h: rh, rx: rrx ?? 10 };
+        return this;
+      },
+
+      _draw(this: InternalEl) {
+        switch (this._type) {
+          case 'dot': {
+            ctx.node({ id: this._id, x: this._x, y: this._y }, { ...this._opts, text: this._text || '' });
+            break;
+          }
+          case 'rect': {
+            if (!this._rect) break;
+            ctx.block(this._rect, {
+              id: this._id, label: this._text || undefined, labelPos: 'tl',
+              fill: this._opts.fill as string, stroke: (this._opts.stroke as string) || p.dim.fg, strokeW: (this._opts.strokeW as number) || 1.2,
+              textSize: (this._opts.textSize as number) || 11, textFill: (this._opts.textFill as string) || (this._opts.stroke as string) || p.dim.fg,
+            });
+            break;
+          }
+          case 'arrow': {
+            if (!this._from || !this._delta) break;
+            const fp = this._from.pos();
+            const tx = fp.x + this._delta.dx, ty = fp.y + this._delta.dy;
+            const tipId = `${this._id}-tip`;
+            ctx.dummy({ id: tipId, x: tx, y: ty }, {
+              dR: 3.5, fill: (this._opts.fill as string) || p.danger.a(70),
+              stroke: (this._opts.stroke as string) || p.danger.fg, strokeW: 1, text: '', textSize: 0,
+            });
+            ctx.edge(
+              { id: this._from._id, x: fp.x, y: fp.y },
+              { id: tipId, x: tx, y: ty },
+              { stroke: (this._opts.stroke as string) || p.danger.a(65), strokeW: (this._opts.strokeW as number) || 1.4 },
+            );
+            break;
+          }
+          case 'line': {
+            if (!this._to) break;
+            ctx.edge(
+              { id: `${this._id}-a`, x: this._x, y: this._y },
+              { id: `${this._id}-b`, x: this._to.x, y: this._to.y },
+              { stroke: (this._opts.stroke as string) || p.dim.a(50), strokeW: (this._opts.strokeW as number) || 1, dash: (this._opts.dash as string) || '' },
+            );
+            break;
+          }
+        }
+        if (this._labelEl) this._labelEl._draw(this.pos());
+      },
+    } as unknown as InternalEl;
+    _els.set(id, self);
+    schedule();
+    return self;
+  }
+
+  function dot(nx: number | [number, number], ny?: number): El {
+    const pos = xy(nx, ny);
+    const el = makeEl('dot', pos.x, pos.y);
+    el._opts = { fill: p.primary.bg, stroke: p.primary.fg, text: '', textSize: 10 };
+    return el;
+  }
+
+  function zone(x: number, y: number, w: number, h: number, label: string, color: string): El {
+    const col = resolve(color) || p.dim;
+    const el = makeEl('rect', x, y);
+    el._opts = { fill: col.a(5), stroke: col.a(22) };
+    el.rectDef(x, y, w, h, 10);
+    if (label) el._text = label;
+    return el;
+  }
+
+  function arrow(from: El, dx: number | [number, number], dy?: number): El {
+    const o = xy(dx, dy);
+    const el = makeEl('arrow', 0, 0);
+    el._from = from;
+    el._delta = { dx: o.x, dy: o.y };
+    return el;
+  }
+
+  function line(x1: number | [number, number], y1: number | [number, number], x2?: number, y2?: number): El {
+    const a = xy(x1, y1 as number), b = xy(x2 as number, y2 as number);
+    const el = makeEl('line', a.x, a.y);
+    el._to = { x: b.x, y: b.y };
+    return el;
+  }
+
+  function path(pts: [number, number][], opts?: { stroke?: string; dash?: string }): El[] {
+    const dots = pts.map(([px, py]) => {
+      const el = makeEl('dot', px, py);
+      el._opts = { fill: 'var(--bg-node)', stroke: 'var(--text-dim)', strokeW: 0.8, text: '', textSize: 0 };
+      return el;
+    });
+    ctx.stage.edges.append('polyline')
+      .attr('points', pts.map(p => p.join(',')).join(' '))
+      .attr('fill', 'none')
+      .attr('stroke', opts?.stroke || p.dim.a(25))
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', opts?.dash || '5 4')
+      .attr('stroke-linecap', 'round');
+    return dots;
+  }
+
+  return { dot, zone, arrow, line, path };
+}

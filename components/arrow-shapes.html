@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Arrow Shape Candidates</title>
+  <style>
+    *{box-sizing:border-box} body{background:#f5f5f5;color:#333;font-family:system-ui;margin:0;padding:2rem}
+    h1{font-size:1.2rem;margin:0 0 1.5rem}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:12px;text-align:center;width:200px;cursor:pointer}
+    .card:hover,.card.sel{border-color:#2563eb;box-shadow:0 0 0 2px #2563eb}
+    .card .name{font-size:.75rem;font-weight:600;margin-bottom:6px}
+    .card .path{font-size:.6rem;color:#999;font-family:monospace;margin-bottom:8px;word-break:break-all}
+    .card svg{display:block;width:180px;height:60px;margin:0 auto;background:#fafbfc}
+  </style>
+</head>
+<body>
+
+<h1>Arrow Shape Candidates — Raw SVG (no marker)</h1>
+
+<div class="row" id="grid"></div>
+
+<script>
+// Each candidate: draw the arrow shape directly with <path> at actual size.
+// Then we also show the same shape inside a <marker> applied to a line.
+// viewBox for marker: 0 0 12 10, refX=4
+
+const candidates = [
+  { name: 'A. Sharp triangle',     d: 'M0,1 L12,5 L0,9 Z' },
+  { name: 'B. Q tip rounded',      d: 'M0,1.5 L9.5,3.5 Q12,5 9.5,6.5 L0,8.5 Z' },
+  { name: 'C. C tip rounded',      d: 'M0,1.5 L9,3.5 C11,4.5 12,4.5 12,5 C12,5.5 11,5.5 9,6.5 L0,8.5 Z' },
+  { name: 'D. Base+tip Q',         d: 'M1.5,0.5 Q0,1.5 1.5,2 L9.5,3.5 Q12,5 9.5,6.5 L1.5,8 Q0,8.5 1.5,9.5 Z' },
+  { name: 'E. Proportional',       d: 'M0,2 L8,3 L10,0 L12,5 L10,10 L8,7 L0,8 Z' },
+  { name: 'F. Wider base',         d: 'M0,0 L10,1 L12,5 L10,9 L0,10 Z' },
+];
+
+const grid = document.getElementById('grid');
+const scale = 3, mw = 14; // 3x for visibility
+
+for (const [mi, c] of candidates.entries()) {
+  const card = document.createElement('div'); card.className = 'card';
+  card.onclick = () => { document.querySelectorAll('.card').forEach(el=>el.className='card'); card.className='card sel'; };
+
+  const nm = document.createElement('div'); nm.className = 'name'; nm.textContent = c.name; card.appendChild(nm);
+  const ps = document.createElement('div'); ps.className = 'path'; ps.textContent = c.d; card.appendChild(ps);
+
+  const svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox', `0 0 ${24*scale} ${12*scale}`);
+  svg.setAttribute('width', 24*scale); svg.setAttribute('height', 12*scale);
+  svg.style.overflow = 'visible';
+  svg.style.margin = '4px auto';
+
+  // Draw the raw path at scale
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.setAttribute('transform', `translate(2,2) scale(${scale})`);
+
+  // Outline rectangle of viewBox
+  const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  rect.setAttribute('x','0');rect.setAttribute('y','0');rect.setAttribute('width','12');rect.setAttribute('height','10');
+  rect.setAttribute('fill','none');rect.setAttribute('stroke','#ddd');rect.setAttribute('stroke-width','0.3');
+  g.appendChild(rect);
+
+  // refX line
+  const rfline = document.createElementNS('http://www.w3.org/2000/svg','line');
+  rfline.setAttribute('x1','4');rfline.setAttribute('y1','0');rfline.setAttribute('x2','4');rfline.setAttribute('y2','10');
+  rfline.setAttribute('stroke','#e74c3c');rfline.setAttribute('stroke-width','0.3');rfline.setAttribute('stroke-dasharray','1 1');
+  rfline.setAttribute('opacity','0.6');
+  g.appendChild(rfline);
+
+  // Arrow path
+  const path = document.createElementNS('http://www.w3.org/2000/svg','path');
+  path.setAttribute('d', c.d); path.setAttribute('fill','#555');
+  g.appendChild(path);
+
+  svg.appendChild(g);
+  card.appendChild(svg);
+  grid.appendChild(card);
+}
+</script>
+</body>
+</html>

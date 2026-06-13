@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Graph Animation — learnvis</title>
+  <link rel="stylesheet" href="../theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1.5rem}
+    section{margin-bottom:2rem}
+    section h2{font-size:0.9rem;margin:0 0 6px}
+    .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:8px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+    .card .name{font-size:0.7rem;color:var(--text-dim);margin-bottom:6px}
+    .card .stage{width:300px;height:220px;display:block}
+    .stepper{display:flex;gap:4px;margin-top:6px;justify-content:center}
+    .stepper button{font-size:0.65rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
+    .stepper button.active{background:var(--blue-05);border-color:var(--blue)}
+  </style>
+</head>
+<body>
+
+<h1>Graph Animation</h1>
+<p class="sub">Insert / delete vertices with smooth <code>flow()</code> transitions</p>
+
+<div id="sections"></div>
+
+<script src="../dist/learnvis.js"></script>
+<script>
+const sections = [
+  {
+    name: 'Insert vertex (grow)',
+    desc: '3→4→5 vertices. Edges persist, new ones fade in.',
+    stepLabels: ['3 vertices', '+ D', '+ E'],
+    steps: [
+      function draw(s) {
+        const a=s.graph.vertex('A',[60,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[240,120]);
+        s.graph.edge(a,b); s.graph.edge(b,c);
+      },
+      function draw(s) {
+        const a=s.graph.vertex('A',[60,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[240,120]), d=s.graph.vertex('D',[120,40]);
+        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c);
+      },
+      function draw(s) {
+        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), d=s.graph.vertex('D',[110,30]), e=s.graph.vertex('E',[150,190]);
+        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c); s.graph.edge(b,e);
+      },
+    ]
+  },
+  {
+    name: 'Delete vertex (fade out)',
+    desc: '5→4→3 vertices. Removed vertices fade out.',
+    stepLabels: ['5 vertices', '− D', '− A'],
+    steps: [
+      function draw(s) {
+        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), d=s.graph.vertex('D',[100,40]), e=s.graph.vertex('E',[200,190]);
+        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c); s.graph.edge(b,e);
+      },
+      function draw(s) {
+        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), e=s.graph.vertex('E',[200,190]);
+        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,e);
+      },
+      function draw(s) {
+        const b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), e=s.graph.vertex('E',[200,190]);
+        s.graph.edge(b,c); s.graph.edge(b,e);
+      },
+    ]
+  },
+  {
+    name: 'Move vertices (lerp)',
+    desc: 'Same graph, different positions → smooth interpolation.',
+    stepLabels: ['Start', 'Shift', 'Shift more'],
+    steps: [
+      function draw(s) {
+        const a=s.graph.vertex('A',[60,60]), b=s.graph.vertex('B',[240,60]), c=s.graph.vertex('C',[60,180]), d=s.graph.vertex('D',[240,180]);
+        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+      },
+      function draw(s) {
+        const a=s.graph.vertex('A',[150,60]), b=s.graph.vertex('B',[60,120]), c=s.graph.vertex('C',[240,120]), d=s.graph.vertex('D',[150,180]);
+        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+      },
+      function draw(s) {
+        const a=s.graph.vertex('A',[240,60]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[60,120]), d=s.graph.vertex('D',[240,180]);
+        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+      },
+    ]
+  },
+];
+
+const container = document.getElementById('sections');
+sections.forEach((sec, si) => {
+  const el = document.createElement('section');
+  const id = 'st' + si;
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="${id}"></div><div class="stepper" id="sp${si}"></div></div>`;
+  container.appendChild(el);
+
+  const s = LearnVis.stage('#' + id, { width: 300, height: 220, theme: 'warm' });
+  sec.steps[0](s);
+
+  const sp = document.getElementById('sp' + si);
+  const labels = sec.stepLabels || sec.steps.map((_, i) => String(i + 1));
+  for (let i = 0; i < sec.steps.length; i++) {
+    const btn = document.createElement('button');
+    btn.textContent = labels[i];
+    if (i === 0) btn.className = 'active';
+    btn.addEventListener('click', () => {
+      sp.querySelectorAll('button').forEach(b => b.className = '');
+      btn.className = 'active';
+      sec.steps[i](s);
+    });
+    sp.appendChild(btn);
+  }
+});
+</script>
+</body>
+</html>

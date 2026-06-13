@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Axes — learnvis</title>
+  <link rel="stylesheet" href="../theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1rem}
+    #stage{width:100%;max-width:500px;background:var(--card);border:1px solid var(--border);border-radius:10px}
+  </style>
+</head>
+<body>
+
+<h1>Axes</h1>
+<p class="sub">Procedural <code>s.axes()</code></p>
+
+<div id="stage"></div>
+
+<script src="../dist/learnvis.js"></script>
+<script>
+const s = LearnVis.stage('#stage', { width: 500, height: 340 });
+s.axes(60, 280, { xRange: [0, 10], yRange: [0, 10], xLabel: 'x-axis', yLabel: 'y-axis' });
+</script>
+</body>
+</html>

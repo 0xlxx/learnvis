@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gradient Descent — vis.js agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem 2rem 1rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.2rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 0.5rem}
+    #math-panel{min-height:2.2rem;font-size:0.88rem;color:var(--text-body);margin-bottom:0.3rem;font-family:var(--font-mono)}
+    #d3-stage{width:100%;max-width:780px;aspect-ratio:780/460;background:var(--card);border:1px solid var(--border);border-radius:10px}
+  </style>
+</head>
+<body>
+
+<h1>Gradient Descent <span style="font-weight:400;color:var(--text-muted)">θ<sub>k+1</sub> = θ<sub>k</sub> − α∇L</span></h1>
+<p class="sub">No show/flow. No ids. No manual draw(). Labels auto-follow.</p>
+
+<div id="math-panel"></div>
+<div id="d3-stage"></div>
+
+<script src="dist/learnvis.js"></script>
+<script>
+const s = LearnVis.stage('#d3-stage', { width: 780, height: 460, ms: 750 });
+
+// ═══ Background zones ═══
+s.zone(52,  40, 230, 380, 'HIGH LOSS', 'danger');
+s.zone(282, 40, 230, 380, 'MEDIUM',    'warning');
+s.zone(512, 40, 230, 380, 'LOW LOSS',  'success');
+
+// ═══ Descent path ═══
+const pts = [[125,85],[240,145],[365,200],[485,250],[590,295],[670,330]];
+s.path(pts);
+
+// ═══ Ball + arrow + label ═══
+const ball = s.dot(pts[0]).label('θ₀').color('primary');
+const grad = s.arrow(ball, [30, 19]).color('danger');
+const tip  = s.tag(ball, '<b>θ₀</b>').above(16).color('primary');
+
+// ═══ No explicit draw() — auto-draw via microtask ═══
+
+// ═══ Stepper ═══
+const deltas = [[30,19],[24,16],[18,12],[13,8],[7,5],[3,2]];
+const texts = [
+  '<b>θ₀</b>  L=12.40  ∇L=6.2',
+  '<b>θ₁</b>  L= 8.21  ∇L=4.1',
+  '<b>θ₂</b>  L= 4.93  ∇L=2.5',
+  '<b>θ₃</b>  L= 2.47  ∇L=1.6',
+  '<b>θ₄</b>  L= 0.82  ∇L=0.8',
+  '<b>θ₅</b>  L= 0.03  ∇L≈0',
+];
+
+s.animate(6, (i) => {
+  ball.to(pts[i]).label('θ' + i);
+  grad.offset(deltas[i]);
+  tip.text('<b>θ<sub>' + i + '</sub></b>');
+}, {
+  labels: ['θ₀','θ₁','θ₂','θ₃','θ₄','θ₅'],
+  texts,
+  panel: '#math-panel',
+});
+</script>
+</body>
+</html>
