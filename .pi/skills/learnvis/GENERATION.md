@@ -6,8 +6,8 @@ This document tracks how learnvis skills are generated and kept in sync with the
 
 **Generated from source at:**
 
-- **Commit SHA**: manual
-- **Date**: 2026-06-13
+- **Commit SHA**: f7c2606
+- **Date**: 2026-06-14
 - **Source**: `vis/` source modules (index.ts, math.ts, graph.ts, elements.ts, create.ts, stage.ts, layout.ts, primitives.ts, themes.ts, tokens.ts)
 
 ## Structure
