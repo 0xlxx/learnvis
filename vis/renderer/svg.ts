@@ -299,8 +299,8 @@ function drawStaticEntity(ctx: StageCtx, id: string, d: EntityState): E {
     case 'grid': {
       const ox = (d as any).ox as number, oy = (d as any).oy as number, w = (d as any).w as number, h = (d as any).h as number, sp = (d as any).sp as number;
       const g = bg.append('g').attr('data-id', id);
-      for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('data-id', id + '-v' + x).attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy - h).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
-      for (let y = oy; y >= oy - h; y -= sp) g.append('line').attr('data-id', id + '-h' + y).attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
+      for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('data-id', id + '-v' + x).attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
+      for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('data-id', id + '-h' + y).attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
       applyCommon(g, d);
       return g;
     }

@@ -492,7 +492,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         axes(id + '-ax', origin, { xLen, yLen, xLabel: opts.xLabel, yLabel: opts.yLabel, color: aOpts.color, strokeW: aOpts.strokeW });
       },
       grid(gOpts = {}) {
-        grid(id + '-g', origin, { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+        grid(id + '-g', [ox, oy - yLen], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
         return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: ox, y: oy, width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });

@@ -5286,7 +5286,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					});
 				},
 				grid(gOpts = {}) {
-					grid(id + "-g", origin, {
+					grid(id + "-g", [ox, oy - yLen], {
 						width: xLen,
 						height: yLen,
 						spacing: gOpts.spacing ?? 40,
@@ -5881,8 +5881,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			case "grid": {
 				const ox = d.ox, oy = d.oy, w = d.w, h = d.h, sp = d.sp;
 				const g = bg.append("g").attr("data-id", id);
-				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("data-id", id + "-v" + x).attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy - h).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
-				for (let y = oy; y >= oy - h; y -= sp) g.append("line").attr("data-id", id + "-h" + y).attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("data-id", id + "-v" + x).attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
+				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("data-id", id + "-h" + y).attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", d.stroke).attr("stroke-width", d.strokeW ?? .3);
 				applyCommon(g, d);
 				return g;
 			}
