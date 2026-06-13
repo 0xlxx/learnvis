@@ -4531,7 +4531,7 @@ function createMathRenderer(fm, ctx, palette) {
 			label,
 			labelPlace,
 			labelGap,
-			marker
+			_markerCfg: marker
 		});
 		return {
 			...mixStroke(eid, fm, p),

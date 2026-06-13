@@ -94,9 +94,9 @@ layout.port('p', owner, pos) → fm.declare('node:p', { type:'node', shape:'circ
 - [x] **Phase 7**: 更新 layout.ts 用新 entity type
 - [x] **Phase 8**: 添加 mixDirected/mixMarker/mixBend 通用 mixin
 - [x] **Phase 9**: 更新 CLI 用新 entity type
-- [ ] **Phase 10**: CLI 测试方案 + 补充测试
-- [ ] **Phase 11**: vitest 补充测试
-- [ ] **Phase 12**: 构建验证 + 全量测试通过
+- [x] **Phase 10**: CLI 测试方案 + 补充测试（testdata/*.json + run.sh）
+- [x] **Phase 11**: vitest 补充测试（entity.test.ts — 26 tests，5 entity types）
+- [x] **Phase 12**: 构建验证 + 全量测试通过（156 tests, 186 kB）
 
 ## 测试方案
 

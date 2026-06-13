@@ -1,0 +1,7 @@
+{"width":300,"height":200,"elements":[
+  {"type":"vertex","id":"A","x":80,"y":100,"label":"Pipeline"},
+  {"type":"vertex","id":"B","x":160,"y":100,"label":"Stage"},
+  {"type":"vertex","id":"C","x":240,"y":100,"label":"Deploy"},
+  {"type":"edge","from":"A","to":"B","color":"dim","directed":true},
+  {"type":"edge","from":"B","to":"C","color":"dim","directed":true}
+]}

@@ -1,0 +1,14 @@
+{"width":200,"height":200,"elements":[
+  {"type":"point","id":"A","x":60,"y":100,"color":"primary","label":"A","size":6},
+  {"type":"point","id":"B","x":140,"y":60,"color":"danger","label":"B","size":5},
+  {"type":"vector","id":"v","from":[60,100],"to":[180,60],"color":"danger","label":"v"},
+  {"type":"segment","id":"s","a":[60,100],"b":[140,160],"color":"dim","dash":"4 3"},
+  {"type":"circle","id":"c","cx":130,"cy":100,"r":40,"color":"accent"},
+  {"type":"polygon","id":"tri","vertices":[[100,30],[180,160],[20,160]],"color":"info","opacity":0.4},
+  {"type":"angle","id":"a","vertex":[60,120],"ray1":[140,120],"ray2":[110,50],"color":"danger","size":20,"label":"45°"},
+  {"type":"fn","id":"sin","f":"Math.sin(x)","domain":[0,6.28],"x":20,"y":100,"width":160,"height":80,"color":"primary"},
+  {"type":"axes","id":"ax","origin":[40,150],"xLen":140,"yLen":100,"color":"dim"},
+  {"type":"fill","id":"f1","pts":[[60,100],[80,60],[120,180],[160,100]],"color":"accent","opacity":0.2},
+  {"type":"rightAngle","id":"R","vertex":[60,120],"ray1":[100,120],"ray2":[60,80],"size":8,"color":"danger"},
+  {"type":"projection","id":"proj","point":[120,40],"lineFrom":[40,150],"lineTo":[180,80],"color":"danger"}
+]}

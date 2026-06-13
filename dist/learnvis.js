@@ -4535,7 +4535,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				label,
 				labelPlace,
 				labelGap,
-				marker
+				_markerCfg: marker
 			});
 			return {
 				...mixStroke(eid, fm, p),

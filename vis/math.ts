@@ -202,7 +202,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
 
     const mh = markerHalf(marker);
     const a = offsetLine(from, to, 4, 4 + mh, true);
-    fm.declare(eid, { type: 'line', marker: 'arrow', from: [a.x1, a.y1], to: [a.x2, a.y2], stroke, strokeW, dash, label, labelPlace, labelGap, marker });
+    fm.declare(eid, { type: 'line', marker: 'arrow', from: [a.x1, a.y1], to: [a.x2, a.y2], stroke, strokeW, dash, label, labelPlace, labelGap, _markerCfg: marker });
 
     return {
       ...mixStroke(eid, fm, p),
