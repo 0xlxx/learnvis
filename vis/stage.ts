@@ -1,6 +1,6 @@
 // vis/stage.ts — lifecycle: steps, frame, play via FrameManager
 
-import { create } from './create';
+import { bootstrap } from './bootstrap';
 import { resolveTheme } from './themes';
 import { createElements } from './elements';
 import { createAxes } from './axes';
@@ -21,7 +21,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   const prev = _stages.get(selector);
   if (prev) prev[Symbol.dispose]();
 
-  const ctx = create(selector, { width, height, margin, geom });
+  const ctx = bootstrap(selector, { width, height, margin, geom });
   const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
   const _theme = resolveTheme(theme);
   const defaultP: Palette = ctx.palette;

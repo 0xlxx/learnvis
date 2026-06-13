@@ -1709,7 +1709,7 @@ function schedule_default(node, name, id, index, group, timing) {
 	var schedules = node.__transition;
 	if (!schedules) node.__transition = {};
 	else if (id in schedules) return;
-	create$1(node, id, {
+	create(node, id, {
 		name,
 		index,
 		group,
@@ -1738,7 +1738,7 @@ function get(node, id) {
 	if (!schedule || !(schedule = schedule[id])) throw new Error("transition not found");
 	return schedule;
 }
-function create$1(node, id, self) {
+function create(node, id, self) {
 	var schedules = node.__transition, tween;
 	schedules[id] = self;
 	self.timer = timer(schedule, 0, self.time);
@@ -3674,215 +3674,6 @@ const domLabel = (container, anchor, html, opts = {}) => {
 };
 
 //#endregion
-//#region vis/shapes.ts
-/** 绘制节点主体（普通节点矩形，dummy 节点圆形）+ 文本标签 */
-const drawNodeContent = (g, n, { w = 34, h = 26, dR = 8, rx = 5, fill = "var(--bg-node)", stroke = "var(--text-dim)", strokeW = 1.2, text, textSize = 11 } = {}) => {
-	const display = text ?? n.label ?? n.id;
-	if (n.t === "dummy") g.append("circle").attr("class", "shp").attr("cx", n.x).attr("cy", n.y).attr("r", dR).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW);
-	else g.append("rect").attr("class", "shp").attr("x", n.x - w / 2).attr("y", n.y - h / 2).attr("width", w).attr("height", h).attr("rx", rx).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW);
-	if (textSize > 0 && display) g.append("text").attr("x", n.x).attr("y", n.y).attr("text-anchor", "middle").attr("dominant-baseline", "central").style("font-family", "JetBrains Mono,monospace").style("font-size", textSize + "px").style("font-weight", 600).style("fill", "var(--text)").text(display);
-};
-/** 绘制 dummy 节点（圆形 + 可选光晕 + 侧边标签） */
-const drawDummy = (g, n, { dR = 8, pad = 4, fill = "#fff", stroke = "var(--text-dim)", strokeW = 1.2, text, textSize = 12, labelSide = "left", labelGap = 8, halo: showHalo = false, haloFill = alpha("accent", 12), haloStroke = alpha("accent", 22), haloStrokeW = 1.5 } = {}) => {
-	const grp = g.append("g").attr("data-id", n.id || "");
-	if (showHalo) grp.append("circle").attr("class", "h").attr("cx", n.x).attr("cy", n.y).attr("r", dR + pad).attr("fill", haloFill).attr("stroke", haloStroke).attr("stroke-width", haloStrokeW);
-	grp.append("circle").attr("class", "shp").attr("cx", n.x).attr("cy", n.y).attr("r", dR).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW);
-	const display = text ?? n.label ?? n.id;
-	if (textSize > 0 && display) {
-		const dx = labelSide === "left" ? -(dR + labelGap) : labelSide === "right" ? dR + labelGap : 0;
-		svgLabel(grp, n.x + dx, n.y + (labelSide === "left" || labelSide === "right" ? 5 : 0), display, {
-			size: textSize,
-			fill: "var(--text)",
-			weight: 700,
-			anchor: labelSide === "left" ? "end" : labelSide === "right" ? "start" : "middle"
-		});
-	}
-	return grp;
-};
-const block = (g, { x, y, w, h, rx = 10 }, { label, fill = alpha("muted", 10), stroke = "var(--border)", strokeW = 1.5, textSize = 14, textFill = "oklch(0.25 0.02 60)", labelPos = "center", id = "blk" } = {}) => {
-	const did = `block-${id}`;
-	g.selectAll(`[data-id="${did}"]`).remove();
-	g.selectAll(`[data-id="label-block-label-${id}"]`).remove();
-	g.append("rect").attr("data-id", did).attr("x", x).attr("y", y).attr("width", w).attr("height", h).attr("rx", rx).attr("ry", rx).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW);
-	if (label) svgLabel(g, labelPos === "tl" ? x + 14 : x + w / 2, labelPos === "tl" ? y + 22 : y + h / 2 + 6, label, {
-		size: textSize,
-		fill: textFill,
-		weight: 600,
-		anchor: labelPos === "tl" ? "start" : "middle",
-		id: `block-label-${id}`
-	});
-};
-const compoundRect = (g, rect, { fill = "var(--bg-panel)", stroke = "var(--border)", strokeW = 1.5, id = "c", label, emph = false } = {}) => {
-	const rx = rect.rx ?? 10, did = `compound-${id}`;
-	const pSize = 10, pRx = 3, gap = 9;
-	const pColor = emph ? "oklch(0.50 0.12 68)" : "var(--text-dim)";
-	const pOp = emph ? .5 : .35;
-	g.selectAll(`[data-id="${did}"]`).remove();
-	g.append("rect").attr("data-id", did).attr("x", rect.x).attr("y", rect.y).attr("width", rect.w).attr("height", rect.h).attr("rx", rx).attr("ry", rx).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW);
-	if (label) {
-		const lx = rect.x + 14, ly = rect.y + 22;
-		g.selectAll(`[data-id="compound-pill-${id}"]`).remove();
-		g.selectAll(`[data-id="compound-lbl-${id}"]`).remove();
-		g.append("rect").attr("data-id", `compound-pill-${id}`).attr("x", lx).attr("y", ly - pSize / 2).attr("width", pSize).attr("height", pSize).attr("rx", pRx).attr("fill", pColor).attr("opacity", pOp);
-		g.append("text").attr("data-id", `compound-lbl-${id}`).attr("x", lx + pSize + gap).attr("y", ly + .35 * 11).attr("fill", "var(--text-dim)").attr("font-size", 11).attr("font-weight", 500).attr("letter-spacing", "1.5px").style("font-family", "Inter,sans-serif").text(String(label).toUpperCase());
-	}
-};
-const connect = (g, from, to, { dir = "v", color = "var(--text-dim)", strokeW = 2, dash = "", markerUrl, markerFor, id = "cn" } = {}) => {
-	const m = markerUrl || (markerFor ? markerFor(color) : "url(#a)");
-	let x1, y1, x2, y2;
-	if (dir === "v") {
-		x1 = from.x + from.w / 2;
-		y1 = from.y + from.h;
-		x2 = to.x + to.w / 2;
-		y2 = to.y;
-	} else {
-		x1 = from.x + from.w;
-		y1 = from.y + from.h / 2;
-		x2 = to.x;
-		y2 = to.y + to.h / 2;
-	}
-	g.selectAll(`[data-id="${id}"]`).remove();
-	return g.append("line").attr("data-id", id).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", color).attr("stroke-width", strokeW).attr("stroke-dasharray", dash || "none").attr("marker-end", m).style("color", color).attr("stroke-linecap", "round");
-};
-/** 绘制管线（多个方块 + 连接线），竖直排列 */
-const pipeline = (g, x, y, stages, { dir = "v", gap = 16, rx = 12, blockW = 300, blockH = 56, color = "var(--text-dim)", stroke, strokeW, textSize, textFill } = {}) => {
-	let cy = y;
-	const blocks = [];
-	stages.forEach((s, i) => {
-		const w = s.w || blockW, h = s.h || blockH;
-		const rect = {
-			x: x + (blockW - w) / 2,
-			y: cy,
-			w,
-			h,
-			rx
-		};
-		block(g, rect, {
-			label: s.label,
-			fill: s.fill || alpha("muted", 10),
-			stroke: s.stroke || stroke || "var(--border)",
-			strokeW: s.strokeW || strokeW || 1.5,
-			textSize: s.textSize || textSize,
-			textFill: s.textFill || textFill,
-			id: `pipe-${i}`
-		});
-		blocks.push(rect);
-		cy += h + gap;
-	});
-	for (let i = 0; i < blocks.length - 1; i++) connect(g, blocks[i], blocks[i + 1], {
-		dir,
-		color,
-		strokeW: 2,
-		id: `pipe-cn-${i}`
-	});
-	return blocks;
-};
-const group = (g, nodes, { pad = 10, rx = 12, fill = alpha("info", 8), stroke = TOKENS.info, strokeW = 2, dash = "5 3", label, textSize = 12, id = "g" } = {}) => {
-	const b = getBounds(nodes, { pad });
-	if (!b) return;
-	const did = `group-${id}`;
-	g.selectAll(`[data-id="${did}"]`).remove();
-	g.append("rect").attr("data-id", did).attr("x", b.mx).attr("y", b.my).attr("width", b.Mx - b.mx).attr("height", b.My - b.my).attr("rx", rx).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW).attr("stroke-dasharray", dash);
-	if (label) svgLabel(g, b.mx + 14, b.my + 20, label, {
-		size: textSize,
-		fill: stroke,
-		anchor: "start",
-		id: `group-label-${id}`
-	});
-};
-const lBend = (g, from, to, bendX, { stroke = "var(--text-dim)", strokeW = 1.3, dash = "", id, markerFor, markerUrl } = {}) => {
-	const autoId = id || `${from.id || from.x}-${to.id || to.x}`;
-	const d = `M${from.x},${from.y} L${bendX},${from.y} L${bendX},${to.y} L${to.x},${to.y}`;
-	if (markerFor && !markerUrl) markerUrl = markerFor(stroke);
-	g.selectAll(`[data-id="${autoId}"]`).remove();
-	return g.append("path").attr("data-id", autoId).attr("d", d).attr("fill", "none").attr("stroke", stroke).attr("stroke-width", strokeW).attr("stroke-dasharray", dash || "none").attr("marker-end", markerUrl || null).style("color", stroke).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
-};
-const edgeLabel = (g, from, to, t, text, { size = 12, fill = "var(--text)", weight = 600, bgFill = alpha("accent", 18), bgPad = 6, bgWidth, id = "el" } = {}) => {
-	const lx = from.x + (to.x - from.x) * t;
-	const ly = from.y + (to.y - from.y) * t;
-	const tw = bgWidth ?? text.length * size * .6 + bgPad * 2;
-	const did = `elabel-bg-${id}`;
-	g.selectAll(`[data-id="${did}"]`).remove();
-	g.append("rect").attr("data-id", did).attr("x", lx - tw / 2).attr("y", ly - size / 2 - bgPad / 2).attr("width", tw).attr("height", size + bgPad).attr("rx", 4).attr("fill", bgFill);
-	return svgLabel(g, lx, ly + 1, text, {
-		size,
-		fill,
-		weight,
-		id: `elabel-${id}`
-	});
-};
-const boundBox = (g, { mx, my, Mx, My }, { rx = 10, fill = alpha("accent", 8), stroke = TOKENS.accent, strokeW = 2, dash = "5 3", id = "bb" } = {}) => {
-	const did = `bbox-${id}`;
-	g.selectAll(`[data-id="${did}"]`).remove();
-	return g.append("rect").attr("data-id", did).attr("x", mx).attr("y", my).attr("width", Mx - mx).attr("height", My - my).attr("rx", rx).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeW).attr("stroke-dasharray", dash);
-};
-const createLayerGuides = (bg, layers, { x1 = 68, x2, stroke = "oklch(0.60 0.03 75 / 0.35)", strokeWidth = 1, dasharray = "4 6" } = {}) => {
-	const xr = x2 ?? 492;
-	for (let i = 1; i < layers.length; i++) {
-		const y = (layers[i - 1] + layers[i]) / 2;
-		const did = `guide-${i}`;
-		bg.selectAll(`[data-id="${did}"]`).remove();
-		bg.append("line").attr("data-id", did).attr("class", "ly").attr("x1", x1).attr("x2", xr).attr("y1", y).attr("y2", y).attr("stroke", stroke).attr("stroke-width", strokeWidth).attr("stroke-dasharray", dasharray);
-	}
-};
-const crossEdge = (g, { from, to, fromRect, toRect, color = TOKENS.accent, strokeW = 2, dash = "", mode = "split", markerFor, dR = 8, portInset = 26, midOffset = 30, bendInset = 14, portFill, portStroke, id = "ce" }) => {
-	const mk = markerFor ? markerFor(color) : "";
-	const wallR = fromRect.x + fromRect.w, wallL = toRect.x;
-	const ports = {
-		fromExt: {
-			x: wallR,
-			y: from.y
-		},
-		toExt: {
-			x: wallL,
-			y: to.y
-		},
-		fromInt: {
-			x: wallR - portInset,
-			y: from.y
-		},
-		toInt: {
-			x: wallL + portInset,
-			y: to.y
-		}
-	};
-	if (mode === "direct") {
-		const ep = exitPt({
-			...from,
-			t: from.t || "node"
-		}, to.x, to.y, { dR });
-		const ip = entryPt({
-			...to,
-			t: to.t || "node"
-		}, from.x, from.y, {
-			dR,
-			gap: 4
-		});
-		g.append("line").attr("data-id", id).attr("x1", ep.x).attr("y1", ep.y).attr("x2", ip.x).attr("y2", ip.y).attr("stroke", color).attr("stroke-width", strokeW).attr("stroke-dasharray", dash || "none").attr("stroke-linecap", "round").attr("marker-end", mk).style("color", color);
-		return { ports: null };
-	}
-	if (mode === "split") {
-		const pf = portFill || alpha(color, 70), ps = portStroke || color;
-		[ports.fromExt, ports.toExt].forEach((p, i) => g.append("circle").attr("data-id", `${id}-p${i}`).attr("cx", p.x).attr("cy", p.y).attr("r", dR).attr("fill", color).attr("stroke", ps).attr("stroke-width", 1.2));
-		[ports.fromInt, ports.toInt].forEach((p, i) => g.append("circle").attr("data-id", `${id}-p${i + 2}`).attr("cx", p.x).attr("cy", p.y).attr("r", dR).attr("fill", pf).attr("stroke", ps).attr("stroke-width", 1.2));
-	}
-	if (mode === "split" || mode === "restore") {
-		const bx1 = wallR - bendInset, bx2 = wallL + bendInset;
-		const my = (from.y + to.y) / 2;
-		if (mode === "split") {
-			const opt = (sId, dStr) => g.append("path").attr("data-id", sId).attr("fill", "none").attr("stroke", color).attr("stroke-width", strokeW).attr("stroke-dasharray", dStr).attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
-			opt(`${id}-s1`, dash || "3 3").attr("d", `M${from.x},${from.y} L${bx1},${from.y} L${bx1},${ports.fromInt.y} L${ports.fromInt.x},${ports.fromInt.y}`);
-			opt(`${id}-s2`, dash || "5 4").attr("d", `M${ports.fromExt.x},${ports.fromExt.y} L${wallR + midOffset},${ports.fromExt.y} L${wallR + midOffset},${my} L${wallL - midOffset},${my} L${wallL - midOffset},${ports.toExt.y} L${ports.toExt.x},${ports.toExt.y}`).attr("marker-end", mk).style("color", color);
-			opt(`${id}-s3`, dash || "3 3").attr("d", `M${ports.toInt.x},${ports.toInt.y} L${bx2},${ports.toInt.y} L${bx2},${to.y} L${to.x},${to.y}`);
-		} else {
-			const d = `M${from.x},${from.y} L${bx1},${from.y} L${bx1},${my} L${bx2},${my} L${bx2},${to.y} L${to.x},${to.y}`;
-			g.append("path").attr("data-id", id).attr("d", d).attr("fill", "none").attr("stroke", color).attr("stroke-width", strokeW * 1.4).attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", mk).style("color", color);
-		}
-	}
-	return { ports };
-};
-
-//#endregion
 //#region vis/stepper.ts
 /**
 * Create stepper buttons in a container element.
@@ -3932,88 +3723,26 @@ const katexify = (html) => {
 };
 
 //#endregion
-//#region vis/create.ts
-const create = (selector, { width = 560, height = 400, margin = 48, geom: { nW = 34, nH = 26, dR = 8, rx = 5, gap = 4 } = {} } = {}) => {
+//#region vis/bootstrap.ts
+function bootstrap(selector, opts = {}) {
+	const { width = 560, height = 400, margin = 48, geom: gOpts = {} } = opts;
 	const C = createCanvas(selector, width, height, margin);
 	const p = palette();
-	const g = Object.freeze({
-		nW,
-		nH,
-		dR,
-		rx,
-		gap
+	const geom = Object.freeze({
+		nW: 34,
+		nH: 26,
+		dR: 8,
+		rx: 5,
+		gap: 4,
+		...gOpts
 	});
 	const { markerFor } = defineArrows(C.svg, { sw: 2 });
 	const callout = (anchor, html, o = {}) => domLabel(C.root, anchor, html, o);
-	const halo$1 = (cx, cy, o = {}) => halo(C.nG, cx, cy, g.nW, g.nH, g.rx, o);
-	const block$1 = (rect, o) => block(C.bg, rect, o);
-	const compound = (rect, o) => compoundRect(C.bg, rect, o);
-	const pipeline$1 = (x, y, stages, o) => pipeline(C.bg, x, y, stages, o);
-	const group$1 = (nodes, o) => group(C.bg, nodes, o);
-	const crossEdge$1 = (opts) => crossEdge(C.oG, {
-		from: {
-			x: 0,
-			y: 0
-		},
-		to: {
-			x: 0,
-			y: 0
-		},
-		fromRect: {
-			x: 0,
-			y: 0,
-			w: 0,
-			h: 0
-		},
-		toRect: {
-			x: 0,
-			y: 0,
-			w: 0,
-			h: 0
-		},
-		markerFor,
-		dR: g.dR,
-		...opts
-	});
-	const label = (text, { at, ...o } = {}) => svgLabel(C.bg, at?.x ?? 0, at?.y ?? 0, text, o);
-	const bounds = (nodes, o) => getBounds(nodes, {
-		nW: g.nW,
-		nH: g.nH,
-		dR: g.dR,
-		...o
-	});
-	const bbox = (nodes, o = {}) => {
-		const b = getBounds(nodes, {
-			nW: g.nW,
-			nH: g.nH,
-			dR: g.dR
-		});
-		if (!b) return;
-		boundBox(C.oG, b, o);
-		return b;
-	};
-	const layerBg = (layers, { h = 52, bgFill = p.accent.a(12), rx: grx = 8 } = {}) => {
-		layers.forEach((y, i) => C.bg.append("rect").attr("data-id", `ly-${i}`).attr("class", "ly").attr("x", margin).attr("y", y - h / 2).attr("width", width - margin * 2).attr("height", h).attr("fill", bgFill).attr("rx", grx));
-	};
-	const guides = (layers, o = {}) => createLayerGuides(C.bg, layers, {
-		x1: margin + 20,
-		x2: width - margin - 20,
-		...o
-	});
-	const connect$1 = (from, to, o) => connect(C.bg, from, to, {
-		markerFor,
-		...o
-	});
-	const eLabel = (f, t, p, text, o = {}) => edgeLabel(C.eG, f, t, p, text, {
-		...o,
-		id: o.id || "el"
-	});
-	const bboxRect = (b, o = {}) => boundBox(C.oG, b, o);
 	return {
-		svg: C.svg,
 		W: C.W,
 		H: C.H,
 		M: C.M,
+		svg: C.svg,
 		stage: {
 			bg: C.bg,
 			nodes: C.nG,
@@ -4022,34 +3751,11 @@ const create = (selector, { width = 560, height = 400, margin = 48, geom: { nW =
 		},
 		root: C.root,
 		palette: p,
-		geom: g,
-		callout,
-		halo: halo$1,
-		block: block$1,
-		compound,
-		pipeline: pipeline$1,
-		group: group$1,
-		crossEdge: crossEdge$1,
-		label,
-		eLabel,
-		katexify,
-		bbox,
-		bboxRect,
-		bounds,
-		distribute: (count, container, o) => distribute(count, container, {
-			itemW: g.nW,
-			itemH: g.nH,
-			...o
-		}),
-		centerIn,
+		geom,
 		markerFor,
-		layerBg,
-		guides,
-		connect: connect$1,
-		exitPt,
-		entryPt
+		callout
 	};
-};
+}
 
 //#endregion
 //#region vis/themes.ts
@@ -6127,7 +5833,7 @@ function stage(selector, opts = {}) {
 	const { width = 780, height = 460, margin = 48, geom, theme = "warm", animation, renderer } = opts;
 	const prev = _stages.get(selector);
 	if (prev) prev[Symbol.dispose]();
-	const ctx = create(selector, {
+	const ctx = bootstrap(selector, {
 		width,
 		height,
 		margin,
@@ -6256,4 +5962,4 @@ if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispo
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, block, boundBox, centerIn, compoundRect, create, createCanvas, createLayerGuides, crossEdge, defineArrows, distribute, domLabel, drawDummy, drawNodeContent, edgeLabel, entryPt, exitPt, getBounds, group, halo, katexify, lBend, len, markerTip, palette, pipeline, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

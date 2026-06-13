@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { create } from './create';
+import { bootstrap } from './bootstrap';
 import { FrameManager } from './frame';
 import { createElements } from './elements';
 import type { Palette, SemColor } from './types';
@@ -11,14 +11,14 @@ function p(): Record<string, SemColor> {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div></body></html>');
   (global as any).document = dom.window.document;
   (global as any).window = dom.window;
-  const ctx = create('#app', { width: 500, height: 400 });
+  const ctx = bootstrap('#app', { width: 500, height: 400 });
   return ctx.palette as Record<string, SemColor>;
 }
 
 function setupElements() {
   const palette = p();
   const dom = (global as any).document;
-  const ctx = create('#app2', { width: 500, height: 400 });
+  const ctx = bootstrap('#app2', { width: 500, height: 400 });
   const fm = new FrameManager(ctx);
   const elements = createElements(fm, ctx, palette);
   return { fm, elements };

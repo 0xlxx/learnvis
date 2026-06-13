@@ -4,13 +4,13 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import * as d3 from 'd3';
 import { JSDOM } from 'jsdom';
 import { FrameManager } from './frame';
-import { create } from './create';
+import { bootstrap } from './bootstrap';
 
 function setupEnv() {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div></body></html>');
   (global as any).document = dom.window.document;
   (global as any).window = dom.window;
-  const ctx = create('#app', { width: 500, height: 400 });
+  const ctx = bootstrap('#app', { width: 500, height: 400 });
   const fm = new FrameManager(ctx);
   return { ctx, fm };
 }
@@ -192,7 +192,7 @@ describe('FrameManager', () => {
     it('merges custom config', () => {
       const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app2"></div></body></html>');
       (global as any).document = dom.window.document;
-      const ctx2 = create('#app2', { width: 500, height: 400 });
+      const ctx2 = bootstrap('#app2', { width: 500, height: 400 });
       const fm2 = new FrameManager(ctx2, { duration: 1000, enter: { ratio: 0.3, easing: (t: number) => t } });
       expect((fm2 as any).animation.duration).toBe(1000);
       expect((fm2 as any).animation.enter.ratio).toBe(0.3);

@@ -2,7 +2,7 @@
 
 import { describe, it, expect, beforeEach } from 'vitest';
 import { JSDOM } from 'jsdom';
-import { create } from './create';
+import { bootstrap } from './bootstrap';
 import { FrameManager } from './frame';
 import { createMathRenderer } from './math';
 import type { MathAPI } from './math';
@@ -11,7 +11,7 @@ function setupMath(): { math: MathAPI; fm: FrameManager } {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div></body></html>');
   (global as any).document = dom.window.document;
   (global as any).window = dom.window;
-  const ctx = create('#app', { width: 500, height: 400 });
+  const ctx = bootstrap('#app', { width: 500, height: 400 });
   const palette = ctx.palette;
   const fm = new FrameManager(ctx);
   const math = createMathRenderer(fm, ctx, palette);

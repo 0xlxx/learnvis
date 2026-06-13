@@ -61,7 +61,7 @@ declare const palette: () => {
 };
 //#endregion
 //#region vis/geometry.d.ts
-interface Nd$2 {
+interface Nd {
   x: number;
   y: number;
   t?: string;
@@ -71,7 +71,7 @@ interface Nd$2 {
   h?: number;
   r?: number;
 }
-interface Rect$2 {
+interface Rect {
   x: number;
   y: number;
   w: number;
@@ -81,14 +81,14 @@ interface Pt {
   x: number;
   y: number;
 }
-interface Bbox$2 {
+interface Bbox {
   mx: number;
   Mx: number;
   my: number;
   My: number;
 }
 declare const len: (dx: number, dy: number) => number;
-declare const exitPt: (n: Nd$2, tx: number, ty: number, {
+declare const exitPt: (n: Nd, tx: number, ty: number, {
   nW,
   nH,
   dR,
@@ -99,7 +99,7 @@ declare const exitPt: (n: Nd$2, tx: number, ty: number, {
   dR?: number | undefined;
   gap?: number | undefined;
 }) => Pt;
-declare const entryPt: (n: Nd$2, fx: number, fy: number, {
+declare const entryPt: (n: Nd, fx: number, fy: number, {
   nW,
   nH,
   dR,
@@ -110,7 +110,7 @@ declare const entryPt: (n: Nd$2, fx: number, fy: number, {
   dR?: number | undefined;
   gap?: number | undefined;
 }) => Pt;
-declare const getBounds: (nodes: Nd$2[], {
+declare const getBounds: (nodes: Nd[], {
   nW,
   nH,
   dR,
@@ -120,9 +120,9 @@ declare const getBounds: (nodes: Nd$2[], {
   nH?: number | undefined;
   dR?: number | undefined;
   pad?: number | undefined;
-}) => Bbox$2 | null;
-declare const centerIn: (rect: Rect$2) => Pt;
-declare const distribute: (count: number, container: Rect$2, {
+}) => Bbox | null;
+declare const centerIn: (rect: Rect) => Pt;
+declare const distribute: (count: number, container: Rect, {
   dir,
   gap,
   itemW,
@@ -228,316 +228,6 @@ declare const domLabel: <PE extends BaseType, PD>(container: Selection<BaseType,
   style?: Record<string, string>;
 }) => d3.Selection<HTMLDivElement, unknown, null, undefined> | d3.Selection<HTMLDivElement, unknown, PE, PD>;
 //#endregion
-//#region vis/shapes.d.ts
-interface Nd$1 {
-  x: number;
-  y: number;
-  t?: string;
-  id?: string;
-  label?: string;
-  nW?: number;
-  nH?: number;
-  w?: number;
-  h?: number;
-  r?: number;
-}
-interface Rect$1 {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rx?: number;
-}
-interface Bbox$1 {
-  mx: number;
-  Mx: number;
-  my: number;
-  My: number;
-}
-/** 绘制节点主体（普通节点矩形，dummy 节点圆形）+ 文本标签 */
-declare const drawNodeContent: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, n: Nd$1, {
-  w,
-  h,
-  dR,
-  rx,
-  fill,
-  stroke,
-  strokeW,
-  text,
-  textSize
-}?: {
-  w?: number;
-  h?: number;
-  dR?: number;
-  rx?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  text?: string;
-  textSize?: number;
-}) => void;
-/** 绘制 dummy 节点（圆形 + 可选光晕 + 侧边标签） */
-declare const drawDummy: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, n: Nd$1, {
-  dR,
-  pad,
-  fill,
-  stroke,
-  strokeW,
-  text,
-  textSize,
-  labelSide,
-  labelGap,
-  halo: showHalo,
-  haloFill,
-  haloStroke,
-  haloStrokeW
-}?: {
-  dR?: number;
-  pad?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  text?: string;
-  textSize?: number;
-  labelSide?: string;
-  labelGap?: number;
-  halo?: boolean;
-  haloFill?: string;
-  haloStroke?: string;
-  haloStrokeW?: number;
-}) => Selection<SVGGElement, unknown, PE, unknown>;
-declare const block: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, {
-  x,
-  y,
-  w,
-  h,
-  rx
-}: Rect$1, {
-  label,
-  fill,
-  stroke,
-  strokeW,
-  textSize,
-  textFill,
-  labelPos,
-  id
-}?: {
-  label?: string;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  textSize?: number;
-  textFill?: string;
-  labelPos?: string;
-  id?: string;
-}) => void;
-declare const compoundRect: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, rect: Rect$1, {
-  fill,
-  stroke,
-  strokeW,
-  id,
-  label,
-  emph
-}?: {
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  id?: string;
-  label?: string;
-  emph?: boolean;
-}) => void;
-interface StageItem {
-  label: string;
-  w?: number;
-  h?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  textSize?: number;
-  textFill?: string;
-}
-/** 绘制管线（多个方块 + 连接线），竖直排列 */
-declare const pipeline: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, x: number, y: number, stages: StageItem[], {
-  dir,
-  gap,
-  rx,
-  blockW,
-  blockH,
-  color,
-  stroke,
-  strokeW,
-  textSize,
-  textFill
-}?: {
-  dir?: string;
-  gap?: number;
-  rx?: number;
-  blockW?: number;
-  blockH?: number;
-  color?: string;
-  stroke?: string;
-  strokeW?: number;
-  textSize?: number;
-  textFill?: string;
-}) => Rect$1[];
-declare const group: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, nodes: Nd$1[], {
-  pad,
-  rx,
-  fill,
-  stroke,
-  strokeW,
-  dash,
-  label,
-  textSize,
-  id
-}?: {
-  pad?: number;
-  rx?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  dash?: string;
-  label?: string;
-  textSize?: number;
-  id?: string;
-}) => void;
-declare const lBend: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, from: Nd$1, to: Nd$1, bendX: number, {
-  stroke,
-  strokeW,
-  dash,
-  id,
-  markerFor,
-  markerUrl
-}?: {
-  stroke?: string;
-  strokeW?: number;
-  dash?: string;
-  id?: string;
-  markerFor?: (c: string) => string;
-  markerUrl?: string;
-}) => Selection<SVGPathElement, unknown, PE, unknown>;
-declare const edgeLabel: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, from: {
-  x: number;
-  y: number;
-}, to: {
-  x: number;
-  y: number;
-}, t: number, text: string, {
-  size,
-  fill,
-  weight,
-  bgFill,
-  bgPad,
-  bgWidth,
-  id
-}?: {
-  size?: number;
-  fill?: string;
-  weight?: number;
-  bgFill?: string;
-  bgPad?: number;
-  bgWidth?: number;
-  id?: string;
-}) => Selection<SVGTextElement, unknown, PE, unknown>;
-declare const boundBox: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, {
-  mx,
-  my,
-  Mx,
-  My
-}: Bbox$1, {
-  rx,
-  fill,
-  stroke,
-  strokeW,
-  dash,
-  id
-}?: {
-  rx?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  dash?: string;
-  id?: string;
-}) => Selection<SVGRectElement, unknown, PE, unknown>;
-declare const createLayerGuides: <GEl extends BaseType, PE extends BaseType>(bg: Selection<GEl, unknown, PE, unknown>, layers: number[], {
-  x1,
-  x2,
-  stroke,
-  strokeWidth,
-  dasharray
-}?: {
-  x1?: number;
-  x2?: number;
-  stroke?: string;
-  strokeWidth?: number;
-  dasharray?: string;
-}) => void;
-interface CrossEdgeOpts {
-  from: {
-    x: number;
-    y: number;
-    t?: string;
-  };
-  to: {
-    x: number;
-    y: number;
-    t?: string;
-  };
-  fromRect: Rect$1;
-  toRect: Rect$1;
-  color?: string;
-  strokeW?: number;
-  dash?: string;
-  mode?: string;
-  markerFor?: (c: string) => string;
-  dR?: number;
-  portInset?: number;
-  midOffset?: number;
-  bendInset?: number;
-  portFill?: string;
-  portStroke?: string;
-  id?: string;
-}
-declare const crossEdge: <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, {
-  from,
-  to,
-  fromRect,
-  toRect,
-  color,
-  strokeW,
-  dash,
-  mode,
-  markerFor,
-  dR,
-  portInset,
-  midOffset,
-  bendInset,
-  portFill,
-  portStroke,
-  id
-}: CrossEdgeOpts) => {
-  ports: null;
-} | {
-  ports: {
-    fromExt: {
-      x: number;
-      y: number;
-    };
-    toExt: {
-      x: number;
-      y: number;
-    };
-    fromInt: {
-      x: number;
-      y: number;
-    };
-    toInt: {
-      x: number;
-      y: number;
-    };
-  };
-};
-//#endregion
 //#region vis/stepper.d.ts
 /**
  * Create stepper buttons in a container element.
@@ -564,296 +254,36 @@ declare global {
 }
 declare const katexify: (html: string) => string;
 //#endregion
-//#region vis/create.d.ts
-interface Nd {
-  id?: string;
-  x: number;
-  y: number;
-  t?: string;
-  label?: string;
-  nW?: number;
-  nH?: number;
-  w?: number;
-  h?: number;
-  r?: number;
+//#region vis/bootstrap.d.ts
+interface Geom {
+  nW: number;
+  nH: number;
+  dR: number;
+  rx: number;
+  gap: number;
 }
-interface Rect {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rx?: number;
-}
-interface Bbox {
-  mx: number;
-  my: number;
-  Mx: number;
-  My: number;
-}
-interface StageDef {
-  label: string;
-  w?: number;
-  h?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  textSize?: number;
-  textFill?: string;
-}
-declare const create: (selector: string | BaseType, {
-  width,
-  height,
-  margin,
-  geom: {
-    nW,
-    nH,
-    dR,
-    rx,
-    gap
-  }
-}?: {
-  width?: number | undefined;
-  height?: number | undefined;
-  margin?: number | undefined;
-  geom?: {
-    nW?: number | undefined;
-    nH?: number | undefined;
-    dR?: number | undefined;
-    rx?: number | undefined;
-    gap?: number | undefined;
-  } | undefined;
-}) => {
-  svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
+interface StageCtx2 {
   W: number;
   H: number;
   M: number;
+  svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
   stage: {
     bg: d3.Selection<SVGGElement, unknown, null, undefined>;
     nodes: d3.Selection<SVGGElement, unknown, null, undefined>;
     edges: d3.Selection<SVGGElement, unknown, null, undefined>;
     overlay: d3.Selection<SVGGElement, unknown, null, undefined>;
   };
-  root: d3.Selection<d3.BaseType, unknown, null, undefined>;
-  palette: {
-    dim: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    accent: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    danger: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    primary: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    success: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    warning: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    info: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-    muted: {
-      fg: string;
-      bg: string;
-      a: (p: number) => string;
-    };
-  };
-  geom: Readonly<{
-    nW: number;
-    nH: number;
-    dR: number;
-    rx: number;
-    gap: number;
-  }>;
-  callout: (anchor: d3.Selection<BaseType, unknown, null, undefined> | Nd, html: string, o?: Record<string, unknown>) => d3.Selection<HTMLDivElement, unknown, null, undefined>;
-  halo: (cx: number, cy: number, o?: {
-    id?: string;
-  }) => d3.Selection<SVGRectElement, unknown, null, unknown>;
-  block: (rect: Rect, o?: {
-    id?: string;
-    label?: string;
-    fill?: string;
-    stroke?: string;
-    strokeW?: number;
-    textSize?: number;
-    textFill?: string;
-  }) => void;
-  compound: (rect: Rect, o?: {
-    id?: string;
-    label?: string;
-    fill?: string;
-    stroke?: string;
-    strokeW?: number;
-    emph?: boolean;
-  }) => void;
-  pipeline: (x: number, y: number, stages: StageDef[], o?: {
-    dir?: string;
-    gap?: number;
-    rx?: number;
-    blockW?: number;
-    blockH?: number;
-    color?: string;
-    stroke?: string;
-    strokeW?: number;
-    textSize?: number;
-    textFill?: string;
-  }) => Rect$1[];
-  group: (nodes: Nd[], o?: {
-    id?: string;
-    label?: string;
-  }) => void;
-  crossEdge: (opts?: {
-    id?: string;
-    mode?: string;
-    from?: Nd;
-    to?: Nd;
-    fromRect?: Rect;
-    toRect?: Rect;
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    markerFor?: (c: string) => string;
-    dR?: number;
-    portInset?: number;
-    midOffset?: number;
-    bendInset?: number;
-    portFill?: string;
-    portStroke?: string;
-  }) => {
-    ports: null;
-  } | {
-    ports: {
-      fromExt: {
-        x: number;
-        y: number;
-      };
-      toExt: {
-        x: number;
-        y: number;
-      };
-      fromInt: {
-        x: number;
-        y: number;
-      };
-      toInt: {
-        x: number;
-        y: number;
-      };
-    };
-  };
-  label: (text: string, {
-    at,
-    ...o
-  }?: {
-    at?: {
-      x?: number;
-      y?: number;
-    };
-    id?: string;
-    [key: string]: unknown;
-  }) => d3.Selection<SVGTextElement, unknown, null, unknown>;
-  eLabel: (f: Nd, t: Nd, p: number, text: string, o?: {
-    id?: string;
-    size?: number;
-    fill?: string;
-    weight?: number;
-    bgFill?: string;
-    bgPad?: number;
-    bgWidth?: number;
-  }) => d3.Selection<SVGTextElement, unknown, null, unknown>;
-  katexify: (html: string) => string;
-  bbox: (nodes: Nd[], o?: {
-    id?: string;
-  }) => Bbox$2 | undefined;
-  bboxRect: (b: Bbox, o?: {
-    id?: string;
-    rx?: number;
-    fill?: string;
-    stroke?: string;
-    strokeW?: number;
-    dash?: string;
-  }) => d3.Selection<SVGRectElement, unknown, null, unknown>;
-  bounds: (nodes: Nd[], o?: {
-    pad?: number;
-    nW?: number;
-    nH?: number;
-    dR?: number;
-  }) => Bbox | null;
-  distribute: (count: number, container: Rect, o?: {
-    dir?: string;
-    gap?: number;
-    itemW?: number;
-    itemH?: number;
-    align?: string;
-  }) => Pt[];
-  centerIn: (rect: Rect$2) => Pt;
-  markerFor: (color: string) => string;
-  layerBg: (layers: number[], {
-    h,
-    bgFill,
-    rx: grx
-  }?: {
-    h?: number;
-    bgFill?: string;
-    rx?: number;
-  }) => void;
-  guides: (layers: number[], o?: {
-    x1?: number;
-    x2?: number;
-    stroke?: string;
-    strokeWidth?: number;
-    dasharray?: string;
-  }) => void;
-  connect: (from: Rect, to: Rect, o?: {
-    id?: string;
-    dir?: string;
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    markerUrl?: string;
-    markerFor?: (c: string) => string;
-  }) => d3.Selection<SVGLineElement, unknown, null, unknown>;
-  exitPt: (n: Nd$2, tx: number, ty: number, {
-    nW,
-    nH,
-    dR,
-    gap
-  }?: {
-    nW?: number | undefined;
-    nH?: number | undefined;
-    dR?: number | undefined;
-    gap?: number | undefined;
-  }) => Pt;
-  entryPt: (n: Nd$2, fx: number, fy: number, {
-    nW,
-    nH,
-    dR,
-    gap
-  }?: {
-    nW?: number | undefined;
-    nH?: number | undefined;
-    dR?: number | undefined;
-    gap?: number | undefined;
-  }) => Pt;
-};
+  root: d3.Selection<BaseType, unknown, null, undefined>;
+  palette: ReturnType<typeof palette>;
+  geom: Geom;
+  markerFor: (c: string) => string;
+}
+declare function bootstrap(selector: string | BaseType, opts?: {
+  width?: number;
+  height?: number;
+  margin?: number;
+  geom?: Partial<Geom>;
+}): StageCtx2;
 //#endregion
 //#region vis/frame.d.ts
 declare class FrameManager {
@@ -1646,4 +1076,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, block, boundBox, centerIn, compoundRect, create, createCanvas, createLayerGuides, crossEdge, defineArrows, distribute, domLabel, drawDummy, drawNodeContent, edgeLabel, entryPt, exitPt, getBounds, group, halo, katexify, lBend, len, markerTip, palette, pipeline, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
