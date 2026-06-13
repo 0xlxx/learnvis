@@ -1,11 +1,11 @@
 # learnvis Skills
 
-Agent skills for [learnvis](https://github.com/0xlxx/vis.js), a zero-dependency D3+SVG visualization library.
+Agent skills for [learnvis](https://github.com/0xlxx/learnvis), a zero-dependency D3+SVG visualization library.
 
 ## Installation
 
 ```bash
-npx skills add 0xlxx/vis.js
+npx skills add 0xlxx/learnvis
 ```
 
 ## What's Included
@@ -48,7 +48,7 @@ Animate a sorting algorithm with step-through controls
 
 ## Documentation
 
-- [learnvis source](https://github.com/0xlxx/vis.js)
+- [learnvis source](https://github.com/0xlxx/learnvis)
 - [D3.js](https://d3js.org)
 
 ## License
