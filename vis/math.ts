@@ -75,6 +75,7 @@ export interface MathSegment {
   strokeW(n: number): MathSegment;
   dashed(d?: string): MathSegment;
   label(t: string): MathSegment;
+  opacity(v: number): MathSegment;
 }
 
 export interface MathCircle {
@@ -218,6 +219,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixStrokeW(eid, fm),
       ...mixDashed(eid, fm),
       ...mixLabel(eid, fm),
+      ...mixOpacity(eid, fm),
     };
   }
 
@@ -275,7 +277,11 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     ];
     const ptsStr = pts.map(p => p.join(',')).join(' ');
     fm.declare(eid, { type: 'path' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
-    return { color(c: string) { fm.patch(eid, { stroke: resolveColor(p, c).stroke }); return this; }, ...mixSize(eid, fm) };
+    return {
+      ...mixStroke(eid, fm, p),
+      ...mixSize(eid, fm),
+      ...mixOpacity(eid, fm),
+    };
   }
 
   function angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts: { color?: string; fill?: string; label?: string; size?: number } = {}): MathAngle {
@@ -419,10 +425,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const eid: `fill:${string}` = `fill:${id}`;
     const r = resolveColor(p, opts.color);
     fm.declare(eid, { type: 'fill', pts, fill: r.fill, opacity: opts.opacity });
-    return {
-      color(c: string) { fm.patch(eid, { fill: resolveColor(p, c).fill }); return this; },
-      opacity(v: number) { fm.patch(eid, { opacity: v }); return this; },
-    };
+    return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) };
   }
   function fillFn(id: string, f: (x: number) => number, opts: { domain?: [number,number]; range?: [number,number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number } = {}): MathFill {
     const eid = `fill:${id}`;
@@ -455,10 +458,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     pts.push([sx(d1), sy(baseline)]);
 
     fm.declare(eid, { type: 'fill', pts, fill: r.fill, opacity: opts.opacity ?? 0.45 });
-    return {
-      color(c: string) { fm.patch(eid, { fill: resolveColor(p, c).fill }); return this; },
-      opacity(v: number) { fm.patch(eid, { opacity: v }); return this; },
-    };
+    return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) };
   }
 
   function coords(id: string, origin: Vec2, opts: CoordsOpts = {}): MathCoords {

@@ -4898,7 +4898,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				...mixStroke(eid, fm, p),
 				...mixStrokeW(eid, fm),
 				...mixDashed(eid, fm),
-				...mixLabel(eid, fm)
+				...mixLabel(eid, fm),
+				...mixOpacity(eid, fm)
 			};
 		}
 		function circle(id, center, radius, opts = {}) {
@@ -4974,11 +4975,9 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				strokeW: 1.5
 			});
 			return {
-				color(c) {
-					fm.patch(eid, { stroke: resolveColor(p, c).stroke });
-					return this;
-				},
-				...mixSize(eid, fm)
+				...mixStroke(eid, fm, p),
+				...mixSize(eid, fm),
+				...mixOpacity(eid, fm)
 			};
 		}
 		function angle(id, vertex, ray1, ray2, opts = {}) {
@@ -5209,14 +5208,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				opacity: opts.opacity
 			});
 			return {
-				color(c) {
-					fm.patch(eid, { fill: resolveColor(p, c).fill });
-					return this;
-				},
-				opacity(v) {
-					fm.patch(eid, { opacity: v });
-					return this;
-				}
+				...mixFill(eid, fm, p),
+				...mixOpacity(eid, fm)
 			};
 		}
 		function fillFn(id, f, opts = {}) {
@@ -5254,14 +5247,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				opacity: opts.opacity ?? .45
 			});
 			return {
-				color(c) {
-					fm.patch(eid, { fill: resolveColor(p, c).fill });
-					return this;
-				},
-				opacity(v) {
-					fm.patch(eid, { opacity: v });
-					return this;
-				}
+				...mixFill(eid, fm, p),
+				...mixOpacity(eid, fm)
 			};
 		}
 		function coords(id, origin, opts = {}) {
