@@ -5543,7 +5543,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
 		const cwLen = a2 >= a1 ? a2 - a1 : 2 * Math.PI - a1 + a2;
 		const ccwLen = a2 < a1 ? a1 - a2 : a1 + (2 * Math.PI - a2);
-		const sweep = cwLen < ccwLen ? 0 : 1;
+		const sweep = cwLen <= ccwLen ? 1 : 0;
 		const arcLen = sweep === 1 ? cwLen : ccwLen;
 		const ma = sweep === 1 ? a1 + arcLen / 2 : a1 - arcLen / 2;
 		const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
@@ -5724,7 +5724,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 						if (text) text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
 						else {
 							svg.selectAll("text").remove();
-							svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+							svg.append("text").attr("x", vx + lr * Math.cos(ma) - 20).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label).interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma));
 						}
 					} else if (text) text.text("");
 				}

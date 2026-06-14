@@ -37,12 +37,10 @@ function _angleArc(vx: number, vy: number, r1x: number, r1y: number, r2x: number
   let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
   if (a1 < 0) a1 += 2 * Math.PI; if (a2 < 0) a2 += 2 * Math.PI;
   if (Math.abs(a2 - a1) < 0.001) a2 = a1 + 0.02;
-  // cwLen: arc length going CW (sweep=1) from a1 to a2
+  // Shortest path (textbook marker) — sweep based on min arc length
   const cwLen = a2 >= a1 ? a2 - a1 : (2 * Math.PI - a1) + a2;
-  // ccwLen: arc length going CCW (sweep=0) from a1 to a2
   const ccwLen = a2 < a1 ? a1 - a2 : a1 + (2 * Math.PI - a2);
-  // Use longer arc for outward bulge (standard textbook marker)
-  const sweep = cwLen < ccwLen ? 0 : 1;
+  const sweep = cwLen <= ccwLen ? 1 : 0;
   const arcLen = sweep === 1 ? cwLen : ccwLen;
   const ma = sweep === 1 ? a1 + arcLen / 2 : a1 - arcLen / 2;
   const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
@@ -243,10 +241,11 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
             text.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
           } else {
             svg.selectAll('text').remove();
-            svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
+            const nt = svg.append('text').attr('x', vx + lr * Math.cos(ma) - 20).attr('y', vy + lr * Math.sin(ma))
               .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
               .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
               .attr('fill', d.stroke ?? '#000').text(label);
+            nt.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma));
           }
         } else if (text) {
           text.text('');
