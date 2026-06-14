@@ -62,12 +62,12 @@ s.layout.edge('e', 'A-out', 'B-in').directed(true)
 ## layer
 
 ```js
-// 自动分层（最常用）
-for (let i = 0; i < 3; i++) {
-  s.layout.layer(`L${i}`, i, { totalRanks: 3, w: 640 })
+// 自动分层（最常用）：引擎会根据 rankIndex 和 totalRanks 自动计算出精确的 Y 像素坐标
+for (let rankIndex = 0; rankIndex < 3; rankIndex++) {
+  s.layout.layer(`L${rankIndex}`, rankIndex, { totalRanks: 3, w: 640 })
 }
 
-// 手动定位
+// 手动定位（如果不想依靠 rank 自动计算）
 s.layout.layer('L', 0, { y: 50, h: 120, w: 640 })
 ```
 
@@ -94,9 +94,9 @@ s.layout.layer('L', 0, { y: 50, h: 120, w: 640 })
 const s = LearnVis.stage('#stage', { width: 700, height: 440 });
 s.frames.begin();
 
-// 3 层 band，自动定位
-for (let i = 0; i < 3; i++) {
-  s.layout.layer(`L${i}`, i, { totalRanks: 3, w: 700, startY: 50, endY: 390, layerGap: 4 });
+// 3 层 band，引擎根据 rankIndex 自动定位像素 Y
+for (let rankIndex = 0; rankIndex < 3; rankIndex++) {
+  s.layout.layer(`L${rankIndex}`, rankIndex, { totalRanks: 3, w: 700, startY: 50, endY: 390, layerGap: 4 });
 }
 
 // 节点 + 端口
@@ -119,4 +119,4 @@ s.frames.commit({ animate: false });
 ## Best Practices
 
 1. **port 必须创建** — `edge()` 用 port ID 作为连接点，不要直接使用 node ID。必须先 `node.port()` 再 `edge()`。
-2. **rank 是索引** — `layer(rank)` 传 0/1/2 等基于 0 的整数，引擎会自动计算 Y 坐标，切勿传入像素 Y。
+2. **rank 是逻辑层级索引，绝不能是像素！** — `layer(id, rank)` 中的 `rank` 必须传基于 0 的整数（如 0, 1, 2）。引擎会通过 `(endY - startY) / totalRanks * rank` 自动计算真实的 Y 像素。如果误将诸如 `160` 这种像素值传给 `rank`，该图层会被渲染到上万像素之外！
