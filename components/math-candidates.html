@@ -83,6 +83,16 @@ const sections = [
     ]
   },
   {
+    name: 'Polyline — multi-segment line',
+    desc: 'Orthogonal / dashed / curved / thick',
+    candidates: [
+      { label:'orthogonal', draw(s){ s.math.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('primary').strokeW(1.8); }},
+      { label:'dashed', draw(s){ s.math.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('dim').dashed('5 3').strokeW(1.5); }},
+      { label:'thick', draw(s){ s.math.polyline('p',[[30,90],[60,90],[60,50],[100,50],[160,50]]).color('accent').strokeW(2.5); }},
+      { label:'long', draw(s){ s.math.polyline('p',[[30,100],[80,100],[80,30],[190,30]]).color('warning').strokeW(1.5); }},
+    ]
+  },
+  {
     name: 'Circle — fill opacity',
     desc: 'None / light / medium / full fill',
     candidates: [
