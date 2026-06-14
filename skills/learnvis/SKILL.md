@@ -9,11 +9,13 @@ description: 高阶 SVG 可视化库 — 开箱即用的绘制原语。Use when 
 
 ## Quick Start
 
-skill 自带 IIFE 文件。建议在生成 HTML 时，使用**软连接（symlink）**接入项目，这样当技能库更新时，本地代码将自动同步而无需再次操作：
+首先，使用官方的 `skills` CLI 将该技能安装到你的智能体工作区：
 
 ```bash
-ln -sf ~/.claude/skills/learnvis/assets/learnvis.iife.js ./lessons/learnvis.iife.js
+npx skills add 0xlxx/learnvis -s learnvis
 ```
+
+技能内部自带了一个打包好的 `assets/learnvis.iife.js`。建议你在生成最终的 HTML 演示时，直接使用脚本标签引入该构建产物（也可以通过软连接指向它，方便后续更新同步）：
 
 ```html
 <script src="./learnvis.iife.js"></script>
