@@ -257,7 +257,7 @@ const phases = [
     title: 'P1: 消环 — Cycle Breaking',
     desc: '发现环 A→C→E→A。反转 E→A 为 A→E，图变为 DAG。',
     nodes: {
-      A: { x: 300, y:  80 }, B: { x: 460, y:  80 },
+      A: { x: 340, y:  80 }, B: { x: 460, y:  80 },
       C: { x: 380, y: 220 },
       D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
     },
@@ -268,7 +268,7 @@ const phases = [
     title: 'P2: 分层 — Layer Assignment',
     desc: '拓扑排序分配层级：A,B→Layer0, C→Layer1, D,E→Layer2',
     nodes: {
-      A: { x: 300, y:  80 }, B: { x: 460, y:  80 },
+      A: { x: 340, y:  80 }, B: { x: 460, y:  80 },
       C: { x: 380, y: 220 },
       D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
     },
@@ -280,7 +280,7 @@ const phases = [
     title: 'P3: 减少交叉 — Crossing Minimization',
     desc: '原顺序 A,B→C 产生交叉。交换 A,B 后消除。',
     nodes: {
-      B: { x: 300, y:  80 }, A: { x: 460, y:  80 },
+      B: { x: 340, y:  80 }, A: { x: 460, y:  80 },
       C: { x: 380, y: 220 },
       D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
     },
