@@ -69,13 +69,13 @@ const compoundSteps = [
   {
     label: '单独容器',
     frame: s => {
-      s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      s.layout.block('Sorter', 200, 130, 140, 110, { style: 'normal', rx: 8 }).label('Sorter');
     },
   },
   {
     label: '带端口',
     frame: s => {
-      const blk = s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      const blk = s.layout.block('Sorter', 200, 130, 140, 110, { style: 'normal', rx: 8 }).label('Sorter');
       blk.port('top', 'top', { size: 5 }).color('primary');
       blk.port('right', 'right', { size: 5 }).color('primary');
       blk.port('bottom', 'bottom', { size: 5 }).color('primary');
@@ -84,22 +84,22 @@ const compoundSteps = [
   {
     label: '含子节点',
     frame: s => {
-      const blk = s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      const blk = s.layout.block('Sorter', 200, 130, 140, 110, { style: 'normal', rx: 8 }).label('Sorter');
       blk.port('top', 'top', { size: 5 }).color('primary');
       blk.port('bottom', 'bottom', { size: 5 }).color('primary');
-      s.layout.node('compare', 180, 110, { w: 48, h: 22, rx: 4 }).color('warning').label('cmp');
-      s.layout.node('swap',    200, 150, { w: 48, h: 22, rx: 4 }).color('danger').label('swap');
+      s.layout.node('compare', 200, 110, { w: 48, h: 22, rx: 4 }).color('warning').label('cmp');
+      s.layout.node('swap',    220, 155, { w: 48, h: 22, rx: 4 }).color('danger').label('swap');
     },
   },
   {
     label: '连接外部',
     frame: s => {
-      const blk = s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      const blk = s.layout.block('Sorter', 200, 130, 140, 110, { style: 'normal', rx: 8 }).label('Sorter');
       blk.port('top', 'top', { size: 5 }).color('primary');
       blk.port('bottom', 'bottom', { size: 5 }).color('primary');
-      s.layout.node('compare', 180, 110, { w: 48, h: 22, rx: 4 }).color('warning').label('cmp');
-      s.layout.node('swap',    200, 150, { w: 48, h: 22, rx: 4 }).color('danger').label('swap');
-      const inp = s.layout.node('input', 50, 100, { w: 50, h: 28, rx: 5 }).color('info').label('data');
+      s.layout.node('compare', 200, 110, { w: 48, h: 22, rx: 4 }).color('warning').label('cmp');
+      s.layout.node('swap',    220, 155, { w: 48, h: 22, rx: 4 }).color('danger').label('swap');
+      const inp = s.layout.node('input', 60, 130, { w: 50, h: 28, rx: 5 }).color('info').label('data');
       inp.port('in-out', 'right', { size: 4 }).color('dim');
       const out = s.layout.node('output', 330, 220, { w: 50, h: 28, rx: 5 }).color('success').label('result');
       out.port('out-in', 'left', { size: 4 }).color('dim');
