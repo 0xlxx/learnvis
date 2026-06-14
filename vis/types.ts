@@ -45,6 +45,7 @@ export type EntityId = string & { [EntityIdBrand]: true };
 
 /** Construct a typed EntityId from a prefix and name. */
 export function eid(prefix: EntityPrefix, id: string): EntityId {
+  if (!id) id = '_';  // guard against empty string
   return `${prefix}:${id}` as EntityId;
 }
 
@@ -83,6 +84,7 @@ export type LineState = WithTransform<{
   stroke: string; strokeW: number;
   dash?: string; opacity?: number; label?: string;
   labelPlace?: Place; labelGap?: number;
+  points?: Vec2[];  // polyline mode: multi-segment line
   marker?: LineMarker; directed?: boolean;
   bend?: boolean; _bend?: boolean;
   _markerCfg?: MarkerConfig | null;

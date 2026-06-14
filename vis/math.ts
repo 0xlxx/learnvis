@@ -31,6 +31,7 @@ export interface MathAPI {
   point(id: string, pos: Vec2, opts?: { color?: string; label?: string; size?: number; fill?: string; labelPlace?: Place; labelGap?: number }): MathPoint;
   vector(id: string, from: Vec2, to: Vec2, opts?: { color?: string; label?: string; strokeW?: number; dash?: string; labelPlace?: Place; labelGap?: number; marker?: MarkerConfig }): MathVector;
   segment(id: string, a: Vec2, b: Vec2, opts?: { color?: string; strokeW?: number; dash?: string; label?: string; labelGap?: number }): MathSegment;
+  polyline(id: string, pts: Vec2[], opts?: { color?: string; strokeW?: number; dash?: string; opacity?: number }): MathPolyline;
   circle(id: string, center: Vec2, radius: number, opts?: { color?: string; fill?: string; strokeW?: number; dash?: string; opacity?: number }): MathCircle;
   polygon(id: string, vertices: Vec2[], opts?: { color?: string; fill?: string; strokeW?: number; opacity?: number }): MathPolygon;
   angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: { color?: string; fill?: string; label?: string; size?: number }): MathAngle;
@@ -78,6 +79,13 @@ export interface MathSegment {
   dashed(d?: string): MathSegment;
   label(t: string): MathSegment;
   opacity(v: number): MathSegment;
+}
+
+export interface MathPolyline {
+  color(c: string): MathPolyline;
+  strokeW(n: number): MathPolyline;
+  dashed(d?: string): MathPolyline;
+  opacity(v: number): MathPolyline;
 }
 
 export interface MathCircle {
@@ -232,6 +240,23 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixLabel(eid, fm),
       ...mixOpacity(eid, fm),
     } as unknown as MathSegment;
+  }
+
+  function polyline(id: string, pts: Vec2[], opts: { color?: string; strokeW?: number; dash?: string; opacity?: number } = {}): MathPolyline {
+    const eid = mkId('segment', id);
+    const { stroke } = resolveColor(p, opts.color);
+    const strokeW = opts.strokeW ?? 1.5;
+    const dash = opts.dash ?? '';
+    const opacity = opts.opacity ?? 1;
+
+    fm.declare(eid, { type: 'line', points: pts, stroke, strokeW, dash, opacity });
+
+    return {
+      ...mixStroke(eid, fm, p),
+      ...mixStrokeW(eid, fm),
+      ...mixDashed(eid, fm),
+      ...mixOpacity(eid, fm),
+    } as unknown as MathPolyline;
   }
 
   function circle(id: string, center: Vec2, radius: number, opts: { color?: string; fill?: string; strokeW?: number; dash?: string; opacity?: number } = {}): MathCircle {
@@ -507,7 +532,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     };
   }
 
-  return { point, vector, segment, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc };
+  return { point, vector, segment, polyline, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc };
 }
 
 // Legacy renderer (kept for backward compat — delegates to FrameManager internally)

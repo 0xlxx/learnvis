@@ -16,6 +16,7 @@ description: D3+SVG visualization — math, graph, layout primitives for algorit
 | `s.math.point('P',[x,y]).color('danger').label('P').size(6)` | 标注点 |
 | `s.math.vector('v',[x1,y1],[x2,y2]).color('primary').label('v⃗')` | 向量（箭头+标记+标签） |
 | `s.math.segment('AB',A,B).color('dim').dashed('5 3')` | 线段 |
+| `s.math.polyline('p',[A,B,C]).color('dim').strokeW(1.5)` | 折线段（多段线） |
 | `s.math.circle('c',[cx,cy],r).color('accent')` | 圆（默认淡色填充） |
 | `s.math.polygon('tri',[A,B,C]).color('info').opacity(0.6)` | 多边形 |
 | `s.math.rect('box',cx,cy,w,h)` | 矩形（= polygon 糖） |
@@ -55,7 +56,7 @@ description: D3+SVG visualization — math, graph, layout primitives for algorit
 | `s.layout.node('A',x,y,{w,h,rx}).color('primary').label('A').port('p',pos)` | 节点 + 端口 |
 | `s.layout.block('b',x,y,w,h,{style:'normal'|'muted'|'active'})` | 容器节点 |
 | `s.layout.edge('e','from','to').color('dim').directed(true).strokeW(1.4)` | 边（自动偏移避开端口） |
-| `s.layout.layer('L',rank,{totalRanks,w,color,style:'band'|'swimlane',label})` | 分层色带/泳道 |
+| `s.layout.layer('L',rank,{totalRanks,w,color,style:'band'|'swimlane',label})` | 分层色带/泳道（rank 为 0-based 整数层级索引，非像素 Y） |
 | `s.layout.enclosure('E',x,y,w,h,{color,dash,rx}).label('Group')` | 虚线包围框 |
 
 > 详见 `references/api-layout.md`

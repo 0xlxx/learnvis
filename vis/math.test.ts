@@ -338,4 +338,14 @@ describe('math frame integration', () => {
     expect(fm.entities.has('vector:v')).toBe(true);
     // No ID collision
   });
+
+  it('polyline creates line entity with points', () => {
+    fm.begin();
+    math.polyline('route', [[0,0],[100,50],[200,0]], { color: 'dim', strokeW: 1.5 });
+    fm.commit({ animate: false });
+    const e = fm.entities.get('segment:route');
+    expect(e).toBeTruthy();
+    expect((e!.desired as any).points).toEqual([[0,0],[100,50],[200,0]]);
+    expect((e!.desired as any).type).toBe('line');
+  });
 });

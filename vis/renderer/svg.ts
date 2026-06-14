@@ -127,6 +127,16 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 
     case 'line': {
       const ld = d as LineState;
+      // Polyline mode: multi-segment line
+      if (ld.points && ld.points.length >= 2) {
+        const ptsStr = ld.points.map(p => p.join(',')).join(' ');
+        const el = edges.append('polyline').attr('data-id', id).attr('points', ptsStr)
+          .attr('fill', 'none')
+          .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW)
+          .attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+        applyCommon(el, ld.opacity);
+        return { group: el, text: null };
+      }
       let x1: number, y1: number, x2: number, y2: number;
       if (ld._tf && ld._base) {
         const b = ld._base as { from: [number, number]; to: [number, number] };
@@ -281,6 +291,17 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
     case 'line': {
       const ld = newState as LineState;
       const oldLd = oldState as LineState;
+
+      // Polyline mode: update points directly
+      if (ld.points && ld.points.length >= 2) {
+        const ptsStr = ld.points.map(p => p.join(',')).join(' ');
+        svg.interrupt().transition(tr)
+          .attr('points', ptsStr)
+          .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW)
+          .attr('stroke-dasharray', ld.dash ?? '');
+        applyCommon(svg, ld.opacity);
+        break;
+      }
 
       // Normalize: ensure both sides have _tf/_base for smooth attrTween interpolation.
       // When one side lacks transforms, construct identity-equivalent ones so rotation/scale

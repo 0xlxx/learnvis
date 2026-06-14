@@ -333,6 +333,12 @@ interface MathAPI {
     label?: string;
     labelGap?: number;
   }): MathSegment;
+  polyline(id: string, pts: Vec2[], opts?: {
+    color?: string;
+    strokeW?: number;
+    dash?: string;
+    opacity?: number;
+  }): MathPolyline;
   circle(id: string, center: Vec2, radius: number, opts?: {
     color?: string;
     fill?: string;
@@ -425,6 +431,12 @@ interface MathSegment {
   dashed(d?: string): MathSegment;
   label(t: string): MathSegment;
   opacity(v: number): MathSegment;
+}
+interface MathPolyline {
+  color(c: string): MathPolyline;
+  strokeW(n: number): MathPolyline;
+  dashed(d?: string): MathPolyline;
+  opacity(v: number): MathPolyline;
 }
 interface MathCircle {
   color(c: string): MathCircle;
@@ -799,6 +811,7 @@ type LineState = WithTransform<{
   label?: string;
   labelPlace?: Place;
   labelGap?: number;
+  points?: Vec2[];
   marker?: LineMarker;
   directed?: boolean;
   bend?: boolean;
