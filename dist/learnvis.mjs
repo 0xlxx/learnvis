@@ -5709,15 +5709,13 @@ function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
 			if (d.subtype === "angle") {
 				const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
-				svg.selectAll("*").remove();
-				svg.append("path").attr("d", arc.path).attr("fill", "none").attr("stroke", d.stroke ?? "#000").attr("stroke-width", d.strokeW ?? 1.5);
+				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", d.stroke ?? "#000").attr("stroke-width", d.strokeW ?? 1.5);
 				if (text) {
-					text.remove();
 					const label = d.label ?? "";
 					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 						const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
-						text = svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
-					}
+						text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
+					} else text.text("");
 				}
 			}
 			break;
@@ -5733,6 +5731,20 @@ function updateEntityImmediate(svg, text, d) {
 		case "line":
 			svg.attr("x1", d.x1 ?? d.from?.[0] ?? 0).attr("y1", d.y1 ?? d.from?.[1] ?? 0).attr("x2", d.x2 ?? d.to?.[0] ?? 0).attr("y2", d.y2 ?? d.to?.[1] ?? 0).attr("stroke", d.stroke).attr("stroke-width", d.strokeW);
 			applyCommon(svg, d);
+			break;
+		case "group":
+			if (d.subtype === "angle") {
+				const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+				svg.select("path").attr("d", arc.path).attr("stroke", d.stroke ?? "#000").attr("stroke-width", d.strokeW ?? 1.5);
+				if (text) {
+					const label = d.label ?? "";
+					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+						const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+						text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
+					} else text.text("");
+				}
+			}
 			break;
 		case "region": {
 			const pts = d.pts ?? d.vertices ?? [];

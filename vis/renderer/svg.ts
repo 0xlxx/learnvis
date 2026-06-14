@@ -38,7 +38,7 @@ function _angleArc(vx: number, vy: number, r1x: number, r1y: number, r2x: number
   if (a1 < 0) a1 += 2 * Math.PI; if (a2 < 0) a2 += 2 * Math.PI;
   if (a2 < a1) [a2, a1] = [a1, a2];
   const diff = a2 - a1;
-  const sweep = diff <= Math.PI ? 0 : 1;
+  const sweep = diff <= Math.PI ? 0 : 1;  // sweep=0 arcs outward (standard angle marker)
   if (Math.abs(a2 - a1) < 0.001) a2 = a1 + 0.02;
   const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
   const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
@@ -226,22 +226,17 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
       // curve transitions are handled by full redraw via FrameManager
       break;
     case 'group': {
-      // full redraw: remove old child elements and re-render
       if (d.subtype === 'angle') {
-        const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
+        const [vx, vy] = d.vertex ?? [0,0], [r1x, r1y] = d.ray1 ?? [0,0], [r2x, r2y] = d.ray2 ?? [0,0];
         const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
-        svg.selectAll('*').remove();
-        svg.append('path').attr('d', arc.path).attr('fill', 'none').attr('stroke', d.stroke ?? '#000').attr('stroke-width', d.strokeW ?? 1.5);
+        svg.select('path').interrupt().transition(tr).attr('d', arc.path).attr('stroke', d.stroke ?? '#000').attr('stroke-width', d.strokeW ?? 1.5);
         if (text) {
-          text.remove();
           const label = d.label ?? '';
           if (label && Math.abs(arc.a2 - arc.a1) > 0.02) {
             const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
-            const nt = svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
-              .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-              .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-              .attr('fill', d.stroke ?? '#000').text(label);
-            text = nt;
+            text.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
+          } else {
+            text.text('');
           }
         }
       }
@@ -272,6 +267,20 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
         .attr('x2', (d as any).x2 ?? (d as any).to?.[0] ?? 0).attr('y2', (d as any).y2 ?? (d as any).to?.[1] ?? 0)
         .attr('stroke', d.stroke).attr('stroke-width', d.strokeW);
       applyCommon(svg, d);
+      break;
+    case 'group':
+      if (d.subtype === 'angle') {
+        const [vx, vy] = d.vertex ?? [0,0], [r1x, r1y] = d.ray1 ?? [0,0], [r2x, r2y] = d.ray2 ?? [0,0];
+        const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+        svg.select('path').attr('d', arc.path).attr('stroke', d.stroke ?? '#000').attr('stroke-width', d.strokeW ?? 1.5);
+        if (text) {
+          const label = d.label ?? '';
+          if (label && Math.abs(arc.a2 - arc.a1) > 0.02) {
+            const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+            text.attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
+          } else { text.text(''); }
+        }
+      }
       break;
     case 'region': {
       const pts = (d as any).pts ?? d.vertices ?? [];
