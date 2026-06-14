@@ -150,7 +150,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const eid = mkId('vertex', id);
     const r = resolveColor(p, opts.stroke ?? 'primary');
     const isCircle = opts.shape === 'circle';
-    const sizeW = opts.w ?? 40, sizeH = opts.h ?? 28;
+    const sizeW = opts.w ?? 32, sizeH = opts.h ?? 24;
     const radius = opts.r ?? 10;
 
     fm.declare(eid, {

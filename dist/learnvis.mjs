@@ -5088,7 +5088,7 @@ function createLayout(fm, p) {
 		const eid$2 = eid("vertex", id);
 		const r = resolveColor(p, opts.stroke ?? "primary");
 		const isCircle = opts.shape === "circle";
-		const sizeW = opts.w ?? 40, sizeH = opts.h ?? 28;
+		const sizeW = opts.w ?? 32, sizeH = opts.h ?? 24;
 		opts.r;
 		fm.declare(eid$2, {
 			type: "node",
