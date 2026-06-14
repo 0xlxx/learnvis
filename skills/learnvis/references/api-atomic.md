@@ -97,6 +97,5 @@ s.ctx.stage.bg              // 背景层 D3 selection
 s.ctx.stage.nodes           // 节点层
 s.ctx.stage.edges           // 边层
 s.ctx.stage.overlay         // 覆盖层
-s.ctx.callout(pos, html, opts)  // HTML overlay 标注
 s.ctx.markerFor(color)      // 获取/创建 SVG marker
 ```

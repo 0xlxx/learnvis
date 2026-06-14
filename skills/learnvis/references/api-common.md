@@ -24,12 +24,4 @@ tip.text('<b>θ₁</b>')  // 更新文字 → 自动跟随目标位置
 - 方位：`.above(gap)` `.below(gap)` `.left(gap)` `.right(gap)`
 - 样式：`.bold()` `.size(n)` `.color(c)` `.text(t)`
 
-## callout
 
-```js
-s.ctx.callout({ x, y }, 'Label text', { place: 'right', gap: 6, style: { fontSize: '10px' } })
-```
-
-- HTML overlay 标注，锚定到 SVG 坐标点
-- `place`: `'above'` | `'below'` | `'left'` | `'right'`
-- `style`: 内联 CSS 样式对象

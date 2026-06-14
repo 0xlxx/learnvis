@@ -5163,7 +5163,7 @@ function createLayout(fm, p) {
 		let y, h;
 		if (opts.totalRanks != null) {
 			const total = opts.totalRanks;
-			const gap = opts.layerGap ?? 0;
+			const gap = opts.layerGap ?? 4;
 			const startY = opts.startY ?? 48;
 			const available = (opts.endY ?? 412) - startY;
 			h = opts.h ?? (available - (total - 1) * gap) / total;
