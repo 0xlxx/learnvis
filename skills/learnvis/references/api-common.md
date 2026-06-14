@@ -13,15 +13,6 @@ c.math.fn(Math.sin, { domain: [0, 6.28], x: 0, y: c.cell.h, width: c.cell.w, hei
 - 返回 `CardStage`，有 `c.cell`（`{x,y,w,h}` 可直接传 math 原语）、`c.el`（DOM 元素）
 - `parent` 可以是 CSS 选择器字符串或 DOM 元素
 
-## tag
 
-```js
-const tip = s.tag(ball, '<b>θ₀</b>').above(16).color('primary')
-tip.text('<b>θ₁</b>')  // 更新文字 → 自动跟随目标位置
-```
-
-- 绑定到目标元素，自动跟随位置，不用每步重建
-- 方位：`.above(gap)` `.below(gap)` `.left(gap)` `.right(gap)`
-- 样式：`.bold()` `.size(n)` `.color(c)` `.text(t)`
 
 
