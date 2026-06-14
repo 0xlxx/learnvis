@@ -25,9 +25,6 @@
     "d3-interpolate": "^3.0.1",
     "d3-shape": "^3.2.0"
   },
-  "bin": {
-    "learnvis": "dist/cli.mjs"
-  },
   "main": "dist/learnvis.mjs",
   "module": "dist/learnvis.mjs",
   "exports": {
