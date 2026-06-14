@@ -200,7 +200,6 @@ declare const defineArrows: <GEl extends BaseType, PE extends BaseType>(svg: Sel
 declare const createCanvas: (selector: string | BaseType, width?: number, height?: number, margin?: number) => {
   svg: d3.Selection<SVGSVGElement, unknown, null, undefined>;
   root: d3.Selection<d3.BaseType, unknown, null, undefined>;
-  lbl: d3.Selection<HTMLDivElement, unknown, null, undefined>;
   bg: d3.Selection<SVGGElement, unknown, null, undefined>;
   eG: d3.Selection<SVGGElement, unknown, null, undefined>;
   nG: d3.Selection<SVGGElement, unknown, null, undefined>;
@@ -209,24 +208,6 @@ declare const createCanvas: (selector: string | BaseType, width?: number, height
   H: number;
   M: number;
 };
-declare const domLabel: <PE extends BaseType, PD>(container: Selection<BaseType, unknown, PE, PD>, anchor: Selection<BaseType, unknown, null, undefined> | {
-  x?: number;
-  y?: number;
-  nW?: number;
-  nH?: number;
-  w?: number;
-  h?: number;
-  r?: number;
-  node?: () => SVGGraphicsElement | null;
-  getBBox?: () => DOMRect;
-}, html: string, opts?: {
-  offsetX?: number;
-  offsetY?: number;
-  place?: string;
-  gap?: number;
-  className?: string;
-  style?: Record<string, string>;
-}) => d3.Selection<HTMLDivElement, unknown, null, undefined> | d3.Selection<HTMLDivElement, unknown, PE, PD>;
 //#endregion
 //#region vis/stepper.d.ts
 /**
@@ -899,10 +880,6 @@ interface StageCtx {
     gap: number;
   };
   markerFor: (c: string) => string;
-  callout(anchor: S | {
-    x: number;
-    y: number;
-  }, html: string, o?: Record<string, unknown>): S;
 }
 interface StageOptions {
   theme?: string;
@@ -1270,4 +1247,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

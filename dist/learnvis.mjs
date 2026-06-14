@@ -3635,7 +3635,6 @@ const createCanvas = (selector, width = 560, height = 400, margin = 48) => {
 	return {
 		svg,
 		root,
-		lbl: root.append("div").attr("class", "vis-labels").style("position", "absolute").style("top", "0").style("left", "0").style("width", "100%").style("height", "100%").style("pointer-events", "none"),
 		bg: svg.append("g"),
 		eG: svg.append("g"),
 		nG: svg.append("g"),
@@ -3644,103 +3643,6 @@ const createCanvas = (selector, width = 560, height = 400, margin = 48) => {
 		H: height,
 		M: margin
 	};
-};
-const isD3Selection = (v) => {
-	if (typeof v !== "object" || v === null) return false;
-	if (!("node" in v)) return false;
-	return typeof v.node === "function";
-};
-const isSVGGraphics = (v) => {
-	if (v instanceof SVGGraphicsElement) return true;
-	if (typeof v !== "object" || v === null) return false;
-	if (!("getBBox" in v)) return false;
-	return typeof v.getBBox === "function";
-};
-const emptySelection = () => select_default$1(document.createElement("div")).remove();
-const domLabel = (container, anchor, html, opts = {}) => {
-	const svgNode = container.select("svg").node();
-	if (!svgNode || !(svgNode instanceof SVGSVGElement)) return emptySelection();
-	const { offsetX = 0, offsetY = 0, place = "above", gap = 8, className = "vlbl", style = {} } = opts;
-	let b;
-	if (isD3Selection(anchor)) {
-		const el = anchor.node();
-		if (el && isSVGGraphics(el)) {
-			const bb = el.getBBox();
-			b = {
-				left: bb.x,
-				top: bb.y,
-				w: bb.width,
-				h: bb.height,
-				cx: bb.x + bb.width / 2,
-				cy: bb.y + bb.height / 2
-			};
-		}
-	} else if (isSVGGraphics(anchor)) {
-		const bb = anchor.getBBox();
-		b = {
-			left: bb.x,
-			top: bb.y,
-			w: bb.width,
-			h: bb.height,
-			cx: bb.x + bb.width / 2,
-			cy: bb.y + bb.height / 2
-		};
-	} else if (anchor && typeof anchor === "object" && "x" in anchor) {
-		const a = anchor;
-		const hw = (a.nW || a.w || 0) / 2, hh = (a.nH || a.h || 0) / 2;
-		const bw = a.nW || a.w || 0, bh = a.nH || a.h || 0;
-		if (a.r !== void 0) b = {
-			left: a.x - a.r,
-			top: a.y - a.r,
-			w: a.r * 2,
-			h: a.r * 2,
-			cx: a.x,
-			cy: a.y
-		};
-		else b = {
-			left: a.x - hw,
-			top: a.y - hh,
-			w: bw,
-			h: bh,
-			cx: a.x,
-			cy: a.y
-		};
-	} else return emptySelection();
-	if (!b) return emptySelection();
-	const vb = svgNode.viewBox.baseVal;
-	const gx = (v) => v / vb.width * 100, gy = (v) => v / vb.height * 100;
-	let left, top, tx = "translate(-50%, -50%)";
-	if (place === "right") {
-		left = gx(b.left + b.w + gap);
-		top = gy(b.cy);
-		tx = "translate(0%, -50%)";
-	} else if (place === "left") {
-		left = gx(b.left - gap);
-		top = gy(b.cy);
-		tx = "translate(-100%, -50%)";
-	} else if (place === "below") {
-		left = gx(b.cx);
-		top = gy(b.top + b.h + gap);
-		tx = "translate(-50%, 0%)";
-	} else if (place === "above") {
-		left = gx(b.cx);
-		top = gy(b.top - gap);
-		tx = "translate(-50%, -100%)";
-	} else {
-		left = gx(b.cx);
-		top = gy(b.cy);
-	}
-	let inner = html;
-	if (typeof window !== "undefined" && window.katex) {
-		inner = html.replace(/\$\$([^$]+)\$\$/g, (_, m) => window.katex.renderToString(m, {
-			throwOnError: false,
-			displayMode: true
-		}));
-		inner = inner.replace(/\$([^$]+)\$/g, (_, m) => window.katex.renderToString(m, { throwOnError: false }));
-	}
-	const div = container.append("div").attr("class", className).style("position", "absolute").style("pointer-events", "none").style("left", left + offsetX / vb.width * 100 + "%").style("top", top + offsetY / vb.height * 100 + "%").style("transform", tx).html(inner);
-	for (const [k, v] of Object.entries(style)) div.style(k, v);
-	return div;
 };
 
 //#endregion
@@ -3807,7 +3709,6 @@ function bootstrap(selector, opts = {}) {
 		...gOpts
 	});
 	const { markerFor } = defineArrows(C.svg, { sw: 2 });
-	const callout = (anchor, html, o = {}) => domLabel(C.root, anchor, html, o);
 	return {
 		svg: C.svg,
 		W: C.W,
@@ -3822,8 +3723,7 @@ function bootstrap(selector, opts = {}) {
 		root: C.root,
 		palette: p,
 		geom,
-		markerFor,
-		callout
+		markerFor
 	};
 }
 
@@ -6183,4 +6083,4 @@ if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispo
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

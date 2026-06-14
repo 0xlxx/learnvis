@@ -141,7 +141,6 @@ export interface StageCtx {
   palette: Palette;
   geom: { nW: number; nH: number; dR: number; rx: number; gap: number };
   markerFor: (c: string) => string;
-  callout(anchor: S | { x: number; y: number }, html: string, o?: Record<string, unknown>): S;
 }
 
 // ── Stage options ──
@@ -162,20 +161,6 @@ export type StageAPI = AgentStage;
 export type StepLike = { label?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void);
 export interface StepsOptions { start?: number }
 export interface StepsController { go(i: number): void; get current(): number; onChange(fn: (i: number) => void): () => void; destroy(): void }
-
-// ── HTML overlay tag (used by callout / axes) ──
-export interface Tag {
-  above(gap?: number): Tag;
-  below(gap?: number): Tag;
-  left(gap?: number): Tag;
-  right(gap?: number): Tag;
-  gap(g: number): Tag;
-  color(c: string): Tag;
-  text(t: string): Tag;
-  size(s: number): Tag;
-  bold(): Tag;
-  remove(): void;
-}
 
 export interface AgentStage extends Disposable {
   ctx: StageCtx; palette: Palette;

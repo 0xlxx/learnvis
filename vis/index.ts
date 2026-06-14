@@ -3,7 +3,7 @@ if (typeof Symbol.asyncDispose === 'undefined') (Symbol as unknown as Record<str
 
 export { TOKENS, alpha, palette } from './tokens';
 export { len, exitPt, entryPt, getBounds, distribute, centerIn } from './geometry';
-export { halo, svgLabel, defineArrows, createCanvas, domLabel, MARKER, markerTip } from './primitives';
+export { halo, svgLabel, defineArrows, createCanvas, MARKER, markerTip } from './primitives';
 export { stepper } from './stepper';
 export { katexify } from './katex';
 export { bootstrap } from './bootstrap';
