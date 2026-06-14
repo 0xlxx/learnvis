@@ -107,6 +107,14 @@ description: D3+SVG visualization — math, graph, layout primitives for algorit
 - **Transform** — 纯描述符 `.rotate()/.scale()/.translate()` 修改坐标，`interpolate()` 平滑插值
 - **Label** — 统一 `label`/`labelPlace`/`labelGap` 字段，region 支持四个方向
 
+## 反馈
+
+用得不爽直接提 issue，附上代码片段 + 期望效果：
+
+**[github.com/0xlxx/learnvis/issues/new](https://github.com/0xlxx/learnvis/issues/new)**
+
+常见反馈类型：API 缺失、签名难用、默认值不合理、报错信息不清晰、文档过期。
+
 ## 构建
 
 ```
