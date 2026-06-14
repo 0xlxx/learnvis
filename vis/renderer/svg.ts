@@ -225,9 +225,28 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
     case 'curve':
       // curve transitions are handled by full redraw via FrameManager
       break;
-    case 'group':
-      // group transitions are complex; for now full redraw
+    case 'group': {
+      // full redraw: remove old child elements and re-render
+      if (d.subtype === 'angle') {
+        const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
+        const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+        svg.selectAll('*').remove();
+        svg.append('path').attr('d', arc.path).attr('fill', 'none').attr('stroke', d.stroke ?? '#000').attr('stroke-width', d.strokeW ?? 1.5);
+        if (text) {
+          text.remove();
+          const label = d.label ?? '';
+          if (label && Math.abs(arc.a2 - arc.a1) > 0.02) {
+            const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+            const nt = svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
+              .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+              .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
+              .attr('fill', d.stroke ?? '#000').text(label);
+            text = nt;
+          }
+        }
+      }
       break;
+    }
   }
 }
 
