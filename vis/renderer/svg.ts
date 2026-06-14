@@ -10,33 +10,55 @@ type E = d3.Selection<any, unknown, null, undefined>;
 
 // ── helpers ──
 
-function resamplePoints(pts: Vec2[], count: number): Vec2[] {
-  if (pts.length === count) return pts;
-  if (pts.length < 2) return Array(count).fill(pts[0] || [0, 0]);
-  let totalLength = 0;
-  const segs = [];
+function getPathParams(pts: Vec2[]): { dists: number[]; total: number } {
+  const dists = [0];
+  let total = 0;
   for (let i = 0; i < pts.length - 1; i++) {
-    const p1 = pts[i], p2 = pts[i + 1];
-    const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-    segs.push({ p1, p2, len });
-    totalLength += len;
+    const d = Math.hypot(pts[i+1][0] - pts[i][0], pts[i+1][1] - pts[i][1]);
+    total += d;
+    dists.push(total);
   }
-  const out: Vec2[] = [];
-  out.push(pts[0]);
-  for (let i = 1; i < count - 1; i++) {
-    const targetDist = (i / (count - 1)) * totalLength;
-    let d = 0;
-    for (const seg of segs) {
-      if (d + seg.len >= targetDist - 1e-6) {
-        const t = seg.len === 0 ? 0 : (targetDist - d) / seg.len;
-        out.push([seg.p1[0] + (seg.p2[0] - seg.p1[0]) * t, seg.p1[1] + (seg.p2[1] - seg.p1[1]) * t]);
-        break;
-      }
-      d += seg.len;
+  return { dists, total };
+}
+
+function samplePolyline(pts: Vec2[], params: { dists: number[]; total: number }, t: number): Vec2 {
+  if (t <= 0) return pts[0];
+  if (t >= 1) return pts[pts.length - 1];
+  const target = t * params.total;
+  for (let i = 0; i < params.dists.length - 1; i++) {
+    const d1 = params.dists[i], d2 = params.dists[i+1];
+    if (target >= d1 && target <= d2) {
+      const segLen = d2 - d1;
+      const ratio = segLen === 0 ? 0 : (target - d1) / segLen;
+      const p1 = pts[i], p2 = pts[i+1];
+      return [p1[0] + (p2[0] - p1[0]) * ratio, p1[1] + (p2[1] - p1[1]) * ratio];
     }
   }
-  out.push(pts[pts.length - 1]);
-  return out;
+  return pts[pts.length - 1];
+}
+
+function alignPolylines(ptsA: Vec2[], ptsB: Vec2[]): [Vec2[], Vec2[]] {
+  if (ptsA.length < 2) ptsA = [ptsA[0] || [0,0], ptsA[0] || [0,0]];
+  if (ptsB.length < 2) ptsB = [ptsB[0] || [0,0], ptsB[0] || [0,0]];
+  
+  const pA = getPathParams(ptsA);
+  const pB = getPathParams(ptsB);
+  
+  // collect all t values from both lines
+  const tSet = new Set<number>();
+  if (pA.total > 0) pA.dists.forEach(d => tSet.add(d / pA.total));
+  else { tSet.add(0); tSet.add(1); }
+  
+  if (pB.total > 0) pB.dists.forEach(d => tSet.add(d / pB.total));
+  else { tSet.add(0); tSet.add(1); }
+  
+  // ensure 0 and 1 are exactly in there to avoid float issues
+  tSet.add(0); tSet.add(1);
+  const tVals = Array.from(tSet).sort((a, b) => a - b);
+  
+  const outA = tVals.map(t => samplePolyline(ptsA, pA, t));
+  const outB = tVals.map(t => samplePolyline(ptsB, pB, t));
+  return [outA, outB];
 }
 
 function resolveLinePoints(ld: LineState): Vec2[] {
@@ -323,10 +345,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       const oldPts = resolveLinePoints(oldLd);
       const newPts = resolveLinePoints(ld);
 
-      // Using max points + 10 padding for smooth curve mapping
-      const count = Math.max(oldPts.length, newPts.length, 10);
-      const oldResampled = resamplePoints(oldPts, count);
-      const newResampled = resamplePoints(newPts, count);
+      const [oldResampled, newResampled] = alignPolylines(oldPts, newPts);
 
       svg.interrupt().transition(tr)
         .attrTween('points', () => t => {

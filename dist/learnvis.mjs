@@ -5318,37 +5318,54 @@ function createLayout(fm, p) {
 
 //#endregion
 //#region vis/renderer/svg.ts
-function resamplePoints(pts, count) {
-	if (pts.length === count) return pts;
-	if (pts.length < 2) return Array(count).fill(pts[0] || [0, 0]);
-	let totalLength = 0;
-	const segs = [];
+function getPathParams(pts) {
+	const dists = [0];
+	let total = 0;
 	for (let i = 0; i < pts.length - 1; i++) {
-		const p1 = pts[i], p2 = pts[i + 1];
-		const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
-		segs.push({
-			p1,
-			p2,
-			len
-		});
-		totalLength += len;
+		const d = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+		total += d;
+		dists.push(total);
 	}
-	const out = [];
-	out.push(pts[0]);
-	for (let i = 1; i < count - 1; i++) {
-		const targetDist = i / (count - 1) * totalLength;
-		let d = 0;
-		for (const seg of segs) {
-			if (d + seg.len >= targetDist - 1e-6) {
-				const t = seg.len === 0 ? 0 : (targetDist - d) / seg.len;
-				out.push([seg.p1[0] + (seg.p2[0] - seg.p1[0]) * t, seg.p1[1] + (seg.p2[1] - seg.p1[1]) * t]);
-				break;
-			}
-			d += seg.len;
+	return {
+		dists,
+		total
+	};
+}
+function samplePolyline(pts, params, t) {
+	if (t <= 0) return pts[0];
+	if (t >= 1) return pts[pts.length - 1];
+	const target = t * params.total;
+	for (let i = 0; i < params.dists.length - 1; i++) {
+		const d1 = params.dists[i], d2 = params.dists[i + 1];
+		if (target >= d1 && target <= d2) {
+			const segLen = d2 - d1;
+			const ratio = segLen === 0 ? 0 : (target - d1) / segLen;
+			const p1 = pts[i], p2 = pts[i + 1];
+			return [p1[0] + (p2[0] - p1[0]) * ratio, p1[1] + (p2[1] - p1[1]) * ratio];
 		}
 	}
-	out.push(pts[pts.length - 1]);
-	return out;
+	return pts[pts.length - 1];
+}
+function alignPolylines(ptsA, ptsB) {
+	if (ptsA.length < 2) ptsA = [ptsA[0] || [0, 0], ptsA[0] || [0, 0]];
+	if (ptsB.length < 2) ptsB = [ptsB[0] || [0, 0], ptsB[0] || [0, 0]];
+	const pA = getPathParams(ptsA);
+	const pB = getPathParams(ptsB);
+	const tSet = /* @__PURE__ */ new Set();
+	if (pA.total > 0) pA.dists.forEach((d) => tSet.add(d / pA.total));
+	else {
+		tSet.add(0);
+		tSet.add(1);
+	}
+	if (pB.total > 0) pB.dists.forEach((d) => tSet.add(d / pB.total));
+	else {
+		tSet.add(0);
+		tSet.add(1);
+	}
+	tSet.add(0);
+	tSet.add(1);
+	const tVals = Array.from(tSet).sort((a, b) => a - b);
+	return [tVals.map((t) => samplePolyline(ptsA, pA, t)), tVals.map((t) => samplePolyline(ptsB, pB, t))];
 }
 function resolveLinePoints(ld) {
 	if (ld.points && ld.points.length >= 2) return ld.points;
@@ -5653,11 +5670,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 		}
 		case "line": {
 			const ld = newState;
-			const oldPts = resolveLinePoints(oldState);
-			const newPts = resolveLinePoints(ld);
-			const count = Math.max(oldPts.length, newPts.length, 10);
-			const oldResampled = resamplePoints(oldPts, count);
-			const newResampled = resamplePoints(newPts, count);
+			const [oldResampled, newResampled] = alignPolylines(resolveLinePoints(oldState), resolveLinePoints(ld));
 			svg.interrupt().transition(tr).attrTween("points", () => (t) => {
 				return oldResampled.map((op, i) => {
 					const np = newResampled[i];
