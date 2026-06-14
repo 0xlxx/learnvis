@@ -5537,10 +5537,11 @@ function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
 	if (a1 < 0) a1 += 2 * Math.PI;
 	if (a2 < 0) a2 += 2 * Math.PI;
 	if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
-	const cwLen = a2 < a1 ? a1 - a2 : a1 + 2 * Math.PI - a2;
-	const ccwLen = a2 >= a1 ? a2 - a1 : a2 + 2 * Math.PI - a1;
-	const sweep = cwLen <= ccwLen ? 1 : 0;
-	const ma = sweep === 1 ? a1 - cwLen / 2 : a1 + ccwLen / 2;
+	const cwLen = a2 >= a1 ? a2 - a1 : 2 * Math.PI - a1 + a2;
+	const ccwLen = a2 < a1 ? a1 - a2 : a1 + (2 * Math.PI - a2);
+	const sweep = cwLen < ccwLen ? 0 : 1;
+	const arcLen = sweep === 1 ? cwLen : ccwLen;
+	const ma = sweep === 1 ? a1 + arcLen / 2 : a1 - arcLen / 2;
 	const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
 	const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
 	return {
