@@ -134,13 +134,13 @@ const phaseSteps = [
         ly.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25 });
         s.ctx.callout({ x: 380, y: 60 + i * 70 + 30 }, p, { place: 'right', gap: 6, style: { fontSize: '10px' } });
       });
-      ly.node('in', 130, 95, { w: 50, h: 28, rx: 5 }).color('info').label('data');
+      const inp  = ly.node('in', 130, 95, { w: 50, h: 28, rx: 5 }).color('info').label('data');
       const proc = ly.node('proc', 130, 165, { w: 60, h: 28, rx: 5 }).color('warning').label('work');
-      ly.node('out', 130, 235, { w: 50, h: 28, rx: 5 }).color('success').label('result');
-      ly.node('in', 130, 95).port('in-out', 'bottom', { size: 4 });
+      const out  = ly.node('out', 130, 235, { w: 50, h: 28, rx: 5 }).color('success').label('result');
+      inp.port('in-out', 'bottom', { size: 4 });
       proc.port('proc-in', 'top', { size: 4 });
       proc.port('proc-out', 'bottom', { size: 4 });
-      ly.node('out', 130, 235).port('out-in', 'top', { size: 4 });
+      out.port('out-in', 'top', { size: 4 });
       ly.edge('e1', 'in-out', 'proc-in').color('dim').directed(true).strokeW(1.4);
       ly.edge('e2', 'proc-out', 'out-in').color('dim').directed(true).strokeW(1.4);
     },
@@ -215,6 +215,43 @@ for (const v of bfsOrder) {
 }
 
 // ═══════════════════════════════════════════════════════════
+//  5. Sugiyama 管道 — layer + node + port + edge + polyline
+// ═══════════════════════════════════════════════════════════
+
+const sugiyamaNodes = { A: [200,80], B: [340,80], C: [270,180], D: [200,280], E: [340,280] };
+const sugiyamaEdges = [['A','C'],['B','C'],['C','D'],['C','E'],['A','E']];
+const sugiyamaSteps = [
+  {
+    label: 'P1: 消环',
+    frame: s => {
+      const ly = s.layout;
+      [0,1,2].forEach(i => ly.layer('L'+i, i, { totalRanks:3, w:W, startY:50, endY:250, layerGap:4, color:['info','warning','success'][i], style:'band', opacity:0.18 }));
+      for (const [k,[x,y]] of Object.entries(sugiyamaNodes)) {
+        const n = ly.node(k, x, y, { w: 44, h: 28, rx: 5 }).color('primary').label(k);
+        n.port(k+'-in','top',{size:3}).color('dim');
+        n.port(k+'-out','bottom',{size:3}).color('dim');
+      }
+      for (const [s,d] of sugiyamaEdges) ly.edge(s+'-'+d, s+'-out', d+'-in').color('dim').directed(true).strokeW(1.4);
+    },
+  },
+  {
+    label: 'P5: 正交路由',
+    frame: s => {
+      [0,1,2].forEach(i => s.layout.layer('L'+i, i, { totalRanks:3, w:W, startY:50, endY:250, layerGap:4, color:['info','warning','success'][i], style:'band', opacity:0.18 }));
+      for (const [k,[x,y]] of Object.entries(sugiyamaNodes)) {
+        s.layout.node(k, x, y, { w: 44, h: 28, rx: 5 }).color('primary').label(k);
+      }
+      for (const [s,d] of sugiyamaEdges) {
+        const sx = sugiyamaNodes[s][0], sy = sugiyamaNodes[s][1];
+        const dx = sugiyamaNodes[d][0], dy = sugiyamaNodes[d][1];
+        const midY = (sy + dy) / 2;
+        s.math.polyline(s+'-'+d, [[sx,sy],[sx,midY],[dx,midY],[dx,dy]]).color('dim').strokeW(1.5);
+      }
+    },
+  },
+];
+
+// ═══════════════════════════════════════════════════════════
 //  Render
 // ═══════════════════════════════════════════════════════════
 
@@ -223,6 +260,7 @@ const demos = [
   { name: '调用栈',   desc: 'block() 栈帧 + fit() 自动尺寸 + enclosure() 包围框。', steps: callstackSteps },
   { name: '阶段分区', desc: 'layer() 背景色带 + enclosure() 虚线框 + port/edge 连线。', steps: phaseSteps },
   { name: '二叉树',   desc: 'BFS 层序遍历, port + edge 父子连线。', steps: treeSteps },
+  { name: 'Sugiyama', desc: 'layer() 分层 + edge() 直线 + polyline() 正交路由。', steps: sugiyamaSteps },
 ];
 
 const container = document.getElementById('sections');

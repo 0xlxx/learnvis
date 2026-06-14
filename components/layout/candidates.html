@@ -117,6 +117,40 @@ const sections = [
       },
     ],
   },
+  // ── Polyline routing ──
+  {
+    name: 'Polyline — orthogonal routing',
+    desc: 'multi-segment lines for edge routing (replaces manual polygon arrow)',
+    candidates: [
+      {
+        label: '↕ 3-segment',
+        draw: s => {
+          const sx = 60, sy = 60, dx = 200, dy = 140, midY = (sy + dy) / 2;
+          s.math.polyline('r1', [[sx,sy],[sx,midY],[dx,midY],[dx,dy]]).color('accent').strokeW(1.8);
+          s.math.point('src', [sx,sy]).size(4).color('primary').label('A');
+          s.math.point('dst', [dx,dy]).size(4).color('primary').label('B');
+        },
+      },
+      {
+        label: '↔ horizontal',
+        draw: s => {
+          const sx = 60, sy = 100, dx = 210, dy = 100, midX = (sx + dx) / 2;
+          s.math.polyline('r2', [[sx,sy],[midX,sy-20],[midX,dy+20],[dx,dy]]).color('warning').strokeW(1.5);
+          s.math.point('src', [sx,sy]).size(4).color('primary').label('A');
+          s.math.point('dst', [dx,dy]).size(4).color('primary').label('B');
+        },
+      },
+      {
+        label: 'dashed bend',
+        draw: s => {
+          const sx = 60, sy = 80, dx = 210, dy = 150;
+          s.math.polyline('r3', [[sx,sy],[sx+50,sy],[sx+50,dy],[dx,dy]]).color('dim').dashed('4 3').strokeW(1.5);
+          s.math.point('src', [sx,sy]).size(4).color('primary').label('A');
+          s.math.point('dst', [dx,dy]).size(4).color('primary').label('B');
+        },
+      },
+    ],
+  },
   // ── Block with ports ──
   {
     name: 'Block + ports',
