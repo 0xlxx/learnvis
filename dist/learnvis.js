@@ -5719,7 +5719,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 						const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
 						if (text) text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
-						else svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+						else {
+							svg.selectAll("text").remove();
+							svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+						}
 					} else if (text) text.text("");
 				}
 				break;
@@ -5745,7 +5748,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 						const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
 						if (text) text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
-						else svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+						else {
+							svg.selectAll("text").remove();
+							svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+						}
 					} else if (text) text.text("");
 				}
 				break;

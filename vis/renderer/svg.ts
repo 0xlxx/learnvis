@@ -237,12 +237,11 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
           if (text) {
             text.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
           } else {
-            const nt = svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
+            svg.selectAll('text').remove();
+            svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
               .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
               .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
               .attr('fill', d.stroke ?? '#000').text(label);
-            // Update SVGHandle's text reference (passed by closure)
-            // Can't update the outer text variable, but drawEntity handles next lifecycle
           }
         } else if (text) {
           text.text('');
@@ -288,6 +287,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
           if (text) {
             text.attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
           } else {
+            svg.selectAll('text').remove();
             svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
               .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
               .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
