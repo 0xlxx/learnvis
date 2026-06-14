@@ -253,6 +253,8 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
           }
         } else if (text) {
           text.text('');
+        } else {
+          svg.select('text').text('');
         }
       }
       break;
@@ -306,6 +308,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
             }
           }
         } else if (text) { text.text(''); }
+        else { svg.select('text').text(''); }
       }
       break;
     case 'region': {

@@ -5724,6 +5724,7 @@ function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
 						else svg.append("text").attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
 					}
 				} else if (text) text.text("");
+				else svg.select("text").text("");
 			}
 			break;
 	}
@@ -5754,6 +5755,7 @@ function updateEntityImmediate(svg, text, d) {
 						else svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
 					}
 				} else if (text) text.text("");
+				else svg.select("text").text("");
 			}
 			break;
 		case "region": {
