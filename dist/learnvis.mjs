@@ -5711,13 +5711,12 @@ function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
 				const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
 				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", d.stroke ?? "#000").attr("stroke-width", d.strokeW ?? 1.5);
-				if (text) {
-					const label = d.label ?? "";
-					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-						const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
-						text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
-					} else text.text("");
-				}
+				const label = d.label ?? "";
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
+					if (text) text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
+					else svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+				} else if (text) text.text("");
 			}
 			break;
 	}
@@ -5738,13 +5737,12 @@ function updateEntityImmediate(svg, text, d) {
 				const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
 				svg.select("path").attr("d", arc.path).attr("stroke", d.stroke ?? "#000").attr("stroke-width", d.strokeW ?? 1.5);
-				if (text) {
-					const label = d.label ?? "";
-					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-						const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
-						text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
-					} else text.text("");
-				}
+				const label = d.label ?? "";
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
+					if (text) text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
+					else svg.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
+				} else if (text) text.text("");
 			}
 			break;
 		case "region": {
