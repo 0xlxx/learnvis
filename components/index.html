@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>learnvis — Component Gallery</title>
+  <link rel="stylesheet" href="../theme.css">
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6;max-width:640px}
+    h1{font-size:1.3rem;margin:0 0 .3rem}
+    .sub{color:var(--text-muted);font-size:.82rem;margin:0 0 2rem}
+    section{margin-bottom:2rem}
+    section h2{font-size:.95rem;margin:0 0 8px;color:var(--text-dim)}
+    .link-list{display:flex;gap:8px;flex-wrap:wrap}
+    .link-list a{display:block;padding:8px 16px;border:1px solid var(--border);border-radius:8px;
+      text-decoration:none;color:var(--text);background:var(--card);font-size:.82rem;transition:all .15s}
+    .link-list a:hover{border-color:var(--blue);background:var(--blue-03)}
+    .link-list a .label{font-weight:600}
+    .link-list a .desc{font-size:.68rem;color:var(--text-dim);display:block}
+    hr{border:0;border-top:1px solid var(--border);margin:2rem 0}
+    .conventions{font-size:.72rem;color:var(--text-dim);margin-top:2rem}
+    .conventions dt{font-weight:600;color:var(--text);margin-top:.5rem}
+    .conventions dd{margin-left:1rem}
+  </style>
+</head>
+<body>
+
+<h1>learnvis — Component Gallery</h1>
+<p class="sub">开发期间快速视觉验证 & 设计决策。每页独立可运行。</p>
+
+<section>
+  <h2>Math 数学原语</h2>
+  <div class="link-list">
+    <a href="math/animation.html"><span class="label">animation</span><span class="desc">逐步构建演示</span></a>
+    <a href="math/candidates.html"><span class="label">candidates</span><span class="desc">样式候选 & 对比</span></a>
+  </div>
+</section>
+
+<section>
+  <h2>Graph 图论原语</h2>
+  <div class="link-list">
+    <a href="graph/animation.html"><span class="label">animation</span><span class="desc">逐步构建演示</span></a>
+    <a href="graph/candidates.html"><span class="label">candidates</span><span class="desc">样式候选 & 对比</span></a>
+  </div>
+</section>
+
+<section>
+  <h2>Layout 布局原语</h2>
+  <div class="link-list">
+    <a href="layout/animation.html"><span class="label">animation</span><span class="desc">真实场景演示</span></a>
+    <a href="layout/candidates.html"><span class="label">candidates</span><span class="desc">样式候选 & 对比</span></a>
+  </div>
+</section>
+
+<hr>
+<dl class="conventions">
+  <dt>animation.html</dt>
+  <dd>分步动画 + 真实场景。用 stepper 按钮切换帧，展示原语组合后的实际效果。</dd>
+  <dt>candidates.html</dt>
+  <dd>并排样式候选。同一原语的多组参数/风格对比，用于快速视觉决策。</dd>
+  <dt>新增页面</dt>
+  <dd>按 <code>components/&lt;domain&gt;/&lt;type&gt;.html</code> 放置。引用路径：<code>../../dist/learnvis.js</code>。</dd>
+  <dt>原型</dt>
+  <dd>临时探索用 <code>prototype/</code> 子目录，确认设计后删除。</dd>
+</dl>
+
+</body>
+</html>
