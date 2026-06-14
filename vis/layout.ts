@@ -204,11 +204,17 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     } as unknown as LayoutNode;
   }
 
-  function edge(id: string, fromPortId: string, toPortId: string, opts: EdgeOpts = {}): LayoutEdge {
+  function edge(id: string, fromId: string, toId: string, opts: EdgeOpts = {}): LayoutEdge {
     const eid = mkId('edge', id);
     const r = resolveColor(p, opts.color ?? 'dim');
-    const fpe = fm.entities.get(`port:${fromPortId}`);
-    const tpe = fm.entities.get(`port:${toPortId}`);
+    
+    // Smart Fallback: Try finding it as a port first, otherwise fall back to the vertex center.
+    let fpe = fm.entities.get(`port:${fromId}`) ?? fm.entities.get(`vertex:${fromId}`);
+    let tpe = fm.entities.get(`port:${toId}`) ?? fm.entities.get(`vertex:${toId}`);
+
+    if (!fpe) console.warn(`[vis.js] Edge '${id}': Source '${fromId}' not found. Did you forget to create the node or port?`);
+    if (!tpe) console.warn(`[vis.js] Edge '${id}': Destination '${toId}' not found. Did you forget to create the node or port?`);
+
     const fx = (fpe?.desired as NodeState)?.x ?? 0, fy = (fpe?.desired as NodeState)?.y ?? 0;
     const tx = (tpe?.desired as NodeState)?.x ?? 0, ty = (tpe?.desired as NodeState)?.y ?? 0;
     const directed = opts.directed ?? false;
@@ -225,7 +231,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       type: 'line', x1, y1, x2, y2,
       stroke: r.stroke, strokeW: opts.strokeW ?? 1.5, dash: opts.dash ?? '',
       directed, _bend: opts.bend ?? false,
-      _fromPort: fromPortId, _toPort: toPortId,
+      _fromPort: fromId, _toPort: toId,
       label: opts.label ?? '',
     } as unknown as LineState);
 
