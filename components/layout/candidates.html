@@ -77,6 +77,31 @@ const sections = [
       },
     ],
   },
+  // ── Node sizes ──
+  {
+    name: 'Node sizes',
+    desc: 'default / wide / large',
+    candidates: [
+      {
+        label: 'default (40x28)',
+        draw: s => {
+          s.layout.node('n', 140, 100, { rx: 4 }).color('primary').label('A');
+        },
+      },
+      {
+        label: 'wide (80x28)',
+        draw: s => {
+          s.layout.node('n', 140, 100, { w: 80, rx: 4 }).color('primary').label('Long Text');
+        },
+      },
+      {
+        label: 'large (60x40)',
+        draw: s => {
+          s.layout.node('n', 140, 100, { w: 60, h: 40, rx: 6 }).color('primary').label('Big');
+        },
+      },
+    ],
+  },
   // ── Edge styles ──
   {
     name: 'Edge styles',
