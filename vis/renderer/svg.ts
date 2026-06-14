@@ -240,12 +240,16 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
           if (text) {
             text.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
           } else {
-            svg.selectAll('text').remove();
-            const nt = svg.append('text').attr('x', vx + lr * Math.cos(ma) - 20).attr('y', vy + lr * Math.sin(ma))
-              .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-              .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-              .attr('fill', d.stroke ?? '#000').text(label);
-            nt.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma));
+            // text null — try to reuse existing, or create with animation
+            const existing = svg.select('text');
+            if (!existing.empty()) {
+              existing.interrupt().transition(tr).attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
+            } else {
+              svg.append('text').attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
+                .attr('fill', d.stroke ?? '#000')
+                .attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
+            }
           }
         } else if (text) {
           text.text('');
@@ -291,11 +295,15 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
           if (text) {
             text.attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
           } else {
-            svg.selectAll('text').remove();
-            svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
-              .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
-              .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-              .attr('fill', d.stroke ?? '#000').text(label);
+            const existing = svg.select('text');
+            if (!existing.empty()) {
+              existing.attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma)).text(label);
+            } else {
+              svg.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
+                .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+                .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
+                .attr('fill', d.stroke ?? '#000').text(label);
+            }
           }
         } else if (text) { text.text(''); }
       }
