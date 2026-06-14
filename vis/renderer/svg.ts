@@ -146,6 +146,23 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 
     // ── GROUP: axes / grid / angle ──
     case 'group': {
+      if (d.subtype === 'angle') {
+        const gv = overlay.append('g').attr('data-id', id);
+        const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
+        const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
+        gv.append('path').attr('d', arc.path).attr('fill', 'none').attr('stroke', d.stroke ?? '#000').attr('stroke-width', d.strokeW ?? 1.5);
+        let text: E | null = null;
+        const label = d.label ?? '';
+        if (label && Math.abs(arc.a2 - arc.a1) > 0.02) {
+          const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+          text = gv.append('text').attr('x', vx + lr * Math.cos(ma)).attr('y', vy + lr * Math.sin(ma))
+            .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
+            .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
+            .attr('fill', d.stroke ?? '#000').text(label);
+        }
+        applyCommon(gv, d);
+        return { group: gv, text };
+      }
       const g = bg.append('g').attr('data-id', id);
       if (d.subtype === 'axes') {
         const ox = d.ox ?? 0, oy = d.oy ?? 0, xl = d.xl ?? 300, yl = d.yl ?? 200, sw = d.strokeW ?? 1.4;
@@ -158,10 +175,6 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         const ox = d.ox ?? 0, oy = d.oy ?? 0, w = d.w ?? 400, h = d.h ?? 300, sp = d.sp ?? 40;
         for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
         for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 0.3);
-      } else if (d.subtype === 'angle') {
-        const [vx, vy] = d.vertex ?? [0, 0], [r1x, r1y] = d.ray1 ?? [0, 0], [r2x, r2y] = d.ray2 ?? [0, 0];
-        const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, d.arcR ?? 30);
-        g.append('path').attr('d', arc.path).attr('fill', 'none').attr('stroke', d.stroke).attr('stroke-width', d.strokeW ?? 1.5);
       }
       applyCommon(g, d);
       return { group: g, text: null };
