@@ -323,11 +323,9 @@ function render(phaseIdx) {
   const p = phases[phaseIdx];
   document.getElementById('stepLabel').textContent = p.title;
 
-  // Clear and redraw
-  const container = document.getElementById('stage');
-  container.innerHTML = '';
-
-  scene = LearnVis.stage('#stage', { width: 700, height: 440, theme: 'paper' });
+  if (!scene) {
+    scene = LearnVis.stage('#stage', { width: 700, height: 440, theme: 'paper' });
+  }
   scene.frames.begin();
 
   // Draw layer bands (rank must be 0-based index, not pixel Y)
