@@ -79,7 +79,7 @@ s.layout.layer('L', 0, { y: 50, h: 120, w: 640 })
 | `opacity` | `0.30`(band) / `0.7`(swimlane) | |
 | `totalRanks` | — | 总层数→自动算 y/h |
 | `startY`/`endY` | `48`/`412` | 首层/末层 y 范围 |
-| `layerGap` | `0` | 层间距 |
+| `layerGap` | `4` | 层间距 |
 | `dash` | `'4 3'`(swimlane) | |
 | `rx` | `8` | 圆角 |
 | `strokeW` | `1.2`(swimlane) | |

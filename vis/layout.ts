@@ -252,7 +252,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     let y: number, h: number;
     if (opts.totalRanks != null) {
       const total = opts.totalRanks;
-      const gap = opts.layerGap ?? 0;
+      const gap = opts.layerGap ?? 4;
       const startY = opts.startY ?? 48;
       const endY = opts.endY ?? 412;  // default: 460 - 48
       const available = endY - startY;
