@@ -50,7 +50,16 @@ export type NodeState = {
 };
 
 export type LineMarker = 'arrow' | 'none';
-export type LineState = {
+// ── Transform (pure descriptors) ──
+export type TfRotate = { type: 'rotate'; angle: number; cx: number; cy: number };
+export type TfScale = { type: 'scale'; sx: number; sy: number };
+export type TfTranslate = { type: 'translate'; dx: number; dy: number };
+export type Transform = TfRotate | TfScale | TfTranslate;
+
+// ── Structural mixin: any entity CAN carry transforms ──
+type WithTransform<T> = T & { _base?: Record<string, unknown>; _tf?: Transform[] };
+
+export type LineState = WithTransform<{
   type: 'line';
   from?: Vec2; to?: Vec2;  // math coords
   x1?: number; y1?: number; x2?: number; y2?: number;  // screen coords
@@ -59,10 +68,10 @@ export type LineState = {
   marker?: LineMarker; directed?: boolean;
   bend?: boolean; _bend?: boolean;
   _fromPort?: string; _toPort?: string;  // for layout edges
-};
+}>;
 
 export type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
-export type RegionState = {
+export type RegionState = WithTransform<{
   type: 'region'; shape: RegionShape;
   cx?: number; cy?: number; r?: number;
   pts?: Vec2[]; vertices?: Vec2[];
@@ -70,7 +79,7 @@ export type RegionState = {
   dash?: string; opacity?: number;
   innerR?: number; outerR?: number; startAngle?: number; endAngle?: number;
   _label?: string; _rx?: number;
-};
+}>;
 
 export type CurveState = {
   type: 'curve';

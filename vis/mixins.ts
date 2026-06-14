@@ -69,58 +69,38 @@ export const mixLabelPos = (eid: string, fm: FrameManager, defaults: { labelPlac
   },
 });
 
-// ── Transform mixin (vector, polygon share _applyTf logic) ──
+// ── Transform mixin (stores pure descriptors) ──
+
+import type { Transform } from './transform';
+import { rotate as _rotate, scale as _scale, translate as _translate } from './transform';
 
 export const mixTransform = (eid: string, fm: FrameManager, getKey: string) => ({
-  rotate(a: number, cx: number, cy: number) { applyTransform('rotate', eid, fm, getKey, a, cx, cy); return this; },
-  translate(dx: number, dy: number) { applyTransform('translate', eid, fm, getKey, dx, dy); return this; },
-  scale(sx: number, sy?: number) { applyTransform('scale', eid, fm, getKey, sx, sy ?? sx); return this; },
+  rotate(a: number, cx: number, cy: number) {
+    const e = fm.entities.get(eid); if (!e) return this;
+    const d = e.desired as any;
+    if (!d._base) _stashBase(d, getKey);
+    d._tf = [...(d._tf || []), _rotate(a, cx, cy)];
+    fm.patch(eid, { _tf: d._tf, _base: d._base } as any); return this;
+  },
+  scale(sx: number, sy: number = sx) {
+    const e = fm.entities.get(eid); if (!e) return this;
+    const d = e.desired as any;
+    if (!d._base) _stashBase(d, getKey);
+    d._tf = [...(d._tf || []), _scale(sx, sy)];
+    fm.patch(eid, { _tf: d._tf, _base: d._base } as any); return this;
+  },
+  translate(dx: number, dy: number) {
+    const e = fm.entities.get(eid); if (!e) return this;
+    const d = e.desired as any;
+    if (!d._base) _stashBase(d, getKey);
+    d._tf = [...(d._tf || []), _translate(dx, dy)];
+    fm.patch(eid, { _tf: d._tf, _base: d._base } as any); return this;
+  },
 });
 
-function applyTransform(type: string, eid: string, fm: FrameManager, getKey: string, a: number, b: number, c?: number) {
-  const e = fm.entities.get(eid);
-  if (!e) return;
-  const d = e.desired as any;
-  let pf: [number, number], pt: [number, number] | null = null;
-  if (getKey === 'vector') {
-    pf = (d.from || [0,0]) as [number,number];
-    pt = (d.to || [0,0]) as [number,number];
-  } else if (getKey === 'polygon') {
-    const vs = (d.vertices as [number,number][]) || [];
-    if (vs.length === 0) return;
-    const mx = vs.reduce((s: number, v: [number,number]) => s + v[0], 0) / vs.length;
-    const my = vs.reduce((s: number, v: [number,number]) => s + v[1], 0) / vs.length;
-    if (type === 'rotate') {
-      const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
-      const nv = vs.map(([px, py]: [number,number]) =>
-        [b + (px-b)*cos - (py-c!)*sin, c! + (px-b)*sin + (py-c!)*cos] as [number,number]);
-      patch(eid, fm, { vertices: nv });
-    } else if (type === 'scale') {
-      const sy = b;  // a=sx, b=sy (sy defaults to sx from mixTransform)
-      const nv = vs.map(([px, py]: [number,number]) =>
-        [mx + (px-mx)*a, my + (py-my)*sy] as [number,number]);
-      patch(eid, fm, { vertices: nv });
-    } else if (type === 'translate') {
-      const nv = vs.map(([px, py]: [number,number]) =>
-        [px + a, py + b] as [number,number]);
-      patch(eid, fm, { vertices: nv });
-    }
-    return;
-  }
-  if (!pf || !pt) return;
-  let nf = [...pf] as [number,number], nt = [...pt] as [number,number];
-  if (type === 'rotate') {
-    const cos = Math.cos(a * Math.PI / 180), sin = Math.sin(a * Math.PI / 180);
-    const rot = (px: number, py: number) =>
-      [b + (px-b)*cos - (py-c!)*sin, c! + (px-b)*sin + (py-c!)*cos] as [number,number];
-    nf = rot(pf[0], pf[1]); nt = rot(pt[0], pt[1]);
-  } else if (type === 'scale') {
-    const dx = pt[0] - pf[0], dy = pt[1] - pf[1];
-    nt = [pf[0] + dx * a, pf[1] + dy * a];
-  } else if (type === 'translate') {
-    nf = [pf[0] + a, pf[1] + b]; nt = [pt[0] + a, pt[1] + b];
-  }
-  patch(eid, fm, { from: nf, to: nt });
+function _stashBase(d: any, getKey: string) {
+  if (getKey === 'vector') d._base = { from: [...(d.from || [0,0])], to: [...(d.to || [0,0])] };
+  else if (getKey === 'polygon') d._base = { vertices: (d.vertices || []).map((v: [number,number]) => [...v]) };
 }
 
 // ── Position translate (point, circle, shape — modifies x/y or cx/cy) ──

@@ -33,3 +33,69 @@ export function toSvg(tf: Transform | Transform[] | null): string | null {
   }
   return parts.join(' ') || null;
 }
+
+// ── Pure: apply transform descriptors to geometry ──
+
+function lerp(a: number, b: number, t: number) { return a + (b - a) * t; }
+
+/** Interpolate between two transform arrays (must be same structure) */
+export function interpolate(a: Transform[], b: Transform[], t: number): Transform[] {
+  return a.map((tf, i) => {
+    const bt = b[i] ?? tf;
+    switch (tf.type) {
+      case 'rotate':    return { ...tf, angle: lerp(tf.angle, (bt as TfRotate).angle, t) };
+      case 'scale':     return { ...tf, sx: lerp(tf.sx, (bt as TfScale).sx, t), sy: lerp(tf.sy, (bt as TfScale).sy, t) };
+      case 'translate': return { ...tf, dx: lerp(tf.dx, (bt as TfTranslate).dx, t), dy: lerp(tf.dy, (bt as TfTranslate).dy, t) };
+    }
+  });
+}
+
+/** Apply transforms to line geometry (from→to) */
+export function applyLine(from: [number, number], to: [number, number], tf: Transform[]): { from: [number, number]; to: [number, number] } {
+  let nf = [...from] as [number, number], nt = [...to] as [number, number];
+  for (const t of tf) {
+    switch (t.type) {
+      case 'rotate': {
+        const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
+        const rot = (px: number, py: number): [number, number] =>
+          [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos];
+        nf = rot(nf[0], nf[1]); nt = rot(nt[0], nt[1]);
+        break;
+      }
+      case 'scale': {
+        nt = [nf[0] + (nt[0] - nf[0]) * t.sx, nf[1] + (nt[1] - nf[1]) * t.sy];
+        break;
+      }
+      case 'translate': {
+        nf = [nf[0] + t.dx, nf[1] + t.dy]; nt = [nt[0] + t.dx, nt[1] + t.dy];
+        break;
+      }
+    }
+  }
+  return { from: nf, to: nt };
+}
+
+/** Apply transforms to polygon vertices */
+export function applyVertices(vertices: [number, number][], tf: Transform[]): [number, number][] {
+  let nv = vertices.map(v => [...v] as [number, number]);
+  for (const t of tf) {
+    switch (t.type) {
+      case 'rotate': {
+        const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
+        nv = nv.map(([px, py]) =>
+          [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos] as [number, number]);
+        break;
+      }
+      case 'scale': {
+        const cx = nv.reduce((s, v) => s + v[0], 0) / nv.length, cy = nv.reduce((s, v) => s + v[1], 0) / nv.length;
+        nv = nv.map(([px, py]) => [cx + (px - cx) * t.sx, cy + (py - cy) * t.sy] as [number, number]);
+        break;
+      }
+      case 'translate': {
+        nv = nv.map(([px, py]) => [px + t.dx, py + t.dy] as [number, number]);
+        break;
+      }
+    }
+  }
+  return nv;
+}

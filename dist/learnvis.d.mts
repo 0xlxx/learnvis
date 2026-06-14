@@ -319,7 +319,28 @@ type NodeState = {
   _children?: string[];
 };
 type LineMarker = 'arrow' | 'none';
-type LineState = {
+type TfRotate = {
+  type: 'rotate';
+  angle: number;
+  cx: number;
+  cy: number;
+};
+type TfScale = {
+  type: 'scale';
+  sx: number;
+  sy: number;
+};
+type TfTranslate = {
+  type: 'translate';
+  dx: number;
+  dy: number;
+};
+type Transform = TfRotate | TfScale | TfTranslate;
+type WithTransform<T> = T & {
+  _base?: Record<string, unknown>;
+  _tf?: Transform[];
+};
+type LineState = WithTransform<{
   type: 'line';
   from?: Vec2;
   to?: Vec2;
@@ -338,9 +359,9 @@ type LineState = {
   _bend?: boolean;
   _fromPort?: string;
   _toPort?: string;
-};
+}>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
-type RegionState = {
+type RegionState = WithTransform<{
   type: 'region';
   shape: RegionShape;
   cx?: number;
@@ -359,7 +380,7 @@ type RegionState = {
   endAngle?: number;
   _label?: string;
   _rx?: number;
-};
+}>;
 type CurveState = {
   type: 'curve';
   f: string;

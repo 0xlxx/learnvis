@@ -6,6 +6,8 @@ import { bootstrap } from './bootstrap';
 import { FrameManager } from './frame';
 import { createMathRenderer } from './math';
 import type { MathAPI } from './math';
+import { applyLine } from './transform';
+import type { Transform } from './transform';
 
 function setupMath(): { math: MathAPI; fm: FrameManager } {
   const dom = new JSDOM('<!DOCTYPE html><html><body><div id="app"></div></body></html>');
@@ -227,45 +229,42 @@ describe('vector transform', () => {
     fm.begin();
     math.vector('v', [0, 0], [100, 0]).rotate(90, 0, 0);
     fm.commit({ animate: false });
-    const d = fm.entities.get('vector:v')!.desired;
-    const from = d.from as [number, number], to = d.to as [number, number];
-    expect(from[0]).toBeCloseTo(0);     // [4,0] rotated 90° → [0,4]
-    expect(from[1]).toBeCloseTo(4);
-    expect(to[0]).toBeCloseTo(0);       // [90,0] rotated 90° → [0,90]
-    expect(to[1]).toBeCloseTo(90);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.from[0]).toBeCloseTo(0);
+    expect(res.from[1]).toBeCloseTo(4);
+    expect(res.to[0]).toBeCloseTo(0);
+    expect(res.to[1]).toBeCloseTo(90);
   });
 
   it('rotate 180° flips vector', () => {
     fm.begin();
     math.vector('v', [10, 0], [100, 0]).rotate(180, 10, 0);
     fm.commit({ animate: false });
-    const from = fm.entities.get('vector:v')!.desired.from as [number, number];
-    // offset: from [14,0], to [90,0] rotated 180° around (10,0) → from [6,0], to [-70,0]? no...
-    // Actually pivot is (10,0). from=[14,0] relative=(4,0) → rotated=(-4,0) → [6,0]
-    // to=[90,0] relative=(80,0) → rotated=(-80,0) → [-70,0]
-    expect(from[0]).toBeCloseTo(6);
-    expect(from[1]).toBeCloseTo(0);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.from[0]).toBeCloseTo(6);
+    expect(res.from[1]).toBeCloseTo(0);
   });
 
   it('scale 2 doubles length from start', () => {
     fm.begin();
     math.vector('v', [100, 100], [200, 100]).scale(2);
     fm.commit({ animate: false });
-    const d = fm.entities.get('vector:v')!.desired;
-    const from = d.from as [number, number], to = d.to as [number, number];
-    // offset: from=[104,100], to=[190,100], dx=86, scale 2x → to=[104+86*2,100]=[276,100]
-    expect(from[0]).toBeCloseTo(104);
-    expect(to[0]).toBeCloseTo(276);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.from[0]).toBeCloseTo(104);
+    expect(res.to[0]).toBeCloseTo(276);
   });
 
   it('scale 0.5 halves length', () => {
     fm.begin();
     math.vector('v', [0, 0], [100, 0]).scale(0.5);
     fm.commit({ animate: false });
-    const to = fm.entities.get('vector:v')!.desired.to as [number, number];
-    // offset: from=[4,0], to=[90,0], dx=86, scale 0.5x → to=[4+43,0]=[47,0]
-    expect(to[0]).toBeCloseTo(47);
-    expect(to[1]).toBeCloseTo(0);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.to[0]).toBeCloseTo(47);
+    expect(res.to[1]).toBeCloseTo(0);
   });
 
   it('translate shifts both endpoints', () => {
