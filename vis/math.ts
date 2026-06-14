@@ -1,6 +1,7 @@
 // vis/math.ts — mathematical primitives migrated to FrameManager
 // Uses composable mixins (mixColor, mixStrokeW, mixOpacity, etc.) instead of repeated per-type impls.
 
+import { eid as mkId } from './types';
 import type { Vec2, Palette, Place, D3S, MarkerConfig } from './types';
 import type { FrameManager } from './frame';
 import { offsetLine, markerHalf } from './geometry';
@@ -172,7 +173,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   const p = palette;
 
   function point(id: string, pos: Vec2, opts: { color?: string; label?: string; size?: number; fill?: string; labelPlace?: Place; labelGap?: number } = {}): MathPoint {
-    const eid: `point:${string}` = `point:${id}`;
+    const eid = mkId('point', id);
     const { stroke, fill } = resolveColor(p, opts.color);
     const r = opts.size ?? 4;
     const label = opts.label ?? '';
@@ -191,7 +192,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function vector(id: string, from: Vec2, to: Vec2, opts: { color?: string; label?: string; strokeW?: number; dash?: string; labelPlace?: Place; labelGap?: number; marker?: MarkerConfig } = {}): MathVector {
-    const eid: `vector:${string}` = `vector:${id}`;
+    const eid = mkId('vector', id);
     const { stroke } = resolveColor(p, opts.color);
     const strokeW = opts.strokeW ?? 1.6;
     const dash = opts.dash ?? '';
@@ -215,7 +216,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function segment(id: string, a: Vec2, b: Vec2, opts: { color?: string; strokeW?: number; dash?: string; label?: string; labelGap?: number } = {}): MathSegment {
-    const eid: `segment:${string}` = `segment:${id}`;
+    const eid = mkId('segment', id);
     const { stroke } = resolveColor(p, opts.color);
     const strokeW = opts.strokeW ?? 1.5;
     const dash = opts.dash ?? '';
@@ -234,7 +235,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function circle(id: string, center: Vec2, radius: number, opts: { color?: string; fill?: string; strokeW?: number; dash?: string; opacity?: number } = {}): MathCircle {
-    const eid: `circle:${string}` = `circle:${id}`;
+    const eid = mkId('circle', id);
     const { stroke, fill } = resolveColor(p, opts.color);
     const strokeW = opts.strokeW ?? 1.2;
     const dash = opts.dash ?? '';
@@ -254,7 +255,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function polygon(id: string, vertices: Vec2[], opts: { color?: string; fill?: string; strokeW?: number; opacity?: number } = {}): MathPolygon {
-    const eid: `polygon:${string}` = `polygon:${id}`;
+    const eid = mkId('polygon', id);
     const r = resolveColor(p, opts.color);
     const strokeW = opts.strokeW ?? 1.5;
     const opacity = opts.opacity ?? 1;
@@ -273,7 +274,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function rightAngle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts: { color?: string; size?: number } = {}): MathRightAngle {
-    const eid: `angle:${string}` = `angle:${id}`;
+    const eid = mkId('angle', id);
     const { stroke } = resolveColor(p, opts.color ?? 'dim');
     const sz = opts.size ?? 8;
     const [vx, vy] = vertex;
@@ -297,7 +298,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts: { color?: string; fill?: string; label?: string; size?: number } = {}): MathAngle {
-    const eid: `angle:${string}` = `angle:${id}`;
+    const eid = mkId('angle', id);
     const { stroke, fill } = resolveColor(p, opts.color);
     const label = opts.label ?? '';
     const arcR = opts.size ?? 30;
@@ -316,7 +317,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function fn(id: string, f: (x: number) => number, opts: FnOpts = {}): MathFn {
-    const eid: `fn:${string}` = `fn:${id}`;
+    const eid = mkId('fn', id);
     const { stroke } = resolveColor(p, opts.color);
     const strokeW = opts.strokeW ?? 1.5;
     const dash = opts.dash ?? '';
@@ -341,7 +342,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function grid(id: string, origin: Vec2, opts: GridOpts = {}) {
-    const eid: `grid:${string}` = `grid:${id}`;
+    const eid = mkId('grid', id);
     const { stroke } = resolveColor(p, opts.color);
     fm.declare(eid, {
       type: 'group', subtype: 'grid',
@@ -353,7 +354,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function axes(id: string, origin: Vec2, opts: AxesOpts = {}) {
-    const eid: `axes:${string}` = `axes:${id}`;
+    const eid = mkId('axes', id);
     const { stroke } = resolveColor(p, opts.color);
     fm.declare(eid, {
       type: 'group', subtype: 'axes',
@@ -386,7 +387,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function symbol(id: string, pos: Vec2, opts: { type?: 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye'; size?: number; color?: string; fill?: string } = {}): MathShape {
-    const eid: `path:${string}` = `path:${id}`;
+    const eid = mkId('path', id);
     const types: Record<string, typeof symbolCircle> = { circle: symbolCircle, cross: symbolCross, diamond: symbolDiamond, square: symbolSquare, star: symbolStar, triangle: symbolTriangle, wye: symbolWye };
     const t = types[opts.type ?? 'circle'] ?? symbolCircle;
     const sy = (d3Symbol() as any).type(t).size((opts.size ?? 8) ** 2)();
@@ -406,7 +407,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function arc(id: string, center: Vec2, opts: { innerR?: number; outerR: number; startAngle: number; endAngle: number; color?: string; fill?: string; strokeW?: number }): MathShape {
-    const eid: `path:${string}` = `path:${id}`;
+    const eid = mkId('path', id);
     const a = d3Arc()({ innerRadius: opts.innerR ?? 0, outerRadius: opts.outerR, startAngle: opts.startAngle, endAngle: opts.endAngle }) || '';
     const r = resolveColor(p, opts.color);
     const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
@@ -422,8 +423,8 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     } as unknown as MathShape;
   }
   function projection(id: string, pt: Vec2, lf: Vec2, lt: Vec2, opts: { color?: string; dash?: string; pointColor?: string } = {}): MathProjection {
-    const eidSeg = `segment:${id}`;
-    const eidPt = `point:${id}-p`;
+    const eidSeg = mkId('segment', id);
+    const eidPt = mkId('point', id + '-p');
     const { stroke } = resolveColor(p, opts.color);
     const dash = opts.dash ?? '4 3';
     const pc = opts.pointColor ?? stroke;
@@ -442,13 +443,13 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   }
 
   function fill(id: string, pts: Vec2[], opts: { color?: string; opacity?: number } = {}): MathFill {
-    const eid: `fill:${string}` = `fill:${id}`;
+    const eid = mkId('fill', id);
     const r = resolveColor(p, opts.color);
     fm.declare(eid, { type: 'region', shape: 'fill', pts, fill: r.fill, opacity: opts.opacity });
     return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) } as unknown as MathFill;
   }
   function fillFn(id: string, f: (x: number) => number, opts: { domain?: [number,number]; range?: [number,number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number } = {}): MathFill {
-    const eid = `fill:${id}`;
+    const eid = mkId('fill', id);
     const domain = opts.domain ?? [0, 10];
     const samples = opts.samples ?? 200;
     const ox = opts.x ?? 0, oy = opts.y ?? 300;

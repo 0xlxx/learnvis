@@ -2,14 +2,13 @@
 
 import { bootstrap } from './bootstrap';
 import { resolveTheme } from './themes';
-import { createElements } from './elements';
 import { createMathRenderer } from './math';
 import { createGraph } from './graph';
 import { createLayout } from './layout';
 import { FrameManager } from './frame';
 import { SVGRenderer } from './renderer/svg';
 import type { Renderer } from './renderer';
-import type { El, Point, Palette, SemColor, AgentStage, StageOptions, AxesOptions, StepsController, StepLike, StepsOptions } from './types';
+import type { Point, Palette, SemColor, AgentStage, StageOptions, AxesOptions, StepsController, StepLike, StepsOptions } from './types';
 
 const _stages = new Map<string, { [Symbol.dispose](): void }>();
 let _observer: MutationObserver | null = null;
@@ -42,8 +41,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
       }
     }
   }
-
-  const elements = createElements(fm, ctx, p);
 
   function steps(defs: StepLike[], opts?: StepsOptions): StepsController {
     const { start = 0 } = opts ?? {};
@@ -93,11 +90,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
 
   const api: Record<string, unknown> = {
     ctx, palette: p, stage: ctx.stage, root: ctx.root,
-    dot: elements.dot,
-    zone: elements.zone,
-    arrow: elements.arrow,
-    path: elements.path,
-    tag: elements.tag,
     steps, frame, play,
     frames: fm,
     theme: _theme,

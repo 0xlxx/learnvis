@@ -43,7 +43,7 @@ describe('graph vertex (chainable)', () => {
 
   it('label() sets label', () => {
     const v = graph.vertex('A', [100, 200]).label('Hello');
-    expect(v._label).toBe('Hello');
+    expect((fm.entities.get('vertex:A')!.desired as any).label).toBe('Hello');
   });
 
   it('size() changes radius', () => {

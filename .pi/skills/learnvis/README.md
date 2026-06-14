@@ -1,6 +1,6 @@
 # learnvis Skills
 
-Agent skills for [learnvis](https://github.com/0xlxx/learnvis), a zero-dependency D3+SVG visualization library.
+Agent skills for **learnvis**, a D3.js visualization library for algorithm lessons — math primitives, graph theory, and layout composition with a fluent builder API.
 
 ## Installation
 
@@ -12,21 +12,22 @@ npx skills add 0xlxx/learnvis
 
 The learnvis skill provides coding agents with knowledge about:
 
-- **Math Primitives** — vector, point, segment, circle, polygon, angle, grid, axes, fn
-- **Graph Theory** — vertex, edge, directed/undirected edges, force/circular layouts
-- **Common UI** — dot, arrow, zone, tag, line, path
-- **Control Flow** — stage(), animate(), layout splitting, themes
-- **Atomic Layer** — low-level createCanvas + render/fade primitives
-- **Marker System** — shared MARKER config, per-color arrowheads
+- **Math Primitives** — point, vector, segment, circle, polygon, angle, grid, axes, fn, fill, symbol, arc
+- **Graph Theory** — vertex, edge, directed/undirected, force/circular layouts
+- **Layout System** — node, block (container), port, edge (offset-line), layer (band/swimlane), enclosure
+- **Control Flow** — stage(), steps(), frame(), play(), FrameManager direct access
+- **Color System** — oklch theme tokens → svgColor() → hex conversion pipeline
+- **Transform System** — pure descriptor rotate/scale/translate with interpolate()
 
 ## Usage
 
 Once installed, agents will automatically use learnvis knowledge when:
 
 - Creating algorithm/data-structure visualizations
-- Building interactive SVG diagrams
+- Building interactive SVG diagrams with nodes and edges
 - Setting up graph/network visualizations with D3
 - Writing math/animation tutorials
+- Designing Sugiyama-style layered layouts
 
 ### Example Prompts
 
@@ -36,6 +37,10 @@ Create a visualization showing Dijkstra's shortest path algorithm
 
 ```
 Draw a force-directed graph with labeled vertices and weighted edges
+```
+
+```
+Build a Sugiyama layered layout with 4 ranks and colored band layers
 ```
 
 ```

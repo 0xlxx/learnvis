@@ -9,5 +9,5 @@ export default defineConfig({
   clean: false,
   minify: false,
   sourcemap: false,
-  deps: { alwaysBundle: ['d3', 'd3-interpolate', 'd3-shape'] },
+  deps: { alwaysBundle: ['d3', 'd3-interpolate', 'd3-shape'], onlyBundle: false },
 });

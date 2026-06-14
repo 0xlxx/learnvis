@@ -1,5 +1,5 @@
 // vis/tag.ts — label bound to a target element, auto-follows position
-import type { Tag, Point, El, Place } from './types';
+import type { Tag, Point, Place } from './types';
 
 interface CalloutOpts {
   place?: Place;
@@ -50,7 +50,7 @@ export function createStandaloneTag(
 /** Create a tag bound to an element. Redrawn when the element's _draw() runs. */
 export function createBoundTag(
   callout: (anchor: Point, html: string, opts?: CalloutOpts | Record<string, unknown>) => void,
-  target: El,
+  target: { pos(): Point },
   html: string,
 ): Tag {
   let _html = html, _place: Place = 'above', _gap = 12;
@@ -76,6 +76,6 @@ export function createBoundTag(
     },
   } as unknown as TagInternal;
 
-  (target as El & { _labelEl?: TagInternal })._labelEl = self;
+  (target as unknown as { pos(): Point; _labelEl?: TagInternal })._labelEl = self;
   return self;
 }

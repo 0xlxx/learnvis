@@ -2,6 +2,7 @@
 // Migrated to FrameManager: vertex/edge call fm.declare() directly.
 
 import * as d3 from 'd3';
+import { eid as mkId } from './types';
 import type { Palette, D3S } from './types';
 import type { FrameManager } from './frame';
 import { offsetLine, markerHalf } from './geometry';
@@ -14,7 +15,6 @@ interface Vertex {
   _r: number;
   _stroke: string;
   _fill: string;
-  _label: string;
   pos(): Vec2;
   color(c: string): Vertex;
   label(t: string): Vertex;
@@ -48,19 +48,19 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
   const _vertices = new Map<string, Vertex>();
 
   function vertex(id: string, pos: Vec2): Vertex {
-    const eid = `vertex:${id}`;
+    const eid = mkId('vertex', id);
     const r = 10;
     const stroke = p.primary.fg;
     const fill = p.primary.a(15);
 
     fm.declare(eid, {
       type: 'node', x: pos[0], y: pos[1],
-      r, stroke, fill, _label: id,
+      r, stroke, fill, label: id,
     } as any);
 
     const v: Vertex = {
       id, x: pos[0], y: pos[1],
-      _r: r, _stroke: stroke, _fill: fill, _label: id,
+      _r: r, _stroke: stroke, _fill: fill,
       pos() { return [this.x, this.y]; },
       color(c: string) {
         const resolved = resolveColor(c);
@@ -68,7 +68,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
         fm.patch(eid, { stroke: this._stroke, fill: this._fill });
         return this;
       },
-      label(t: string) { this._label = t; fm.patch(eid, { _label: t }); return this; },
+      label(t: string) { fm.patch(eid, { label: t }); return this; },
       size(r: number) { this._r = r; fm.patch(eid, { r }); return this; },
       fill(c: string) { this._fill = c; fm.patch(eid, { fill: c }); return this; },
     };
@@ -77,7 +77,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
   }
 
   function edge(a: Vertex, b: Vertex, opts?: { directed?: boolean; gap?: number; marker?: import('./types').MarkerConfig }): Edge {
-    const eid = `edge:${a.id}:${b.id}`;
+    const eid = mkId('edge', a.id + ':' + b.id);
     const stroke = p.dim.fg;
     const strokeW = 1.8;
     const directed = opts?.directed !== false;
@@ -150,9 +150,9 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
 
     // Re-declare vertices with new positions
     for (const v of vertices) {
-      fm.declare(`vertex:${v.id}`, {
+      fm.declare(mkId('vertex', v.id), {
         type: 'node', x: v.x, y: v.y,
-        r: v._r, stroke: v._stroke, fill: v._fill, _label: v._label,
+        r: v._r, stroke: v._stroke, fill: v._fill, label: v.label,
       } as any);
     }
   }

@@ -69,6 +69,41 @@ export const mixLabelPos = (eid: string, fm: FrameManager, defaults: { labelPlac
   },
 });
 
+// ── Shared node label (unified across all domains) ──
+
+export const mixNodeLabel = (eid: string, fm: FrameManager) => ({
+  label(t: string, place?: Place, gap?: number) {
+    const p: Record<string, unknown> = { label: t };
+    if (place !== undefined) p.labelPlace = place;
+    if (gap !== undefined) p.labelGap = gap;
+    fm.patch(eid, p);
+    return this;
+  },
+});
+
+// ── Shared moveTo (absolute reposition) ──
+
+export const mixMoveTo = (eid: string, fm: FrameManager) => ({
+  moveTo(x: number, y: number) {
+    patch(eid, fm, { x, y });
+    return this;
+  },
+});
+
+// ── CoreNode: shared fluent builder for all node-like entities ──
+
+export function coreNodeMixin(eid: string, fm: FrameManager, p: Palette) {
+  return {
+    ...mixColor(eid, fm, p),
+    ...mixStrokeW(eid, fm),
+    ...mixFill(eid, fm, p),
+    ...mixOpacity(eid, fm),
+    ...mixSize(eid, fm),
+    ...mixNodeLabel(eid, fm),
+    ...mixMoveTo(eid, fm),
+  };
+}
+
 // ── Transform mixin (stores pure descriptors) ──
 
 import type { Transform } from './transform';

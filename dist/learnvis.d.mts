@@ -289,8 +289,15 @@ declare class FrameManager {
   private renderer;
   constructor(ctx: StageCtx, animation?: Partial<AnimationConfig>, renderer?: Renderer);
   begin(): void;
-  declare(id: EntityId, state: EntityState): Entity;
-  patch(id: EntityId, partial: Partial<EntityState>): void;
+  declare(id: string, state: EntityState): Entity;
+  patch(id: string, partial: Partial<EntityState>): void;
+  /** Typed getter: narrows EntityState by its discriminant type field.
+   *  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
+  get<T extends EntityState['type']>(id: string, _type: T): (Entity & {
+    desired: Extract<EntityState, {
+      type: T;
+    }>;
+  }) | undefined;
   commit(opts?: {
     ms?: number;
     animate?: boolean;
@@ -545,7 +552,6 @@ interface Vertex {
   _r: number;
   _stroke: string;
   _fill: string;
-  _label: string;
   pos(): Vec2$1;
   color(c: string): Vertex;
   label(t: string): Vertex;
@@ -585,9 +591,6 @@ interface LayoutNode {
   moveTo(x: number, y: number): LayoutNode;
   port(id: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
 }
-interface LayoutBlock extends LayoutNode {
-  fit(pad?: number): LayoutBlock;
-}
 interface LayoutPort {
   color(c: string): LayoutPort;
   size(r: number): LayoutPort;
@@ -609,6 +612,8 @@ interface LayoutLayer {
   color(c: string): LayoutLayer;
   opacity(v: number): LayoutLayer;
   label(t: string): LayoutLayer;
+  dash(d: string): LayoutLayer;
+  strokeW(n: number): LayoutLayer;
 }
 interface LayoutEnclosure {
   color(c: string): LayoutEnclosure;
@@ -631,10 +636,6 @@ interface NodeOpts {
   labelGap?: number;
   shape?: 'rect' | 'circle';
 }
-interface BlockOpts extends NodeOpts {
-  childIds?: string[];
-  emph?: boolean;
-}
 type PortPosition = 'top' | 'bottom' | 'left' | 'right' | [number, number];
 interface PortOpts {
   size?: number;
@@ -651,11 +652,23 @@ interface EdgeOpts {
   label?: string;
 }
 interface LayerOpts {
+  totalRanks?: number;
+  layerGap?: number;
+  startY?: number;
+  endY?: number;
+  y?: number;
+  h?: number;
   color?: string;
   opacity?: number;
   x?: number;
   w?: number;
   label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
+  style?: 'band' | 'swimlane';
+  dash?: string;
+  rx?: number;
+  strokeW?: number;
 }
 interface EnclosureOpts {
   color?: string;
@@ -667,20 +680,18 @@ interface EnclosureOpts {
 }
 interface LayoutAPI {
   node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
-  block(id: string, x: number, y: number, w: number, h: number, opts?: BlockOpts): LayoutBlock;
+  block(id: string, x: number, y: number, w: number, h: number, opts?: NodeOpts & {
+    style?: 'muted' | 'normal' | 'active';
+  }): LayoutNode;
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
-  layer(id: string, y: number, h: number, opts?: LayerOpts): LayoutLayer;
+  layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
   enclosure(id: string, x: number, y: number, w: number, h: number, opts?: EnclosureOpts): LayoutEnclosure;
 }
 declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
 //#endregion
 //#region vis/types.d.ts
 type Vec2 = [number, number];
-type Point = {
-  x: number;
-  y: number;
-};
 type Place = 'above' | 'below' | 'left' | 'right';
 type SemColor = {
   fg: string;
@@ -719,8 +730,6 @@ interface AnimationConfig {
     easing: (t: number) => number;
   };
 }
-type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge';
-type EntityId = `${EntityPrefix}:${string}`;
 type NodeShape = 'circle' | 'rect' | 'symbol';
 type NodeState = {
   type: 'node';
@@ -737,13 +746,13 @@ type NodeState = {
   opacity?: number;
   label?: string;
   labelPlace?: Place;
-  _labelY?: number;
-  _labelAnchor?: string;
+  labelGap?: number;
   symType?: string;
   _owner?: string;
+  _shape?: string;
+  _portPos?: 'top' | 'bottom' | 'left' | 'right' | [number, number];
   _blockW?: number;
   _blockH?: number;
-  _children?: string[];
 };
 type LineMarker = 'arrow' | 'none';
 type TfRotate = {
@@ -781,15 +790,20 @@ type LineState = WithTransform<{
   y1?: number;
   x2?: number;
   y2?: number;
+  a?: Vec2;
+  b?: Vec2;
   stroke: string;
   strokeW: number;
   dash?: string;
   opacity?: number;
   label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
   marker?: LineMarker;
   directed?: boolean;
   bend?: boolean;
   _bend?: boolean;
+  _markerCfg?: MarkerConfig | null;
   _fromPort?: string;
   _toPort?: string;
 }>;
@@ -811,7 +825,14 @@ type RegionState = WithTransform<{
   outerR?: number;
   startAngle?: number;
   endAngle?: number;
-  _label?: string;
+  d?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
   _rx?: number;
 }>;
 type CurveState = {
@@ -855,8 +876,9 @@ type GroupState = {
 };
 type EntityState = NodeState | LineState | RegionState | CurveState | GroupState;
 interface Entity {
-  id: EntityId;
+  id: string;
   desired: EntityState;
+  svg?: any;
 }
 interface StageCtx {
   svg: S;
@@ -901,10 +923,11 @@ interface StageOptions {
   animation?: Partial<AnimationConfig>;
   renderer?: Renderer;
 }
-interface StepLike {
+type StageAPI = AgentStage;
+type StepLike = {
   label?: string;
   frame(s: StageAPI): void;
-}
+} | ((s: StageAPI) => void);
 interface StepsOptions {
   start?: number;
 }
@@ -913,25 +936,6 @@ interface StepsController {
   get current(): number;
   onChange(fn: (i: number) => void): () => void;
   destroy(): void;
-}
-interface El {
-  pos(): Point;
-  label(t: string): El;
-  color(c: string): El;
-  size(n: number): El;
-  fill(c: string): El;
-  opacity(v: number): El;
-  moveTo(x: number, y: number): El;
-  remove(): void;
-}
-interface Tag {
-  above(gap?: number): Tag;
-  below(gap?: number): Tag;
-  left(gap?: number): Tag;
-  right(gap?: number): Tag;
-  color(c: string): Tag;
-  text(t: string): Tag;
-  remove(): void;
 }
 interface AgentStage extends Disposable {
   ctx: StageCtx;
@@ -946,16 +950,6 @@ interface AgentStage extends Disposable {
   math: MathAPI;
   graph: GraphAPI;
   layout: LayoutAPI;
-  dot(x: number | Vec2, y?: number): El;
-  zone(x: number, y: number, w: number, h: number, label: string, color: string): El;
-  arrow(from: El, dx: number | Vec2, dy?: number): El;
-  tag(target: El | {
-    pos(): Point;
-  }, html: string): Tag;
-  path(pts: Vec2[], opts?: {
-    stroke?: string;
-    dash?: string;
-  }): El[];
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: {
     ms?: number;
@@ -963,7 +957,7 @@ interface AgentStage extends Disposable {
   play(frames: ((s: AgentStage) => void)[], opts?: {
     ms?: number;
   }): Promise<void>;
-  frames: Record<string, EntityState[]>;
+  frames: any;
   theme?: Record<string, unknown>;
 }
 //#endregion
@@ -1278,4 +1272,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, type LayoutAPI, type LayoutBlock, type LayoutEdge, type LayoutEnclosure, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutEnclosure, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

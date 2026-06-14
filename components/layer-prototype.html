@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Layer Prototype — Sugiyama 分层布局</title>
+  <link rel="stylesheet" href="../theme.css">
+  <style>
+    *,*::before,*::after{box-sizing:border-box}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem 2rem 5rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 .3rem}
+    .sub{color:var(--text-muted);font-size:.82rem;margin:0 0 1.5rem}
+    #stage{width:640px;height:440px;display:block;border:1px solid var(--border);border-radius:12px;background:var(--card);margin:0 auto}
+
+    /* ── Floating variant switcher ── */
+    #switcher{position:fixed;bottom:20px;left:50%;translate:-50% 0;display:flex;align-items:center;gap:12px;
+      background:var(--card);border:1px solid var(--border);border-radius:20px;padding:6px 16px;
+      box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:999;user-select:none}
+    #switcher button{font-size:.75rem;padding:4px 12px;border:1px solid var(--border);border-radius:14px;
+      background:var(--bg);cursor:pointer;transition:all .15s;color:var(--text);font-family:var(--font)}
+    #switcher button:hover{border-color:var(--blue);background:var(--blue-03)}
+    #switcher .label{font-size:.78rem;font-weight:600;min-width:120px;text-align:center;color:var(--text)}
+    #switcher .vname{font-weight:400;color:var(--text-dim)}
+    #switcher .hint{font-size:.6rem;color:var(--text-dim);opacity:.5}
+  </style>
+</head>
+<body>
+
+<h1>Layer Prototype</h1>
+<p class="sub">Sugiyama layered layout — 三种视觉方案：色带 · 泳道 · 极简</p>
+<div id="stage"></div>
+<div id="switcher">
+  <button id="prev">←</button>
+  <span class="label" id="vlabel">A — <span class="vname">色带</span></span>
+  <button id="next">→</button>
+  <span class="hint">← →</span>
+</div>
+
+<script src="../dist/learnvis.js"></script>
+
+<script type="module">
+// ═══════════════════════════════════════════════════════════
+//  Shared data: a 4-rank Sugiyama DAG
+// ═══════════════════════════════════════════════════════════
+
+const W = 640, H = 440;
+const THEME = 'paper';
+
+const ranks = [
+  { name: 'Input',      nodes: ['data'] },
+  { name: 'Pre-process', nodes: ['parse', 'validate'] },
+  { name: 'Process',    nodes: ['transform', 'analyze'] },
+  { name: 'Output',     nodes: ['result'] },
+];
+const rankColors = ['info', 'warning', 'accent', 'success'];
+const totalRanks = ranks.length;
+
+const edgeList = [
+  ['data', 'parse'],      ['data', 'validate'],
+  ['parse', 'transform'], ['validate', 'transform'],
+  ['validate', 'analyze'],
+  ['transform', 'result'], ['analyze', 'result'],
+];
+
+// Layer geometry
+const startY = 50, endY = 410, layerGap = 6;
+const bandH = (endY - startY - (totalRanks - 1) * layerGap) / totalRanks;
+const rankY = r => startY + r * (bandH + layerGap);
+const rankCY = r => rankY(r) + bandH / 2;
+
+// Node x-positions per rank
+const nodeXs = (count) => {
+  if (count === 1) return [W / 2];
+  const spacing = 180;
+  const total = (count - 1) * spacing;
+  const start = (W - total) / 2;
+  return Array.from({ length: count }, (_, i) => start + i * spacing);
+};
+
+// ═══════════════════════════════════════════════════════════
+//  Shared draw helpers
+// ═══════════════════════════════════════════════════════════
+
+function drawNodes(s) {
+  const ly = s.layout;
+  const nodes = [];
+  for (const [ri, rank] of ranks.entries()) {
+    const xs = nodeXs(rank.nodes.length);
+    const cy = rankCY(ri);
+    for (const [ni, nid] of rank.nodes.entries()) {
+      const n = ly.node(nid, xs[ni], cy, { w: 64, h: 30, rx: 6 })
+        .color('primary').label(nid);
+      // ports: bottom for outgoing (except last rank), top for incoming (except first rank)
+      if (ri < totalRanks - 1) n.port(`${nid}-out`, 'bottom', { size: 4 }).color('dim');
+      if (ri > 0) n.port(`${nid}-in`, 'top', { size: 4 }).color('dim');
+      nodes.push(n);
+    }
+  }
+  return nodes;
+}
+
+function drawEdges(s) {
+  const ly = s.layout;
+  for (const [from, to] of edgeList) {
+    ly.edge(`${from}-${to}`, `${from}-out`, `${to}-in`)
+      .color('dim').directed(true).strokeW(1.4);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Variant A — 色带 (Colored Bands)
+//  Layers as full-width background zones. Rank labels on the left.
+//  Visual hierarchy: COLOR → nodes → edges.
+// ═══════════════════════════════════════════════════════════
+
+function drawVariantA(s) {
+  const ly = s.layout;
+  for (const [ri, rank] of ranks.entries()) {
+    ly.layer(rank.name, ri, {
+      totalRanks, w: W, startY, endY, layerGap,
+      color: rankColors[ri], style: 'band',
+    });
+    // Rank label on the left edge
+    s.ctx.callout(
+      { x: 8, y: rankCY(ri) },
+      rank.name,
+      { place: 'left', gap: 8, style: { fontSize: '11px', fontWeight: '600', color: 'var(--text-dim)' } }
+    );
+  }
+  drawNodes(s);
+  drawEdges(s);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Variant B — 泳道 (Swimlanes)
+//  Layers as bordered containers with visible edges. Labels inside.
+//  Visual hierarchy: BORDERS → labels → nodes → edges.
+// ═══════════════════════════════════════════════════════════
+
+function drawVariantB(s) {
+  const ly = s.layout;
+  for (const [ri, rank] of ranks.entries()) {
+    ly.layer(rank.name, ri, {
+      totalRanks, w: W - 40, x: 20, startY, endY, layerGap,
+      color: rankColors[ri], style: 'swimlane', label: rank.name,
+    });
+  }
+  drawNodes(s);
+  drawEdges(s);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Variant C — 极简 (Minimal)
+//  No fills, just dashed guide lines between ranks. Labels on left.
+//  Visual hierarchy: NODES → edges → subtle guides.
+// ═══════════════════════════════════════════════════════════
+
+function drawVariantC(s) {
+  const m = s.math;
+  // Dashed separator lines between ranks
+  for (let ri = 0; ri < totalRanks - 1; ri++) {
+    const y = rankY(ri) + bandH + layerGap / 2;
+    m.segment(`sep-${ri}`, [30, y], [W - 10, y], {
+      color: 'muted', strokeW: 1.2, dash: '8 4',
+    });
+  }
+  // Rank labels on the left
+  for (const [ri, rank] of ranks.entries()) {
+    s.ctx.callout(
+      { x: 8, y: rankCY(ri) },
+      rank.name,
+      { place: 'left', gap: 8, style: { fontSize: '10px', color: 'var(--text-dim)' } }
+    );
+  }
+  drawNodes(s);
+  drawEdges(s);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  Variants registry
+// ═══════════════════════════════════════════════════════════
+
+const variants = [
+  { key: 'A', name: '色带',   desc: 'Colored bands — 全宽背景色带，左侧标签', draw: drawVariantA },
+  { key: 'B', name: '泳道',   desc: 'Swimlanes — 带边框容器，内部标签',       draw: drawVariantB },
+  { key: 'C', name: '极简',   desc: 'Minimal — 仅虚线段分隔，无填充',          draw: drawVariantC },
+];
+
+// ═══════════════════════════════════════════════════════════
+//  Bootstrap
+// ═══════════════════════════════════════════════════════════
+
+const stageEl = document.getElementById('stage');
+const s = LearnVis.stage('#stage', { width: W, height: H, theme: THEME });
+
+function renderVariant(key) {
+  const v = variants.find(x => x.key === key) ?? variants[0];
+  s.frames.begin();
+  v.draw(s);
+  s.frames.commit({ animate: false });
+  document.getElementById('vlabel').innerHTML = `${v.key} — <span class="vname">${v.name}</span>`;
+}
+
+function getVariant() {
+  const p = new URLSearchParams(window.location.search);
+  const v = p.get('variant');
+  return variants.some(x => x.key === v) ? v : 'A';
+}
+
+function setVariant(key) {
+  const url = new URL(window.location);
+  url.searchParams.set('variant', key);
+  history.replaceState(null, '', url);
+  renderVariant(key);
+}
+
+// Init
+const current = getVariant();
+history.replaceState(null, '', `?variant=${current}`);
+renderVariant(current);
+
+// ── Switcher events ──
+
+document.getElementById('prev').addEventListener('click', () => {
+  const idx = variants.findIndex(x => x.key === getVariant());
+  setVariant(variants[(idx - 1 + variants.length) % variants.length].key);
+});
+document.getElementById('next').addEventListener('click', () => {
+  const idx = variants.findIndex(x => x.key === getVariant());
+  setVariant(variants[(idx + 1) % variants.length].key);
+});
+
+// Keyboard
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable) return;
+  if (e.key === 'ArrowLeft')  document.getElementById('prev').click();
+  if (e.key === 'ArrowRight') document.getElementById('next').click();
+});
+</script>
+</body>
+</html>

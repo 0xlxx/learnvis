@@ -251,7 +251,8 @@ describe('layout API (v4 entity types)', () => {
     fm.commit();
     const e = fm.entities.get('fill:L1');
     expect(e!.desired.type).toBe('region');
-    expect((e!.desired as any).shape).toBe('fill');
+    expect((e!.desired as any).shape).toBe('polygon');
+    expect((e!.desired as any).stroke).toBeTruthy();
   });
 
   it('enclosure() creates region entity', () => {

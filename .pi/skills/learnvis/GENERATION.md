@@ -6,9 +6,10 @@ This document tracks how learnvis skills are generated and kept in sync with the
 
 **Generated from source at:**
 
-- **Commit SHA**: f7c2606
+- **Commit SHA**: `26c2086`
 - **Date**: 2026-06-14
-- **Source**: `vis/` source modules (index.ts, math.ts, graph.ts, elements.ts, create.ts, stage.ts, layout.ts, primitives.ts, themes.ts, tokens.ts)
+- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, layout.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts, color.ts)
+- **Tooling**: `scripts/postinstall.mjs` — multi-platform skill symlink (Claude Code, Codex, Pi, OpenCode)
 
 ## Structure
 
@@ -20,10 +21,10 @@ This document tracks how learnvis skills are generated and kept in sync with the
 └── references/                # Domain-specific reference docs (6 files)
     ├── api-math.md            # Math primitives API
     ├── api-graph.md           # Graph theory primitives API
-    ├── api-common.md          # Common UI elements API
+    ├── api-layout.md          # Layout primitives API (node/block/port/edge/layer/enclosure)
+    ├── api-common.md          # Shared utilities (card, tag, callout)
     ├── api-controlflow.md     # Lifecycle & control flow API
-    ├── api-atomic.md          # Low-level atomic API
-    └── api-layout.md          # Layout system API
+    └── api-atomic.md          # Low-level atomic API
 ```
 
 ## File Naming Convention
@@ -57,6 +58,10 @@ git diff HEAD -- vis/
 - Add `api-<domain>.md` in `references/`
 - Add a new section to `SKILL.md` with API table
 
+**For deleted APIs:**
+- Remove from `api-*.md` and `SKILL.md`
+- If an entire domain is removed, delete the reference file
+
 **For theme/marker changes:**
 - Add `reference-*.md` files for configuration reference
 
@@ -67,6 +72,16 @@ git diff HEAD -- vis/
 - [ ] Update `SKILL.md` tables
 - [ ] Update this `GENERATION.md` with date/SHA
 - [ ] Run `pnpm build && pnpm test` to verify nothing broke
+
+## Key Architecture Notes (current)
+
+- **EntityId** — branded type `string & { [EntityIdBrand]: true }`, constructed via `eid(prefix, id)` from `vis/types.ts`
+- **FrameManager** — ECS-style: `begin() → declare(id, state) → commit({ ms?, animate? })`
+- **Renderer** — Strategy pattern, SVGRenderer in `vis/renderer/svg.ts`
+- **Color pipeline** — oklch theme tokens → `resolveColor()` → `svgColor()` converts to hex at render boundary
+- **Mixins** — Composable fluent builders (Hejlsberg pattern): `coreNodeMixin`, `mixColor`, `mixStrokeW`, `mixOpacity`, `mixLabel`, etc.
+- **CoreNode** — `coreNodeMixin(eid, fm, p)` shared across all domains (color, strokeW, fill, opacity, size, label, moveTo)
+- **elements.ts** — DELETED. `zone`, `dot`, `arrow`, `line`, `path` no longer exist. Use `math` or `layout` primitives instead.
 
 ## Style Guidelines
 
@@ -80,8 +95,10 @@ git diff HEAD -- vis/
 
 | Date       | Changes                                              |
 |------------|------------------------------------------------------|
+| 2026-06-14 | Full skill refresh: all 6 reference files updated, SKILL.md layout section, README.md rewritten, segment a/b render fix, layer dual-style, postinstall multi-platform |
+| 2026-06-14 | Major: elements.ts deleted, layout API (node/block/port/edge/layer/enclosure), CoreNode mixin unified labels, layer style: band/swimlane, EntityId branded type, oklch→hex color pipeline, labelPlace on regions |
 | 2026-06-13 | Added `using` syntax support, `AgentStage extends Disposable`, polyfill |
 
 ---
 
-Last updated: 2026-06-13
+Last updated: 2026-06-14

@@ -4,6 +4,7 @@ import * as d3 from 'd3';
 import type { EntityState, StageCtx, Vec2, NodeState, LineState, RegionState, CurveState, GroupState } from '../types';
 import type { Renderer, RenderHandle } from './index';
 import { applyLine, applyVertices, interpolate, type Transform } from '../transform';
+import { svgColor } from '../color';
 
 type E = d3.Selection<any, unknown, null, undefined>;
 
@@ -50,8 +51,8 @@ function markerFor(stroke: string, cache: Record<string, string>, svg: d3.Select
       .attr('refX', vbW / 2).attr('refY', h / 2)
       .attr('markerWidth', vbW).attr('markerHeight', h)
       .attr('markerUnits', 'userSpaceOnUse').attr('orient', 'auto');
-    if (open) m.append('path').attr('d', `M2,0 L${vbW},${h / 2} L2,${h}`).attr('fill', 'none').attr('stroke', stroke).attr('stroke-width', 1.5);
-    else m.append('path').attr('d', `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr('fill', stroke);
+    if (open) m.append('path').attr('d', `M2,0 L${vbW},${h / 2} L2,${h}`).attr('fill', svgColor('none')).attr('stroke', svgColor(stroke)).attr('stroke-width', 1.5);
+    else m.append('path').attr('d', `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr('fill', svgColor(stroke));
     cache[key] = id;
   }
   return `url(#${cache[key]})`;
@@ -92,25 +93,34 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         g.append('rect').attr('class', 'shp')
           .attr('x', nd.x - bw / 2).attr('y', nd.y - bh / 2)
           .attr('width', bw).attr('height', bh).attr('rx', nd.rx ?? 5)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       } else if (nd.shape === 'symbol') {
         const sym = (globalThis as any).d3?.symbol?.().type?.((globalThis as any).d3?.[nd.symType ?? 'symbolCircle'] ?? (globalThis as any).d3?.symbolCircle)?.size?.((nd.r ?? 8) ** 2)?.();
         g.append('path').attr('data-id', id).attr('d', sym ? `${sym}` : '')
           .attr('transform', `translate(${nd.x},${nd.y})`)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.2);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.2);
       } else {
         g.append('circle').attr('class', 'shp')
           .attr('cx', nd.x).attr('cy', nd.y).attr('r', nd.r ?? 4)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       }
       applyCommon(g, nd.opacity);
-      const label = nd.label ?? '';
+      const label = nd.label || '';
       let text: E | null = null;
       if (label) {
-        const ly = (nd._labelY ?? nd.y - (nd._blockH ?? (nd.r ?? 4) * 2) / 2 - 12);
+        const bw = nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+        const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+        const gap = nd.labelGap ?? 12;
+        const place = nd.labelPlace ?? 'above';
+        let ly: number, anchor = 'middle';
+        if (place === 'above')      { ly = nd.y - bh / 2 - gap; }
+        else if (place === 'below')  { ly = nd.y + bh / 2 + gap; }
+        else if (place === 'left')   { ly = nd.y; anchor = 'end'; }
+        else if (place === 'right')  { ly = nd.y; anchor = 'start'; }
+        else                         { ly = nd.y - bh / 2 - gap; }
         text = g.append('text').attr('class', 'vlbl-txt').attr('font-size', '11px')
-          .attr('font-family', 'JetBrains Mono,monospace').attr('fill', nd.stroke).attr('font-weight', '600')
-          .attr('x', nd.x).attr('y', ly).attr('text-anchor', nd._labelAnchor ?? 'middle').text(label);
+          .attr('font-family', 'JetBrains Mono,monospace').attr('fill', svgColor(nd.stroke)).attr('font-weight', '600')
+          .attr('x', nd.x).attr('y', ly).attr('text-anchor', anchor).text(label);
       }
       return { group: g, text };
     }
@@ -123,13 +133,13 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         const res = applyLine(b.from, b.to, ld._tf);
         x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
       } else {
-        x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-        x2 = ld.x2 ?? ld.to?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+        x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+        x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
       }
       const hasMarker = (ld.marker === 'arrow') || ld.directed;
       const line = edges.append('line').attr('data-id', id)
         .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
-        .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW).attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round')
+        .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW).attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round')
         .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, (ld._markerCfg as any) ?? null) ?? null : null);
       applyCommon(line, ld.opacity);
       return { group: line, text: null };
@@ -140,14 +150,14 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       if (rd.shape === 'circle') {
         const el = bg.append('circle').attr('data-id', id)
           .attr('cx', rd.cx ?? 0).attr('cy', rd.cy ?? 0).attr('r', rd.r ?? 0)
-          .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill).attr('stroke-width', rd.strokeW ?? 1.2);
+          .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? rd.fill)).attr('stroke-width', rd.strokeW ?? 1.2);
         applyCommon(el, rd.opacity); return { group: el, text: null };
       }
       if (rd.shape === 'arc') {
         const a = (globalThis as any).d3?.arc?.()?.({ innerRadius: rd.innerR ?? 0, outerRadius: rd.outerR ?? 0, startAngle: rd.startAngle ?? 0, endAngle: rd.endAngle ?? 0 }) ?? '';
         const el = bg.append('path').attr('data-id', id).attr('d', `${a}`)
           .attr('transform', `translate(${rd.cx ?? 0},${rd.cy ?? 0})`)
-          .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill).attr('stroke-width', rd.strokeW ?? 1.2);
+          .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? rd.fill)).attr('stroke-width', rd.strokeW ?? 1.2);
         applyCommon(el, rd.opacity); return { group: el, text: null };
       }
       // polygon / fill — apply transforms if present
@@ -159,10 +169,33 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       }
       const ptsStr = pts.map(p => p.join(',')).join(' ');
       const el = bg.append('polygon').attr('data-id', id).attr('points', ptsStr)
-        .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none').attr('stroke-width', rd.strokeW ?? 0)
+        .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? 'none')).attr('stroke-width', rd.strokeW ?? 0)
         .attr('stroke-dasharray', rd.dash ?? '');
       applyCommon(el, rd.opacity);
-      return { group: el, text: null };
+      // Label placement — respects labelPlace, defaults to centroid
+      let rt: E | null = null;
+      const rlabel = rd.label ?? '';
+      if (rlabel) {
+        const minX = Math.min(...pts.map(p => p[0]));
+        const maxX = Math.max(...pts.map(p => p[0]));
+        const minY = Math.min(...pts.map(p => p[1]));
+        const maxY = Math.max(...pts.map(p => p[1]));
+        const cx = (minX + maxX) / 2;
+        const cy = (minY + maxY) / 2;
+        const gap = rd.labelGap ?? 6;
+        let lx: number, ly: number, anchor: string;
+        switch (rd.labelPlace) {
+          case 'above':  lx = cx;       ly = minY - gap; anchor = 'middle'; break;
+          case 'below':  lx = cx;       ly = maxY + gap; anchor = 'middle'; break;
+          case 'left':   lx = minX + gap; ly = minY + 14; anchor = 'start'; break;
+          case 'right':  lx = maxX + gap; ly = minY + 10; anchor = 'start'; break;
+          default:       lx = cx;       ly = cy + 4;      anchor = 'middle'; break;
+        }
+        rt = bg.append('text').attr('class', 'vlbl-txt').attr('font-size', '10px')
+          .attr('font-family', 'JetBrains Mono,monospace').attr('fill', '#888').attr('font-weight', '500')
+          .attr('x', lx).attr('y', ly).attr('text-anchor', anchor).text(rlabel);
+      }
+      return { group: el, text: rt };
     }
 
     case 'curve': {
@@ -179,8 +212,8 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const sx = (x: number) => ox + ((x - d0) / (d1 - d0)) * pw;
       const sy = (y: number) => oy - ((y - r0) / (r1 - r0)) * ph;
       const ptsStr = Array.from({ length: n }, (_, i) => { const xv = d0 + i * step; return [sx(xv), sy(fn(xv))].join(','); }).join(' ');
-      const el = edges.append('polyline').attr('data-id', id).attr('points', ptsStr).attr('fill', 'none')
-        .attr('stroke', cd.stroke).attr('stroke-width', cd.strokeW).attr('stroke-dasharray', cd.dash ?? '');
+      const el = edges.append('polyline').attr('data-id', id).attr('points', ptsStr).attr('fill', svgColor('none'))
+        .attr('stroke', svgColor(cd.stroke)).attr('stroke-width', cd.strokeW).attr('stroke-dasharray', cd.dash ?? '');
       applyCommon(el, cd.opacity);
       return { group: el, text: null };
     }
@@ -191,7 +224,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         const gv = overlay.append('g').attr('data-id', id);
         const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
         const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-        gv.append('path').attr('d', arc.path).attr('fill', 'none').attr('stroke', gd.stroke ?? '#000').attr('stroke-width', gd.strokeW ?? 1.5);
+        gv.append('path').attr('d', arc.path).attr('fill', svgColor('none')).attr('stroke', svgColor(gd.stroke ?? '#000')).attr('stroke-width', gd.strokeW ?? 1.5);
         let text: E | null = null;
         const label = gd.label ?? '';
         if (label && Math.abs(arc.a2 - arc.a1) > 0.02) {
@@ -199,7 +232,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
           text = gv.append('text').attr('x', vx + lr * Math.cos(arc.ma)).attr('y', vy + lr * Math.sin(arc.ma))
             .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
             .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-            .attr('fill', gd.stroke ?? '#000').text(label);
+            .attr('fill', svgColor(gd.stroke ?? '#000')).text(label);
         }
         applyCommon(gv, gd.opacity);
         return { group: gv, text };
@@ -207,15 +240,15 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const g = bg.append('g').attr('data-id', id);
       if (gd.subtype === 'axes') {
         const ox = gd.ox ?? 0, oy = gd.oy ?? 0, xl = gd.xl ?? 300, yl = gd.yl ?? 200, sw = gd.strokeW ?? 1.4;
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox + xl + 10).attr('y2', oy).attr('stroke', gd.stroke!).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr('fill', gd.stroke!);
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox).attr('y2', oy - yl - 10).attr('stroke', gd.stroke!).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', gd.stroke!);
-        g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', '#fff').attr('stroke', gd.stroke!).attr('stroke-width', sw);
+        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox + xl + 10).attr('y2', oy).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
+        g.append('polygon').attr('points', `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr('fill', svgColor(gd.stroke!));
+        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox).attr('y2', oy - yl - 10).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
+        g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', svgColor(gd.stroke!));
+        g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', svgColor('#fff')).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
       } else if (gd.subtype === 'grid') {
         const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
-        for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', gd.stroke!).attr('stroke-width', gd.strokeW ?? 0.3);
-        for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', gd.stroke!).attr('stroke-width', gd.strokeW ?? 0.3);
+        for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
+        for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
       }
       applyCommon(g, gd.opacity);
       return { group: g, text: null };
@@ -236,11 +269,11 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
         svg.select('rect').interrupt().transition(tr)
           .attr('x', nd.x - bw / 2).attr('y', nd.y - bh / 2)
           .attr('width', bw).attr('height', bh)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       } else {
         svg.select('.shp').interrupt().transition(tr)
           .attr('cx', nd.x).attr('cy', nd.y).attr('r', nd.r ?? 4)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       }
       applyCommon(svg, nd.opacity);
       break;
@@ -273,7 +306,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
            .attrTween('y1', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).from[1].toString())
            .attrTween('x2', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).to[0].toString())
            .attrTween('y2', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).to[1].toString())
-           .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
+           .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW);
       } else {
         let x1: number, y1: number, x2: number, y2: number;
         if (ld._tf && ld._base) {
@@ -281,12 +314,12 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           const res = applyLine(b.from, b.to, ld._tf);
           x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
         } else {
-          x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-          x2 = ld.x2 ?? ld.to?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+          x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+          x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
         }
         svg.interrupt().transition(tr)
           .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
-          .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
+          .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW);
       }
       if (ld.opacity != null) svg.transition(tr).attr('opacity', ld.opacity);
       break;
@@ -295,7 +328,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       const rd = newState as RegionState;
       if (rd.shape === 'circle') {
         svg.interrupt().transition(tr).attr('cx', rd.cx ?? 0).attr('cy', rd.cy ?? 0).attr('r', rd.r ?? 0)
-          .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill);
+          .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? rd.fill));
       } else {
         const oldRd = oldState as RegionState;
 
@@ -317,7 +350,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           const norm = normalizeTransforms(oldTf!, newTf!);
           svg.interrupt().transition(tr)
              .attrTween('points', () => t => applyVertices(regionBase!, interpolate(norm.old, norm.new, t)).map(p => p.join(',')).join(' '))
-             .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
+             .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? 'none'));
         } else {
           let pts: Vec2[];
           if (rd._tf && rd._base && 'vertices' in rd._base) {
@@ -327,7 +360,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           }
           svg.interrupt().transition(tr)
             .attr('points', pts.map(p => p.join(',')).join(' '))
-            .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
+            .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? 'none'));
         }
       }
       if (rd.opacity != null) svg.transition(tr).attr('opacity', rd.opacity);
@@ -338,7 +371,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       if (gd.subtype === 'angle') {
         const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
         const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-        svg.select('path').interrupt().transition(tr).attr('d', arc.path).attr('stroke', gd.stroke ?? '#000').attr('stroke-width', gd.strokeW ?? 1.5);
+        svg.select('path').interrupt().transition(tr).attr('d', arc.path).attr('stroke', svgColor(gd.stroke ?? '#000')).attr('stroke-width', gd.strokeW ?? 1.5);
         const label = gd.label ?? '';
         const showLabel = label && Math.abs(arc.a2 - arc.a1) > 0.02;
         if (showLabel) {
@@ -352,7 +385,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
             } else {
               svg.append('text').attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
                 .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-                .attr('fill', gd.stroke ?? '#000')
+                .attr('fill', svgColor(gd.stroke ?? '#000'))
                 .attr('x', vx + lr * Math.cos(arc.ma)).attr('y', vy + lr * Math.sin(arc.ma)).text(label);
             }
           }
@@ -376,10 +409,10 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
         const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
         svg.select('rect').attr('x', nd.x - bw / 2).attr('y', nd.y - bh / 2)
           .attr('width', bw).attr('height', bh)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       } else {
         svg.select('.shp').attr('cx', nd.x).attr('cy', nd.y).attr('r', nd.r ?? 4)
-          .attr('fill', nd.fill).attr('stroke', nd.stroke).attr('stroke-width', nd.strokeW ?? 1.5);
+          .attr('fill', svgColor(nd.fill)).attr('stroke', svgColor(nd.stroke)).attr('stroke-width', nd.strokeW ?? 1.5);
       }
       applyCommon(svg, nd.opacity);
       break;
@@ -396,7 +429,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
         x2 = ld.x2 ?? ld.to?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? 0;
       }
       svg.attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
-        .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
+        .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW);
       applyCommon(svg, ld.opacity);
       break;
     }
@@ -409,7 +442,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
         pts = rd.pts ?? rd.vertices ?? [];
       }
       svg.attr('points', pts.map(p => p.join(',')).join(' '))
-        .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none').attr('stroke-width', rd.strokeW ?? 0);
+        .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? 'none')).attr('stroke-width', rd.strokeW ?? 0);
       applyCommon(svg, rd.opacity);
       break;
     }
@@ -418,7 +451,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
       if (gd.subtype === 'angle') {
         const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
         const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-        svg.select('path').attr('d', arc.path).attr('stroke', gd.stroke ?? '#000').attr('stroke-width', gd.strokeW ?? 1.5);
+        svg.select('path').attr('d', arc.path).attr('stroke', svgColor(gd.stroke ?? '#000')).attr('stroke-width', gd.strokeW ?? 1.5);
         const label = gd.label ?? '';
         const showLabel = label && Math.abs(arc.a2 - arc.a1) > 0.02;
         if (showLabel) {
@@ -433,7 +466,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
               svg.append('text').attr('x', vx + lr * Math.cos(arc.ma)).attr('y', vy + lr * Math.sin(arc.ma))
                 .attr('text-anchor', 'middle').attr('dominant-baseline', 'middle')
                 .attr('font-size', '10px').attr('font-family', 'JetBrains Mono,monospace')
-                .attr('fill', gd.stroke ?? '#000').text(label);
+                .attr('fill', svgColor(gd.stroke ?? '#000')).text(label);
             }
           }
         } else if (text) { text.text(''); }
@@ -495,17 +528,19 @@ export class SVGRenderer implements Renderer {
     for (const [id, h] of this.handles) {
       if (h.state.type !== 'node') continue;
       const nd = h.state as NodeState;
-      const label = nd.label ?? '';
+      const label = nd.label || '';
       if (!label) continue;
       const angles = edgeAngles.get(label) ?? [];
       let place = dirs[0];
       for (const dir of dirs) {
         if (angles.every(a => angleDiff(a, dir.angle) >= Math.PI / 4)) { place = dir; break; }
       }
-      const r = nd.r ?? 10;
+      const bw = nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+      const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+      const halfW = bw / 2, halfH = bh / 2;
       const gap = 6;
-      const tx = nd.x + place.dx * (r + gap);
-      const ty = nd.y + place.dy * (r + gap);
+      const tx = nd.x + place.dx * (halfW + gap);
+      const ty = nd.y + place.dy * (halfH + gap);
       h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
     }
   }

@@ -3516,12 +3516,76 @@ function transform(node) {
 }
 
 //#endregion
+//#region vis/color.ts
+/**
+* Convert an oklch() CSS color string to #rrggbb hex.
+* Falls through unchanged if the input is not an oklch color.
+*
+* Math: oklch → oklab → linear sRGB → gamma-corrected sRGB → hex.
+* Reference: https://www.w3.org/TR/css-color-4/#oklab-to-srgb
+*/
+function oklchToHex(c) {
+	if (!c.startsWith("oklch(")) return c;
+	const m = c.match(/oklch\(([\d.]+)\s+([\d.]+)\s+([\d.]+)\s*(?:\/\s*([\d.]+))?\)/);
+	if (!m) return c;
+	const L = parseFloat(m[1]);
+	const C = parseFloat(m[2]);
+	const H = parseFloat(m[3]);
+	const alpha = m[4] ? parseFloat(m[4]) : 1;
+	const hRad = H * Math.PI / 180;
+	const a = C * Math.cos(hRad);
+	const b = C * Math.sin(hRad);
+	const l_ = L + .3963377774 * a + .2158037573 * b;
+	const m_ = L - .1055613458 * a - .0638541728 * b;
+	const s_ = L - .0894841775 * a - 1.291485548 * b;
+	const l3 = l_ * l_ * l_;
+	const m3 = m_ * m_ * m_;
+	const s3 = s_ * s_ * s_;
+	const rLin = 4.0767416621 * l3 - 3.3077115913 * m3 + .2309699292 * s3;
+	const gLin = -1.2684380046 * l3 + 2.6097574011 * m3 - .3413193965 * s3;
+	const bLin = -.0041960863 * l3 - .7034186147 * m3 + 1.707614701 * s3;
+	const toSRGB = (v) => {
+		const abs = Math.abs(v);
+		return abs <= .0031308 ? 12.92 * v : 1.055 * Math.pow(abs, 1 / 2.4) - .055;
+	};
+	const clamp = (v) => Math.max(0, Math.min(255, Math.round(v * 255)));
+	const R = clamp(toSRGB(rLin));
+	const G = clamp(toSRGB(gLin));
+	const B = clamp(toSRGB(bLin));
+	const hex = "#" + [
+		R,
+		G,
+		B
+	].map((v) => v.toString(16).padStart(2, "0")).join("");
+	if (alpha < 1) {
+		const blend = (c) => Math.round(c * alpha + 255 * (1 - alpha));
+		return "#" + [
+			blend(R),
+			blend(G),
+			blend(B)
+		].map((v) => v.toString(16).padStart(2, "0")).join("");
+	}
+	return hex;
+}
+/**
+* Ensure a color value is safe for SVG attributes.
+* Converts oklch → hex; passes everything else through unchanged.
+* Also handles the CSS `var(--xxx)` and `none` keywords.
+*/
+function svgColor(c) {
+	if (!c) return c ?? "";
+	if (c.startsWith("var(") || c === "none" || c.startsWith("#")) return c;
+	if (c.startsWith("oklch(")) return oklchToHex(c);
+	return c;
+}
+
+//#endregion
 //#region vis/primitives.ts
 /** 为形状绘制光晕背景（半透明圆角矩形） */
-const halo = (g, cx, cy, w, h, rx, { pad = 6, fill = "oklch(0.92 0.015 75)", stroke = "oklch(0.55 0.02 65 / 0.22)", strokeWidth = 1.5, id = "h" } = {}) => {
+const halo = (g, cx, cy, w, h, rx, { pad = 6, fill = svgColor("oklch(0.92 0.015 75)"), stroke = svgColor("oklch(0.55 0.02 65 / 0.22)"), strokeWidth = 1.5, id = "h" } = {}) => {
 	const did = `halo-${id}`;
 	g.selectAll(`[data-id="${did}"]`).remove();
-	return g.append("rect").attr("data-id", did).attr("class", "h").attr("x", cx - w / 2 - pad).attr("y", cy - h / 2 - pad).attr("width", w + pad * 2).attr("height", h + pad * 2).attr("rx", rx + pad * .66).attr("fill", fill).attr("stroke", stroke).attr("stroke-width", strokeWidth);
+	return g.append("rect").attr("data-id", did).attr("class", "h").attr("x", cx - w / 2 - pad).attr("y", cy - h / 2 - pad).attr("width", w + pad * 2).attr("height", h + pad * 2).attr("rx", rx + pad * .66).attr("fill", svgColor(fill)).attr("stroke", svgColor(stroke)).attr("stroke-width", strokeWidth);
 };
 /** SVG 文本标签，支持 paintOrder（描边扩边可读性） */
 const svgLabel = (g, x, y, text, { size = 14, fill = "var(--text)", weight = 700, anchor = "middle", font = "JetBrains Mono,monospace", paintOrder = false, id = "lbl" } = {}) => {
@@ -3550,7 +3614,7 @@ const defineArrows = (svg, { sw = MARKER.sw, refX = MARKER.refX, refY = MARKER.r
 		const c = color || "#888";
 		if (!_cache[c]) {
 			const id = "ar" + Object.keys(_cache).length;
-			defs.append("marker").attr("id", id).attr("viewBox", "0 0 12 10").attr("refX", refX).attr("refY", refY).attr("markerWidth", mw).attr("markerHeight", mw).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto-start-reverse").append("path").attr("d", "M0,0.5 L12,5 L0,9.5 Z").attr("fill", c);
+			defs.append("marker").attr("id", id).attr("viewBox", "0 0 12 10").attr("refX", refX).attr("refY", refY).attr("markerWidth", mw).attr("markerHeight", mw).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto-start-reverse").append("path").attr("d", "M0,0.5 L12,5 L0,9.5 Z").attr("fill", svgColor(c));
 			_cache[c] = id;
 		}
 		return `url(#${_cache[c]})`;
@@ -3994,346 +4058,10 @@ function resolveTheme(name) {
 }
 
 //#endregion
-//#region vis/elements.ts
-const xy = (a, b) => Array.isArray(a) ? {
-	x: a[0],
-	y: a[1]
-} : {
-	x: a,
-	y: b
-};
-let _counter = 0;
-function createElements(fm, ctx, p) {
-	function resolve(c) {
-		const col = p[c];
-		if (col) return {
-			stroke: col.fg,
-			fill: col.bg
-		};
-		return {
-			stroke: c,
-			fill: c
-		};
-	}
-	function dot(x, y) {
-		const pos = xy(x, y);
-		const id = `dot:e${_counter++}`;
-		const { stroke, fill } = resolve(p.primary.fg);
-		fm.declare(id, {
-			type: "node",
-			shape: "circle",
-			x: pos.x,
-			y: pos.y,
-			stroke,
-			fill,
-			r: 5,
-			label: ""
-		});
-		return {
-			_id: id,
-			_type: "node",
-			shape: "circle",
-			_x: pos.x,
-			_y: pos.y,
-			_opts: {},
-			_text: "",
-			pos() {
-				return {
-					x: this._x,
-					y: this._y
-				};
-			},
-			move(nx, ny) {
-				const pt = xy(nx, ny);
-				this._x = pt.x;
-				this._y = pt.y;
-				fm.declare(id, {
-					type: "node",
-					shape: "circle",
-					x: pt.x,
-					y: pt.y,
-					stroke,
-					fill
-				});
-				return this;
-			},
-			dx(dx, dy) {
-				this._x += dx;
-				this._y += dy;
-				fm.declare(id, {
-					type: "node",
-					shape: "circle",
-					x: this._x,
-					y: this._y,
-					stroke,
-					fill
-				});
-				return this;
-			},
-			color(c) {
-				const r = resolve(c);
-				fm.declare(id, {
-					type: "node",
-					shape: "circle",
-					x: this._x,
-					y: this._y,
-					stroke: r.stroke,
-					fill: r.fill
-				});
-				return this;
-			},
-			size(s) {
-				fm.declare(id, {
-					type: "node",
-					shape: "circle",
-					x: this._x,
-					y: this._y,
-					stroke,
-					fill,
-					r: s
-				});
-				return this;
-			},
-			opacity(v) {
-				this._opts.opacity = v;
-				return this;
-			},
-			text(t) {
-				this._text = t;
-				fm.declare(id, {
-					type: "node",
-					shape: "circle",
-					x: this._x,
-					y: this._y,
-					stroke,
-					fill,
-					label: t
-				});
-				return this;
-			},
-			font(_k, _v) {
-				return this;
-			},
-			show() {
-				return this;
-			},
-			glyph(_g) {
-				return this;
-			}
-		};
-	}
-	function zone(x, y, w, h, label, color) {
-		const id = `zone:e${_counter++}`;
-		const { stroke, fill } = resolve(color);
-		fm.declare(id, {
-			type: "region",
-			shape: "polygon",
-			x,
-			y,
-			w,
-			h,
-			stroke,
-			fill,
-			label
-		});
-		return {
-			_id: id,
-			_type: "region",
-			shape: "polygon",
-			_x: x,
-			_y: y,
-			_opts: {},
-			_text: label,
-			pos() {
-				return {
-					x: this._x,
-					y: this._y
-				};
-			},
-			move(nx, ny) {
-				this._x = nx;
-				this._y = ny;
-				return this;
-			},
-			dx(dx, dy) {
-				this._x += dx;
-				this._y += dy;
-				return this;
-			},
-			color(_c) {
-				return this;
-			},
-			size(_s) {
-				return this;
-			},
-			opacity(_v) {
-				return this;
-			},
-			text(_t) {
-				return this;
-			},
-			font(_k, _v) {
-				return this;
-			},
-			show() {
-				return this;
-			},
-			glyph(_g) {
-				return this;
-			}
-		};
-	}
-	function arrow(from, dx, dy) {
-		const id = `arrow:e${_counter++}`;
-		const o = xy(dx, dy);
-		const fp = from.pos();
-		const tx = fp.x + o.x, ty = fp.y + o.y;
-		fm.declare(id + "-tip", {
-			type: "node",
-			shape: "circle",
-			x: tx,
-			y: ty,
-			r: 3.5,
-			stroke: p.danger.fg,
-			fill: p.danger.a(70)
-		});
-		fm.declare(id + "-line", {
-			type: "line",
-			from: from._id,
-			to: id + "-tip",
-			x1: fp.x,
-			y1: fp.y,
-			x2: tx,
-			y2: ty,
-			stroke: p.danger.a(65),
-			strokeW: 1.4,
-			dash: "",
-			directed: true
-		});
-		return {
-			_id: id,
-			_type: "line",
-			marker: "arrow",
-			_x: tx,
-			_y: ty,
-			_opts: {},
-			_text: "",
-			pos() {
-				return {
-					x: this._x,
-					y: this._y
-				};
-			},
-			move(_nx, _ny) {
-				return this;
-			},
-			dx(_dx, _dy) {
-				return this;
-			},
-			color(_c) {
-				return this;
-			},
-			size(_s) {
-				return this;
-			},
-			opacity(_v) {
-				return this;
-			},
-			text(_t) {
-				return this;
-			},
-			font(_k, _v) {
-				return this;
-			},
-			show() {
-				return this;
-			},
-			glyph(_g) {
-				return this;
-			}
-		};
-	}
-	function tag(target, html) {
-		const pt = "_id" in target ? target.pos() : target.pos();
-		ctx.callout(pt, html, {
-			place: "above",
-			gap: 8
-		});
-		return {
-			above(gap) {
-				return this;
-			},
-			below(gap) {
-				return this;
-			},
-			left(gap) {
-				return this;
-			},
-			right(gap) {
-				return this;
-			},
-			gap(g) {
-				return this;
-			},
-			color(c) {
-				return this;
-			},
-			text(t) {
-				return this;
-			},
-			size(s) {
-				return this;
-			},
-			bold() {
-				return this;
-			}
-		};
-	}
-	function path(pts, opts) {
-		const id = `path:e${_counter++}`;
-		const dots = pts.map(([px, py]) => {
-			const did = `${id}-d${_counter++}`;
-			fm.declare(did, {
-				type: "node",
-				shape: "circle",
-				x: px,
-				y: py,
-				r: 2,
-				stroke: p.dim.fg,
-				fill: "var(--bg-node)"
-			});
-			return {
-				_id: did,
-				_type: "node",
-				shape: "circle",
-				_x: px,
-				_y: py,
-				_opts: {},
-				_text: "",
-				pos() {
-					return {
-						x: px,
-						y: py
-					};
-				},
-				color() {
-					return this;
-				},
-				size() {
-					return this;
-				}
-			};
-		});
-		ctx.stage.edges.append("polyline").attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", "none").attr("stroke", opts?.stroke || p.dim.a(25)).attr("stroke-width", 1).attr("stroke-dasharray", opts?.dash || "5 4").attr("stroke-linecap", "round");
-		return dots;
-	}
-	return {
-		dot,
-		zone,
-		arrow,
-		tag,
-		path
-	};
+//#region vis/types.ts
+/** Construct a typed EntityId from a prefix and name. */
+function eid(prefix, id) {
+	return `${prefix}:${id}`;
 }
 
 //#endregion
@@ -4497,6 +4225,31 @@ const mixLabelPos = (eid, fm, defaults) => ({ label(t, place, gap) {
 	});
 	return this;
 } });
+const mixNodeLabel = (eid, fm) => ({ label(t, place, gap) {
+	const p = { label: t };
+	if (place !== void 0) p.labelPlace = place;
+	if (gap !== void 0) p.labelGap = gap;
+	fm.patch(eid, p);
+	return this;
+} });
+const mixMoveTo = (eid, fm) => ({ moveTo(x, y) {
+	patch$1(eid, fm, {
+		x,
+		y
+	});
+	return this;
+} });
+function coreNodeMixin(eid, fm, p) {
+	return {
+		...mixColor(eid, fm, p),
+		...mixStrokeW(eid, fm),
+		...mixFill(eid, fm, p),
+		...mixOpacity(eid, fm),
+		...mixSize(eid, fm),
+		...mixNodeLabel(eid, fm),
+		...mixMoveTo(eid, fm)
+	};
+}
 const mixTransform = (eid, fm, getKey) => ({
 	rotate(a, cx, cy) {
 		const e = fm.entities.get(eid);
@@ -4563,11 +4316,11 @@ const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
 function createMathRenderer(fm, ctx, palette) {
 	const p = palette;
 	function point(id, pos, opts = {}) {
-		const eid = `point:${id}`;
+		const eid$9 = eid("point", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const r = opts.size ?? 4;
 		const label = opts.label ?? "";
-		fm.declare(eid, {
+		fm.declare(eid$9, {
 			type: "node",
 			shape: "circle",
 			x: pos[0],
@@ -4583,19 +4336,19 @@ function createMathRenderer(fm, ctx, palette) {
 			pos() {
 				return [pos[0], pos[1]];
 			},
-			...mixColor(eid, fm, p),
-			...mixLabelPos(eid, fm, {
+			...mixColor(eid$9, fm, p),
+			...mixLabelPos(eid$9, fm, {
 				labelPlace: opts.labelPlace,
 				labelGap: opts.labelGap
 			}),
-			...mixSize(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixOpacity(eid, fm),
-			...mixTranslatePos(eid, fm)
+			...mixSize(eid$9, fm),
+			...mixFill(eid$9, fm, p),
+			...mixOpacity(eid$9, fm),
+			...mixTranslatePos(eid$9, fm)
 		};
 	}
 	function vector(id, from, to, opts = {}) {
-		const eid = `vector:${id}`;
+		const eid$10 = eid("vector", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.6;
 		const dash = opts.dash ?? "";
@@ -4603,8 +4356,8 @@ function createMathRenderer(fm, ctx, palette) {
 		const labelGap = opts.labelGap ?? 10;
 		const labelPlace = opts.labelPlace ?? "above";
 		const marker = opts.marker ?? null;
-		const a = offsetLine(from, to, 4, 4 + markerHalf(marker), true);
-		fm.declare(eid, {
+		const a = offsetLine(from, to, 4, 4 + markerHalf(marker ?? void 0), true);
+		fm.declare(eid$10, {
 			type: "line",
 			marker: "arrow",
 			from: [a.x1, a.y1],
@@ -4618,25 +4371,25 @@ function createMathRenderer(fm, ctx, palette) {
 			_markerCfg: marker
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixLabelPos(eid, fm, {
+			...mixStroke(eid$10, fm, p),
+			...mixLabelPos(eid$10, fm, {
 				labelPlace,
 				labelGap
 			}),
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixTransform(eid, fm, "vector")
+			...mixStrokeW(eid$10, fm),
+			...mixDashed(eid$10, fm),
+			...mixOpacity(eid$10, fm),
+			...mixTransform(eid$10, fm, "vector")
 		};
 	}
 	function segment(id, a, b, opts = {}) {
-		const eid = `segment:${id}`;
+		const eid$11 = eid("segment", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const dash = opts.dash ?? "";
 		const label = opts.label ?? "";
 		const labelGap = opts.labelGap ?? 10;
-		fm.declare(eid, {
+		fm.declare(eid$11, {
 			type: "line",
 			a,
 			b,
@@ -4647,21 +4400,21 @@ function createMathRenderer(fm, ctx, palette) {
 			labelGap
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixLabel(eid, fm),
-			...mixOpacity(eid, fm)
+			...mixStroke(eid$11, fm, p),
+			...mixStrokeW(eid$11, fm),
+			...mixDashed(eid$11, fm),
+			...mixLabel(eid$11, fm),
+			...mixOpacity(eid$11, fm)
 		};
 	}
 	function circle(id, center, radius, opts = {}) {
-		const eid = `circle:${id}`;
+		const eid$12 = eid("circle", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.2;
 		const dash = opts.dash ?? "";
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? p.accent.a(8);
-		fm.declare(eid, {
+		fm.declare(eid$12, {
 			type: "region",
 			shape: "circle",
 			cx: center[0],
@@ -4674,21 +4427,21 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity
 		});
 		return {
-			...mixColor(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixTranslatePos(eid, fm)
+			...mixColor(eid$12, fm, p),
+			...mixStrokeW(eid$12, fm),
+			...mixFill(eid$12, fm, p),
+			...mixDashed(eid$12, fm),
+			...mixOpacity(eid$12, fm),
+			...mixTranslatePos(eid$12, fm)
 		};
 	}
 	function polygon(id, vertices, opts = {}) {
-		const eid = `polygon:${id}`;
+		const eid$13 = eid("polygon", id);
 		const r = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? r.fill;
-		fm.declare(eid, {
+		fm.declare(eid$13, {
 			type: "region",
 			shape: "polygon",
 			vertices,
@@ -4698,16 +4451,16 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity
 		});
 		return {
-			...mixColor(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixTransform(eid, fm, "polygon")
+			...mixColor(eid$13, fm, p),
+			...mixStrokeW(eid$13, fm),
+			...mixFill(eid$13, fm, p),
+			...mixDashed(eid$13, fm),
+			...mixOpacity(eid$13, fm),
+			...mixTransform(eid$13, fm, "polygon")
 		};
 	}
 	function rightAngle(id, vertex, ray1, ray2, opts = {}) {
-		const eid = `angle:${id}`;
+		const eid$14 = eid("angle", id);
 		const { stroke } = resolveColor(p, opts.color ?? "dim");
 		const sz = opts.size ?? 8;
 		const [vx, vy] = vertex;
@@ -4720,7 +4473,7 @@ function createMathRenderer(fm, ctx, palette) {
 			[vx + (u1x + u2x) * sz, vy + (u1y + u2y) * sz],
 			[vx + u2x * sz, vy + u2y * sz]
 		].map((p) => p.join(",")).join(" ");
-		fm.declare(eid, {
+		fm.declare(eid$14, {
 			type: "region",
 			shape: "polygon",
 			d: `M${ptsStr}`,
@@ -4731,19 +4484,19 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: 1.5
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixSize(eid, fm),
-			...mixOpacity(eid, fm)
+			...mixStroke(eid$14, fm, p),
+			...mixStrokeW(eid$14, fm),
+			...mixSize(eid$14, fm),
+			...mixOpacity(eid$14, fm)
 		};
 	}
 	function angle(id, vertex, ray1, ray2, opts = {}) {
-		const eid = `angle:${id}`;
+		const eid$15 = eid("angle", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const label = opts.label ?? "";
 		const arcR = opts.size ?? 30;
 		const finalFill = opts.fill ?? p.warning.a(15);
-		fm.declare(eid, {
+		fm.declare(eid$15, {
 			type: "group",
 			subtype: "angle",
 			vertex,
@@ -4755,16 +4508,16 @@ function createMathRenderer(fm, ctx, palette) {
 			arcR
 		});
 		return {
-			...mixColor(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixLabel(eid, fm)
+			...mixColor(eid$15, fm, p),
+			...mixStrokeW(eid$15, fm),
+			...mixFill(eid$15, fm, p),
+			...mixDashed(eid$15, fm),
+			...mixOpacity(eid$15, fm),
+			...mixLabel(eid$15, fm)
 		};
 	}
 	function fn(id, f, opts = {}) {
-		const eid = `fn:${id}`;
+		const eid$16 = eid("fn", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const dash = opts.dash ?? "";
@@ -4776,7 +4529,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const oy = opts.y ?? 300;
 		const pw = opts.width ?? 780;
 		const ph = opts.height ?? 460;
-		fm.declare(eid, {
+		fm.declare(eid$16, {
 			type: "curve",
 			f: f.toString(),
 			domain,
@@ -4793,17 +4546,17 @@ function createMathRenderer(fm, ctx, palette) {
 			label
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixLabel(eid, fm)
+			...mixStroke(eid$16, fm, p),
+			...mixStrokeW(eid$16, fm),
+			...mixDashed(eid$16, fm),
+			...mixOpacity(eid$16, fm),
+			...mixLabel(eid$16, fm)
 		};
 	}
 	function grid(id, origin, opts = {}) {
-		const eid = `grid:${id}`;
+		const eid$17 = eid("grid", id);
 		const { stroke } = resolveColor(p, opts.color);
-		fm.declare(eid, {
+		fm.declare(eid$17, {
 			type: "group",
 			subtype: "grid",
 			ox: origin[0],
@@ -4816,9 +4569,9 @@ function createMathRenderer(fm, ctx, palette) {
 		});
 	}
 	function axes(id, origin, opts = {}) {
-		const eid = `axes:${id}`;
+		const eid$18 = eid("axes", id);
 		const { stroke } = resolveColor(p, opts.color);
-		fm.declare(eid, {
+		fm.declare(eid$18, {
 			type: "group",
 			subtype: "axes",
 			ox: origin[0],
@@ -4857,7 +4610,7 @@ function createMathRenderer(fm, ctx, palette) {
 		return polygon(id, verts);
 	}
 	function symbol(id, pos, opts = {}) {
-		const eid = `path:${id}`;
+		const eid$19 = eid("path", id);
 		const t = {
 			circle: circle_default,
 			cross: cross_default,
@@ -4871,7 +4624,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const d = sy ? `${sy}` : "";
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid, {
+		fm.declare(eid$19, {
 			type: "region",
 			shape: "polygon",
 			d,
@@ -4882,17 +4635,17 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: 1.2
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixSize(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixOpacity(eid, fm),
-			...mixTranslatePos(eid, fm)
+			...mixStroke(eid$19, fm, p),
+			...mixStrokeW(eid$19, fm),
+			...mixDashed(eid$19, fm),
+			...mixSize(eid$19, fm),
+			...mixFill(eid$19, fm, p),
+			...mixOpacity(eid$19, fm),
+			...mixTranslatePos(eid$19, fm)
 		};
 	}
 	function arc(id, center, opts) {
-		const eid = `path:${id}`;
+		const eid$20 = eid("path", id);
 		const a = arc_default()({
 			innerRadius: opts.innerR ?? 0,
 			outerRadius: opts.outerR,
@@ -4901,7 +4654,7 @@ function createMathRenderer(fm, ctx, palette) {
 		}) || "";
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid, {
+		fm.declare(eid$20, {
 			type: "region",
 			shape: "polygon",
 			d: `${a}`,
@@ -4912,18 +4665,18 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: opts.strokeW ?? 1.2
 		});
 		return {
-			...mixStroke(eid, fm, p),
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixSize(eid, fm),
-			...mixFill(eid, fm, p),
-			...mixOpacity(eid, fm),
-			...mixTranslatePos(eid, fm)
+			...mixStroke(eid$20, fm, p),
+			...mixStrokeW(eid$20, fm),
+			...mixDashed(eid$20, fm),
+			...mixSize(eid$20, fm),
+			...mixFill(eid$20, fm, p),
+			...mixOpacity(eid$20, fm),
+			...mixTranslatePos(eid$20, fm)
 		};
 	}
 	function projection(id, pt, lf, lt, opts = {}) {
-		const eidSeg = `segment:${id}`;
-		const eidPt = `point:${id}-p`;
+		const eidSeg = eid("segment", id);
+		const eidPt = eid("point", id + "-p");
 		const { stroke } = resolveColor(p, opts.color);
 		const dash = opts.dash ?? "4 3";
 		const pc = opts.pointColor ?? stroke;
@@ -4960,9 +4713,9 @@ function createMathRenderer(fm, ctx, palette) {
 		};
 	}
 	function fill(id, pts, opts = {}) {
-		const eid = `fill:${id}`;
+		const eid$21 = eid("fill", id);
 		const r = resolveColor(p, opts.color);
-		fm.declare(eid, {
+		fm.declare(eid$21, {
 			type: "region",
 			shape: "fill",
 			pts,
@@ -4970,12 +4723,12 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity: opts.opacity
 		});
 		return {
-			...mixFill(eid, fm, p),
-			...mixOpacity(eid, fm)
+			...mixFill(eid$21, fm, p),
+			...mixOpacity(eid$21, fm)
 		};
 	}
 	function fillFn(id, f, opts = {}) {
-		const eid = `fill:${id}`;
+		const eid$22 = eid("fill", id);
 		const domain = opts.domain ?? [0, 10];
 		const samples = opts.samples ?? 200;
 		const ox = opts.x ?? 0, oy = opts.y ?? 300;
@@ -5002,7 +4755,7 @@ function createMathRenderer(fm, ctx, palette) {
 		pts.push([sx(d0), sy(baseline)]);
 		for (let i = 0; i < samples; i++) pts.push([sx(d0 + i * step), sy(f(d0 + i * step))]);
 		pts.push([sx(d1), sy(baseline)]);
-		fm.declare(eid, {
+		fm.declare(eid$22, {
 			type: "region",
 			shape: "fill",
 			pts,
@@ -5010,8 +4763,8 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity: opts.opacity ?? .45
 		});
 		return {
-			...mixFill(eid, fm, p),
-			...mixOpacity(eid, fm)
+			...mixFill(eid$22, fm, p),
+			...mixOpacity(eid$22, fm)
 		};
 	}
 	function coords(id, origin, opts = {}) {
@@ -5112,18 +4865,18 @@ function createGraph(fm, ctx, palette) {
 	}
 	const _vertices = /* @__PURE__ */ new Map();
 	function vertex(id, pos) {
-		const eid = `vertex:${id}`;
+		const eid$7 = eid("vertex", id);
 		const r = 10;
 		const stroke = p.primary.fg;
 		const fill = p.primary.a(15);
-		fm.declare(eid, {
+		fm.declare(eid$7, {
 			type: "node",
 			x: pos[0],
 			y: pos[1],
 			r,
 			stroke,
 			fill,
-			_label: id
+			label: id
 		});
 		const v = {
 			id,
@@ -5132,7 +4885,6 @@ function createGraph(fm, ctx, palette) {
 			_r: r,
 			_stroke: stroke,
 			_fill: fill,
-			_label: id,
 			pos() {
 				return [this.x, this.y];
 			},
@@ -5140,25 +4892,24 @@ function createGraph(fm, ctx, palette) {
 				const resolved = resolveColor(c);
 				this._stroke = resolved.stroke;
 				this._fill = resolved.fill;
-				fm.patch(eid, {
+				fm.patch(eid$7, {
 					stroke: this._stroke,
 					fill: this._fill
 				});
 				return this;
 			},
 			label(t) {
-				this._label = t;
-				fm.patch(eid, { _label: t });
+				fm.patch(eid$7, { label: t });
 				return this;
 			},
 			size(r) {
 				this._r = r;
-				fm.patch(eid, { r });
+				fm.patch(eid$7, { r });
 				return this;
 			},
 			fill(c) {
 				this._fill = c;
-				fm.patch(eid, { fill: c });
+				fm.patch(eid$7, { fill: c });
 				return this;
 			}
 		};
@@ -5166,14 +4917,14 @@ function createGraph(fm, ctx, palette) {
 		return v;
 	}
 	function edge(a, b, opts) {
-		const eid = `edge:${a.id}:${b.id}`;
+		const eid$8 = eid("edge", a.id + ":" + b.id);
 		const stroke = p.dim.fg;
 		const strokeW = 1.8;
 		const directed = opts?.directed !== false;
 		const gap = opts?.gap ?? 4;
 		const marker = opts?.marker;
 		const { x1, y1, x2, y2 } = offsetLine([a.x, a.y], [b.x, b.y], a._r + gap, b._r + markerHalf(marker), directed);
-		fm.declare(eid, {
+		fm.declare(eid$8, {
 			type: "line",
 			from: a.id,
 			to: b.id,
@@ -5190,15 +4941,15 @@ function createGraph(fm, ctx, palette) {
 		return {
 			color(c) {
 				const resolved = resolveColor(c);
-				fm.patch(eid, { stroke: resolved.stroke });
+				fm.patch(eid$8, { stroke: resolved.stroke });
 				return this;
 			},
 			strokeW(n) {
-				fm.patch(eid, { strokeW: n });
+				fm.patch(eid$8, { strokeW: n });
 				return this;
 			},
 			dashed(d = "5 4") {
-				fm.patch(eid, { dash: d });
+				fm.patch(eid$8, { dash: d });
 				return this;
 			},
 			label(t) {
@@ -5238,14 +4989,14 @@ function createGraph(fm, ctx, palette) {
 				break;
 			}
 		}
-		for (const v of vertices) fm.declare(`vertex:${v.id}`, {
+		for (const v of vertices) fm.declare(eid("vertex", v.id), {
 			type: "node",
 			x: v.x,
 			y: v.y,
 			r: v._r,
 			stroke: v._stroke,
 			fill: v._fill,
-			_label: v._label
+			label: v.label
 		});
 	}
 	return {
@@ -5266,8 +5017,8 @@ function portPos(ownerId, pos, fm) {
 	if (!e) return [0, 0];
 	const d = e.desired;
 	const cx = d.x ?? 0, cy = d.y ?? 0;
-	const bw = d._blockW ?? d.r * 2 ?? 20;
-	const bh = d._blockH ?? d.r * 2 ?? 20;
+	const bw = d._blockW ?? (d.r ?? 10) * 2;
+	const bh = d._blockH ?? (d.r ?? 10) * 2;
 	const hw = bw / 2, hh = bh / 2;
 	if (Array.isArray(pos)) return [cx + pos[0], cy + pos[1]];
 	switch (pos) {
@@ -5277,54 +5028,12 @@ function portPos(ownerId, pos, fm) {
 		case "right": return [cx + hw, cy];
 	}
 }
-const mixLabelNode = (eid, fm) => ({ label(t, place = "above") {
-	const e = fm.entities.get(eid);
-	if (!e) return this;
-	const d = e.desired;
-	d.x;
-	const cy = d.y ?? 0;
-	const hh = (d._blockH ?? (d.r ?? 10) * 2) / 2 + 12;
-	let ly = cy - hh, la = "middle";
-	if (place === "below") {
-		ly = cy + hh;
-		la = "middle";
-	}
-	if (place === "left") la = "end";
-	if (place === "right") la = "start";
-	patch(eid, fm, {
-		_label: t,
-		_labelY: ly,
-		_labelAnchor: la
-	});
-	return this;
-} });
-const mixMoveTo = (eid, fm) => ({ moveTo(x, y) {
-	const e = fm.entities.get(eid);
-	if (!e) return this;
-	const d = e.desired;
-	const dx = x - (d.x ?? 0), dy = y - (d.y ?? 0);
-	patch(eid, fm, {
-		x,
-		y
-	});
-	for (const [pid, pe] of fm.entities) {
-		const pd = pe.desired;
-		if (pid.startsWith(`port:`) && pd._owner === eid) {
-			const px = pd.x ?? 0, py = pd.y ?? 0;
-			patch(pid, fm, {
-				x: px + dx,
-				y: py + dy
-			});
-		}
-	}
-	return this;
-} });
 function createLayout(fm, p) {
 	function port(id, ownerId, pos, opts = {}) {
-		const eid = `port:${id}`;
+		const eid$1 = eid("port", id);
 		const r = resolveColor(p, opts.stroke);
 		const [px, py] = portPos(ownerId, pos, fm);
-		fm.declare(eid, {
+		fm.declare(eid$1, {
 			type: "node",
 			shape: "circle",
 			x: px,
@@ -5333,26 +5042,13 @@ function createLayout(fm, p) {
 			stroke: r.stroke,
 			fill: opts.fill ?? r.fill,
 			label: opts.label ?? "",
-			_owner: `vertex:${ownerId}`,
+			_owner: eid("vertex", ownerId),
 			_portPos: pos
 		});
 		return {
-			color(c) {
-				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
-				return this;
-			},
-			...mixSize(eid, fm),
-			fill(c) {
-				patch(eid, fm, { fill: resolveColor(p, c).fill });
-				return this;
-			},
-			...mixOpacity(eid, fm),
-			label(t) {
-				patch(eid, fm, { label: t });
-				return this;
-			},
+			...coreNodeMixin(eid$1, fm, p),
 			pos() {
-				const e = fm.entities.get(eid);
+				const e = fm.entities.get(eid$1);
 				if (!e) return [0, 0];
 				const d = e.desired;
 				return [d.x ?? 0, d.y ?? 0];
@@ -5360,12 +5056,12 @@ function createLayout(fm, p) {
 		};
 	}
 	function node(id, x, y, opts = {}) {
-		const eid = `vertex:${id}`;
+		const eid$2 = eid("vertex", id);
 		const r = resolveColor(p, opts.stroke ?? "primary");
 		const isCircle = opts.shape === "circle";
 		const sizeW = opts.w ?? 60, sizeH = opts.h ?? 36;
 		opts.r;
-		fm.declare(eid, {
+		fm.declare(eid$2, {
 			type: "node",
 			shape: opts.shape ?? "rect",
 			x,
@@ -5375,27 +5071,16 @@ function createLayout(fm, p) {
 			stroke: r.stroke,
 			strokeW: opts.strokeW ?? 1.5,
 			opacity: opts.opacity ?? 1,
-			_label: opts.label ?? "",
-			_labelPlace: opts.labelPlace ?? "above",
+			label: opts.label ?? "",
+			labelPlace: opts.labelPlace ?? "above",
 			_blockW: isCircle ? void 0 : sizeW,
 			_blockH: isCircle ? void 0 : sizeH,
 			_shape: opts.shape ?? "rect"
 		});
 		return {
-			color(c) {
-				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
-				return this;
-			},
-			fill(c) {
-				patch(eid, fm, { fill: resolveColor(p, c).fill });
-				return this;
-			},
-			...mixStrokeW(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixLabelNode(eid, fm),
-			...mixMoveTo(eid, fm),
+			...coreNodeMixin(eid$2, fm, p),
 			size(w, h) {
-				patch(eid, fm, {
+				patch(eid$2, fm, {
 					_blockW: w,
 					_blockH: h ?? w
 				});
@@ -5406,42 +5091,47 @@ function createLayout(fm, p) {
 			}
 		};
 	}
+	const BLOCK_STYLE = {
+		muted: {
+			stroke: "dim",
+			strokeW: 1,
+			fill: "dim"
+		},
+		normal: {
+			stroke: "primary",
+			strokeW: 1.5,
+			fill: "primary"
+		},
+		active: {
+			stroke: "primary",
+			strokeW: 2,
+			fill: "primary"
+		}
+	};
 	function block(id, x, y, w, h, opts = {}) {
-		const eid = `vertex:${id}`;
-		const r = resolveColor(p, opts.stroke ?? (opts.emph ? "accent" : "dim"));
-		const emph = opts.emph ?? false;
-		const fill = opts.fill ?? (emph ? p.accent?.a?.(15) : p.accent?.a?.(8)) ?? r.fill;
-		fm.declare(eid, {
+		const eid$3 = eid("vertex", id);
+		const s = BLOCK_STYLE[opts.style ?? "normal"];
+		const stroke = resolveColor(p, s.stroke).stroke;
+		const fill = opts.fill ?? resolveColor(p, s.fill).fill;
+		fm.declare(eid$3, {
 			type: "node",
 			shape: "rect",
 			x: x + w / 2,
 			y: y + h / 2,
 			r: opts.rx ?? 8,
 			fill,
-			stroke: r.stroke,
-			strokeW: opts.strokeW ?? (emph ? 2 : 1.2),
+			stroke,
+			strokeW: opts.strokeW ?? s.strokeW,
 			opacity: opts.opacity ?? 1,
-			_label: opts.label ?? "",
-			_labelPlace: "above",
+			label: opts.label ?? "",
+			labelPlace: opts.labelPlace ?? "above",
 			_blockW: w,
-			_blockH: h,
-			_children: opts.childIds ?? []
+			_blockH: h
 		});
 		return {
-			color(c) {
-				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
-				return this;
-			},
-			fill(c) {
-				patch(eid, fm, { fill: resolveColor(p, c).fill });
-				return this;
-			},
-			...mixStrokeW(eid, fm),
-			...mixOpacity(eid, fm),
-			...mixLabelNode(eid, fm),
-			...mixMoveTo(eid, fm),
+			...coreNodeMixin(eid$3, fm, p),
 			size(nw, nh) {
-				patch(eid, fm, {
+				patch(eid$3, fm, {
 					_blockW: nw,
 					_blockH: nh ?? nw
 				});
@@ -5449,112 +5139,143 @@ function createLayout(fm, p) {
 			},
 			port(pid, pos, portOpts = {}) {
 				return port(pid, id, pos, portOpts);
-			},
-			fit(pad = 16) {
-				const e = fm.entities.get(eid);
-				if (!e) return this;
-				const children = e.desired._children ?? [];
-				if (children.length === 0) return this;
-				let mx = Infinity, My = Infinity, Mx = -Infinity, my = -Infinity;
-				for (const cid of children) {
-					const ce = fm.entities.get(`vertex:${cid}`);
-					if (!ce) continue;
-					const cd = ce.desired;
-					const bw = cd._blockW ?? (cd.r ?? 10) * 2;
-					const bh = cd._blockH ?? (cd.r ?? 10) * 2;
-					const l = (cd.x ?? 0) - bw / 2, t = (cd.y ?? 0) - bh / 2;
-					if (l < mx) mx = l;
-					if (t < My) My = t;
-					if (l + bw > Mx) Mx = l + bw;
-					if (t + bh > my) my = t + bh;
-				}
-				const nw = Mx - mx + pad * 2, nh = my - My + pad * 2;
-				patch(eid, fm, {
-					x: mx - pad + nw / 2,
-					y: My - pad + nh / 2,
-					_blockW: nw,
-					_blockH: nh
-				});
-				return this;
 			}
 		};
 	}
 	function edge(id, fromPortId, toPortId, opts = {}) {
-		const eid = `edge:${id}`;
+		const eid$4 = eid("edge", id);
 		const r = resolveColor(p, opts.color ?? "dim");
 		const fpe = fm.entities.get(`port:${fromPortId}`);
 		const tpe = fm.entities.get(`port:${toPortId}`);
 		const fx = (fpe?.desired)?.x ?? 0, fy = (fpe?.desired)?.y ?? 0;
 		const tx = (tpe?.desired)?.x ?? 0, ty = (tpe?.desired)?.y ?? 0;
-		fm.declare(eid, {
+		const directed = opts.directed ?? false;
+		const portR = (fpe?.desired)?.r ?? 4;
+		const toR = (tpe?.desired)?.r ?? 4;
+		const mt = directed ? markerTip() : 0;
+		const { x1, y1, x2, y2 } = offsetLine([fx, fy], [tx, ty], portR, toR + mt + 2, directed);
+		fm.declare(eid$4, {
 			type: "line",
-			x1: fx,
-			y1: fy,
-			x2: tx,
-			y2: ty,
+			x1,
+			y1,
+			x2,
+			y2,
 			stroke: r.stroke,
 			strokeW: opts.strokeW ?? 1.5,
 			dash: opts.dash ?? "",
-			directed: opts.directed ?? false,
+			directed,
 			_bend: opts.bend ?? false,
 			_fromPort: fromPortId,
 			_toPort: toPortId,
-			_label: opts.label ?? ""
+			label: opts.label ?? ""
 		});
 		return {
 			color(c) {
-				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				patch(eid$4, fm, { stroke: resolveColor(p, c).stroke });
 				return this;
 			},
-			...mixStrokeW(eid, fm),
-			...mixDashed(eid, fm),
-			...mixOpacity(eid, fm),
-			label(t) {
-				patch(eid, fm, { _label: t });
-				return this;
-			},
+			...mixStrokeW(eid$4, fm),
+			...mixDashed(eid$4, fm),
+			...mixOpacity(eid$4, fm),
+			...mixLabel(eid$4, fm),
 			directed(v) {
-				patch(eid, fm, { directed: v });
+				patch(eid$4, fm, { directed: v });
 				return this;
 			},
 			bend() {
-				patch(eid, fm, { _bend: true });
+				patch(eid$4, fm, { _bend: true });
 				return this;
 			}
 		};
 	}
-	function layer(id, y, h, opts = {}) {
-		const eid = `fill:${id}`;
+	function layer(id, rank, opts = {}) {
+		const eid$5 = eid("fill", id);
+		const style = opts.style ?? "band";
 		const r = resolveColor(p, opts.color ?? "accent");
+		let y, h;
+		if (opts.totalRanks != null) {
+			const total = opts.totalRanks;
+			const gap = opts.layerGap ?? 0;
+			const startY = opts.startY ?? 48;
+			const available = (opts.endY ?? 412) - startY;
+			h = opts.h ?? (available - (total - 1) * gap) / total;
+			y = opts.y ?? startY + rank * (h + gap);
+		} else {
+			y = opts.y ?? 0;
+			h = opts.h ?? 60;
+		}
 		const x = opts.x ?? 0, w = opts.w ?? 780;
-		const pts = [
+		const vertices = [
 			[x, y],
 			[x + w, y],
 			[x + w, y + h],
 			[x, y + h]
 		];
-		fm.declare(eid, {
+		const rx = opts.rx ?? 8;
+		const label = opts.label ?? "";
+		const labelPlace = opts.labelPlace ?? "left";
+		const labelGap = opts.labelGap ?? 6;
+		if (style === "band") {
+			const opacity = opts.opacity ?? .3;
+			fm.declare(eid$5, {
+				type: "region",
+				shape: "polygon",
+				vertices,
+				stroke: "none",
+				fill: r.fill,
+				strokeW: 0,
+				opacity,
+				_rx: rx,
+				label,
+				labelPlace,
+				labelGap
+			});
+			return {
+				color(c) {
+					patch(eid$5, fm, { fill: resolveColor(p, c).fill });
+					return this;
+				},
+				...mixOpacity(eid$5, fm),
+				...mixLabel(eid$5, fm),
+				...mixDashed(eid$5, fm),
+				...mixStrokeW(eid$5, fm)
+			};
+		}
+		const dash = opts.dash ?? "4 3";
+		const strokeW = opts.strokeW ?? 1.2;
+		const opacity = opts.opacity ?? .7;
+		const fill = r.fill + " / 0.05";
+		fm.declare(eid$5, {
 			type: "region",
-			shape: "fill",
-			pts,
-			fill: r.fill,
-			opacity: opts.opacity ?? .12,
-			_label: opts.label ?? ""
+			shape: "polygon",
+			vertices,
+			stroke: r.stroke,
+			fill,
+			strokeW,
+			dash,
+			opacity,
+			_rx: rx,
+			label,
+			labelPlace,
+			labelGap
 		});
 		return {
 			color(c) {
-				patch(eid, fm, { fill: resolveColor(p, c).fill });
+				const rc = resolveColor(p, c);
+				patch(eid$5, fm, {
+					stroke: rc.stroke,
+					fill: rc.fill + " / 0.05"
+				});
 				return this;
 			},
-			...mixOpacity(eid, fm),
-			label(t) {
-				patch(eid, fm, { _label: t });
-				return this;
-			}
+			...mixOpacity(eid$5, fm),
+			...mixLabel(eid$5, fm),
+			...mixDashed(eid$5, fm),
+			...mixStrokeW(eid$5, fm)
 		};
 	}
 	function enclosure(id, x, y, w, h, opts = {}) {
-		const eid = `polygon:${id}`;
+		const eid$6 = eid("polygon", id);
 		const r = resolveColor(p, opts.color ?? "dim");
 		const rx = opts.rx ?? 8;
 		const pts = [
@@ -5563,7 +5284,7 @@ function createLayout(fm, p) {
 			[x + w, y + h],
 			[x, y + h]
 		];
-		fm.declare(eid, {
+		fm.declare(eid$6, {
 			type: "region",
 			shape: "polygon",
 			vertices: pts,
@@ -5573,20 +5294,17 @@ function createLayout(fm, p) {
 			dash: opts.dash ?? "6 3",
 			opacity: opts.opacity ?? 1,
 			_rx: rx,
-			_label: opts.label ?? ""
+			label: opts.label ?? ""
 		});
 		return {
 			color(c) {
-				patch(eid, fm, { stroke: resolveColor(p, c).stroke });
+				patch(eid$6, fm, { stroke: resolveColor(p, c).stroke });
 				return this;
 			},
-			...mixDashed(eid, fm),
-			...mixStrokeW(eid, fm),
-			...mixOpacity(eid, fm),
-			label(t) {
-				patch(eid, fm, { _label: t });
-				return this;
-			}
+			...mixDashed(eid$6, fm),
+			...mixStrokeW(eid$6, fm),
+			...mixOpacity(eid$6, fm),
+			...mixLabel(eid$6, fm)
 		};
 	}
 	return {
@@ -5601,6 +5319,43 @@ function createLayout(fm, p) {
 
 //#endregion
 //#region vis/renderer/svg.ts
+/** Construct identity-equivalent transforms matching the structure of the given list.
+*  Used to enable smooth attrTween interpolation when one side lacks _tf. */
+function identityTransforms(tf) {
+	return tf.map((t) => {
+		switch (t.type) {
+			case "rotate": return {
+				type: "rotate",
+				angle: 0,
+				cx: t.cx,
+				cy: t.cy
+			};
+			case "scale": return {
+				type: "scale",
+				sx: 1,
+				sy: 1
+			};
+			case "translate": return {
+				type: "translate",
+				dx: 0,
+				dy: 0
+			};
+		}
+	});
+}
+/** Pad both transform arrays to the same length with identity-equivalent transforms.
+*  Without this, interpolate() (which maps over the old array) would miss extra
+*  transforms in the new array — e.g. old=[rotate(45)], new=[rotate(45),scale(2)]
+*  would never interpolate the scale, causing the animation to appear frozen. */
+function normalizeTransforms(oldTf, newTf) {
+	const maxLen = Math.max(oldTf.length, newTf.length);
+	if (oldTf.length < maxLen) oldTf = [...oldTf, ...identityTransforms(newTf.slice(oldTf.length))];
+	if (newTf.length < maxLen) newTf = [...newTf, ...identityTransforms(oldTf.slice(newTf.length))];
+	return {
+		old: oldTf,
+		new: newTf
+	};
+}
 function markerFor(stroke, cache, svg, config) {
 	if (!stroke) return void 0;
 	const size = config?.size ?? 10, w = config?.width ?? size, h = config?.height ?? size;
@@ -5612,8 +5367,8 @@ function markerFor(stroke, cache, svg, config) {
 		const id = "fm" + Object.keys(cache).length;
 		const vbW = w + offset + 2;
 		const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
-		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", "none").attr("stroke", stroke).attr("stroke-width", 1.5);
-		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", stroke);
+		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", svgColor("none")).attr("stroke", svgColor(stroke)).attr("stroke-width", 1.5);
+		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", svgColor(stroke));
 		cache[key] = id;
 	}
 	return `url(#${cache[key]})`;
@@ -5649,17 +5404,30 @@ function drawEntity(ctx, id, d, markerCache) {
 			const g = nodes.append("g").attr("data-id", id);
 			if (nd.shape === "rect") {
 				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				g.append("rect").attr("class", "shp").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("rx", nd.rx ?? 5).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
+				g.append("rect").attr("class", "shp").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("rx", nd.rx ?? 5).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
 			} else if (nd.shape === "symbol") {
 				const sym = globalThis.d3?.symbol?.().type?.(globalThis.d3?.[nd.symType ?? "symbolCircle"] ?? globalThis.d3?.symbolCircle)?.size?.((nd.r ?? 8) ** 2)?.();
-				g.append("path").attr("data-id", id).attr("d", sym ? `${sym}` : "").attr("transform", `translate(${nd.x},${nd.y})`).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.2);
-			} else g.append("circle").attr("class", "shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
+				g.append("path").attr("data-id", id).attr("d", sym ? `${sym}` : "").attr("transform", `translate(${nd.x},${nd.y})`).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.2);
+			} else g.append("circle").attr("class", "shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
 			applyCommon(g, nd.opacity);
-			const label = nd.label ?? "";
+			const label = nd.label || "";
 			let text = null;
 			if (label) {
-				const ly = nd._labelY ?? nd.y - (nd._blockH ?? (nd.r ?? 4) * 2) / 2 - 12;
-				text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", nd.stroke).attr("font-weight", "600").attr("x", nd.x).attr("y", ly).attr("text-anchor", nd._labelAnchor ?? "middle").text(label);
+				nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+				const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+				const gap = nd.labelGap ?? 12;
+				const place = nd.labelPlace ?? "above";
+				let ly, anchor = "middle";
+				if (place === "above") ly = nd.y - bh / 2 - gap;
+				else if (place === "below") ly = nd.y + bh / 2 + gap;
+				else if (place === "left") {
+					ly = nd.y;
+					anchor = "end";
+				} else if (place === "right") {
+					ly = nd.y;
+					anchor = "start";
+				} else ly = nd.y - bh / 2 - gap;
+				text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(nd.stroke)).attr("font-weight", "600").attr("x", nd.x).attr("y", ly).attr("text-anchor", anchor).text(label);
 			}
 			return {
 				group: g,
@@ -5677,13 +5445,13 @@ function drawEntity(ctx, id, d, markerCache) {
 				x2 = res.to[0];
 				y2 = res.to[1];
 			} else {
-				x1 = ld.x1 ?? ld.from?.[0] ?? 0;
-				y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-				x2 = ld.x2 ?? ld.to?.[0] ?? 0;
-				y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+				x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
+				y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+				x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
+				y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
 			}
 			const hasMarker = ld.marker === "arrow" || ld.directed;
-			const line = edges.append("line").attr("data-id", id).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld.marker) ?? null : null);
+			const line = edges.append("line").attr("data-id", id).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
 			applyCommon(line, ld.opacity);
 			return {
 				group: line,
@@ -5693,7 +5461,7 @@ function drawEntity(ctx, id, d, markerCache) {
 		case "region": {
 			const rd = d;
 			if (rd.shape === "circle") {
-				const el = bg.append("circle").attr("data-id", id).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", rd.fill).attr("stroke", rd.stroke ?? rd.fill).attr("stroke-width", rd.strokeW ?? 1.2);
+				const el = bg.append("circle").attr("data-id", id).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
 				applyCommon(el, rd.opacity);
 				return {
 					group: el,
@@ -5707,7 +5475,7 @@ function drawEntity(ctx, id, d, markerCache) {
 					startAngle: rd.startAngle ?? 0,
 					endAngle: rd.endAngle ?? 0
 				}) ?? "";
-				const el = bg.append("path").attr("data-id", id).attr("d", `${a}`).attr("transform", `translate(${rd.cx ?? 0},${rd.cy ?? 0})`).attr("fill", rd.fill).attr("stroke", rd.stroke ?? rd.fill).attr("stroke-width", rd.strokeW ?? 1.2);
+				const el = bg.append("path").attr("data-id", id).attr("d", `${a}`).attr("transform", `translate(${rd.cx ?? 0},${rd.cy ?? 0})`).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
 				applyCommon(el, rd.opacity);
 				return {
 					group: el,
@@ -5718,11 +5486,51 @@ function drawEntity(ctx, id, d, markerCache) {
 			if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 			else pts = rd.pts ?? rd.vertices ?? [];
 			const ptsStr = pts.map((p) => p.join(",")).join(" ");
-			const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none").attr("stroke-width", rd.strokeW ?? 0).attr("stroke-dasharray", rd.dash ?? "");
+			const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0).attr("stroke-dasharray", rd.dash ?? "");
 			applyCommon(el, rd.opacity);
+			let rt = null;
+			const rlabel = rd.label ?? "";
+			if (rlabel) {
+				const minX = Math.min(...pts.map((p) => p[0]));
+				const maxX = Math.max(...pts.map((p) => p[0]));
+				const minY = Math.min(...pts.map((p) => p[1]));
+				const maxY = Math.max(...pts.map((p) => p[1]));
+				const cx = (minX + maxX) / 2;
+				const cy = (minY + maxY) / 2;
+				const gap = rd.labelGap ?? 6;
+				let lx, ly, anchor;
+				switch (rd.labelPlace) {
+					case "above":
+						lx = cx;
+						ly = minY - gap;
+						anchor = "middle";
+						break;
+					case "below":
+						lx = cx;
+						ly = maxY + gap;
+						anchor = "middle";
+						break;
+					case "left":
+						lx = minX + gap;
+						ly = minY + 14;
+						anchor = "start";
+						break;
+					case "right":
+						lx = maxX + gap;
+						ly = minY + 10;
+						anchor = "start";
+						break;
+					default:
+						lx = cx;
+						ly = cy + 4;
+						anchor = "middle";
+						break;
+				}
+				rt = bg.append("text").attr("class", "vlbl-txt").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", "#888").attr("font-weight", "500").attr("x", lx).attr("y", ly).attr("text-anchor", anchor).text(rlabel);
+			}
 			return {
 				group: el,
-				text: null
+				text: rt
 			};
 		}
 		case "curve": {
@@ -5749,7 +5557,7 @@ function drawEntity(ctx, id, d, markerCache) {
 				const xv = d0 + i * step;
 				return [sx(xv), sy(fn(xv))].join(",");
 			}).join(" ");
-			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", cd.stroke).attr("stroke-width", cd.strokeW).attr("stroke-dasharray", cd.dash ?? "");
+			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor("none")).attr("stroke", svgColor(cd.stroke)).attr("stroke-width", cd.strokeW).attr("stroke-dasharray", cd.dash ?? "");
 			applyCommon(el, cd.opacity);
 			return {
 				group: el,
@@ -5762,12 +5570,12 @@ function drawEntity(ctx, id, d, markerCache) {
 				const gv = overlay.append("g").attr("data-id", id);
 				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				gv.append("path").attr("d", arc.path).attr("fill", "none").attr("stroke", gd.stroke ?? "#000").attr("stroke-width", gd.strokeW ?? 1.5);
+				gv.append("path").attr("d", arc.path).attr("fill", svgColor("none")).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
 				let text = null;
 				const label = gd.label ?? "";
 				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 					const lr = (gd.arcR ?? 30) + 12;
-					text = gv.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", gd.stroke ?? "#000").text(label);
+					text = gv.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
 				}
 				applyCommon(gv, gd.opacity);
 				return {
@@ -5778,15 +5586,15 @@ function drawEntity(ctx, id, d, markerCache) {
 			const g = bg.append("g").attr("data-id", id);
 			if (gd.subtype === "axes") {
 				const ox = gd.ox ?? 0, oy = gd.oy ?? 0, xl = gd.xl ?? 300, yl = gd.yl ?? 200, sw = gd.strokeW ?? 1.4;
-				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", gd.stroke).attr("stroke-width", sw);
-				g.append("polygon").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", gd.stroke);
-				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", gd.stroke).attr("stroke-width", sw);
-				g.append("polygon").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", gd.stroke);
-				g.append("circle").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", "#fff").attr("stroke", gd.stroke).attr("stroke-width", sw);
+				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
+				g.append("polygon").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", svgColor(gd.stroke));
+				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
+				g.append("polygon").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", svgColor(gd.stroke));
+				g.append("circle").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", svgColor("#fff")).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
 			} else if (gd.subtype === "grid") {
 				const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
-				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", gd.stroke).attr("stroke-width", gd.strokeW ?? .3);
-				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", gd.stroke).attr("stroke-width", gd.strokeW ?? .3);
+				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
+				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
 			}
 			applyCommon(g, gd.opacity);
 			return {
@@ -5802,17 +5610,28 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 			const nd = newState;
 			if (nd.shape === "rect") {
 				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				svg.select("rect").interrupt().transition(tr).attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
-			} else svg.select(".shp").interrupt().transition(tr).attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
+				svg.select("rect").interrupt().transition(tr).attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			} else svg.select(".shp").interrupt().transition(tr).attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
 			applyCommon(svg, nd.opacity);
 			break;
 		}
 		case "line": {
 			const ld = newState;
 			const oldLd = oldState;
-			if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
-				const base = ld._base;
-				svg.interrupt().transition(tr).attrTween("x1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString()).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
+			let oldTf = oldLd._tf;
+			let newTf = ld._tf;
+			let lineBase;
+			if (ld._tf && ld._base) {
+				lineBase = ld._base;
+				if (!oldLd._tf) oldTf = identityTransforms(ld._tf);
+			}
+			if (oldLd._tf && oldLd._base && !lineBase) {
+				lineBase = oldLd._base;
+				if (!ld._tf) newTf = identityTransforms(oldLd._tf);
+			}
+			if (lineBase && oldTf && newTf) {
+				const norm = normalizeTransforms(oldTf, newTf);
+				svg.interrupt().transition(tr).attrTween("x1", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).to[1].toString()).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 			} else {
 				let x1, y1, x2, y2;
 				if (ld._tf && ld._base) {
@@ -5823,29 +5642,40 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 					x2 = res.to[0];
 					y2 = res.to[1];
 				} else {
-					x1 = ld.x1 ?? ld.from?.[0] ?? 0;
-					y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-					x2 = ld.x2 ?? ld.to?.[0] ?? 0;
-					y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+					x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
+					y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+					x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
+					y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
 				}
-				svg.interrupt().transition(tr).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
+				svg.interrupt().transition(tr).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 			}
 			if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
 			break;
 		}
 		case "region": {
 			const rd = newState;
-			if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", rd.fill).attr("stroke", rd.stroke ?? rd.fill);
+			if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill));
 			else {
 				const oldRd = oldState;
-				if (rd._tf && rd._base && "vertices" in rd._base && oldRd._tf && oldRd._base && "vertices" in oldRd._base) {
-					const baseVerts = rd._base.vertices;
-					svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+				let oldTf = oldRd._tf;
+				let newTf = rd._tf;
+				let regionBase;
+				if (rd._tf && rd._base && "vertices" in rd._base) {
+					regionBase = rd._base.vertices;
+					if (!oldRd._tf) oldTf = identityTransforms(rd._tf);
+				}
+				if (oldRd._tf && oldRd._base && "vertices" in oldRd._base && !regionBase) {
+					regionBase = oldRd._base.vertices;
+					if (!rd._tf) newTf = identityTransforms(oldRd._tf);
+				}
+				if (regionBase && oldTf && newTf) {
+					const norm = normalizeTransforms(oldTf, newTf);
+					svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(regionBase, interpolate(norm.old, norm.new, t)).map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
 				} else {
 					let pts;
 					if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 					else pts = rd.pts ?? rd.vertices ?? [];
-					svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+					svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
 				}
 			}
 			if (rd.opacity != null) svg.transition(tr).attr("opacity", rd.opacity);
@@ -5856,7 +5686,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 			if (gd.subtype === "angle") {
 				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", gd.stroke ?? "#000").attr("stroke-width", gd.strokeW ?? 1.5);
+				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
 				const label = gd.label ?? "";
 				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 					const lr = (gd.arcR ?? 30) + 12;
@@ -5864,7 +5694,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 					else {
 						const existing = svg.select("text");
 						if (!existing.empty()) existing.interrupt().transition(tr).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-						else svg.append("text").attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", gd.stroke ?? "#000").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+						else svg.append("text").attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
 					}
 				} else if (text) text.text("");
 				else svg.select("text").text("");
@@ -5879,8 +5709,8 @@ function updateEntityImmediate(svg, text, d) {
 			const nd = d;
 			if (nd.shape === "rect") {
 				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				svg.select("rect").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
-			} else svg.select(".shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
+				svg.select("rect").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			} else svg.select(".shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
 			applyCommon(svg, nd.opacity);
 			break;
 		}
@@ -5900,7 +5730,7 @@ function updateEntityImmediate(svg, text, d) {
 				x2 = ld.x2 ?? ld.to?.[0] ?? 0;
 				y2 = ld.y2 ?? ld.to?.[1] ?? 0;
 			}
-			svg.attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
+			svg.attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 			applyCommon(svg, ld.opacity);
 			break;
 		}
@@ -5909,7 +5739,7 @@ function updateEntityImmediate(svg, text, d) {
 			let pts;
 			if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 			else pts = rd.pts ?? rd.vertices ?? [];
-			svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none").attr("stroke-width", rd.strokeW ?? 0);
+			svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0);
 			applyCommon(svg, rd.opacity);
 			break;
 		}
@@ -5918,7 +5748,7 @@ function updateEntityImmediate(svg, text, d) {
 			if (gd.subtype === "angle") {
 				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				svg.select("path").attr("d", arc.path).attr("stroke", gd.stroke ?? "#000").attr("stroke-width", gd.strokeW ?? 1.5);
+				svg.select("path").attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
 				const label = gd.label ?? "";
 				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
 					const lr = (gd.arcR ?? 30) + 12;
@@ -5926,7 +5756,7 @@ function updateEntityImmediate(svg, text, d) {
 					else {
 						const existing = svg.select("text");
 						if (!existing.empty()) existing.attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-						else svg.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", gd.stroke ?? "#000").text(label);
+						else svg.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
 					}
 				} else if (text) text.text("");
 				else svg.select("text").text("");
@@ -6013,7 +5843,7 @@ var SVGRenderer = class {
 		for (const [id, h] of this.handles) {
 			if (h.state.type !== "node") continue;
 			const nd = h.state;
-			const label = nd.label ?? "";
+			const label = nd.label || "";
 			if (!label) continue;
 			const angles = edgeAngles.get(label) ?? [];
 			let place = dirs[0];
@@ -6021,10 +5851,12 @@ var SVGRenderer = class {
 				place = dir;
 				break;
 			}
-			const r = nd.r ?? 10;
+			const bw = nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+			const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+			const halfW = bw / 2, halfH = bh / 2;
 			const gap = 6;
-			const tx = nd.x + place.dx * (r + gap);
-			const ty = nd.y + place.dy * (r + gap);
+			const tx = nd.x + place.dx * (halfW + gap);
+			const ty = nd.y + place.dy * (halfH + gap);
 			h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
 		}
 	}
@@ -6116,6 +5948,8 @@ var FrameManager = class {
 		this.current.add(id);
 		const existing = this.store.get(id);
 		if (existing) {
+			if (!("_tf" in state)) delete existing.desired._tf;
+			if (!("_base" in state)) delete existing.desired._base;
 			Object.assign(existing.desired, state);
 			return existing;
 		}
@@ -6131,6 +5965,11 @@ var FrameManager = class {
 		const entity = this.store.get(id);
 		if (!entity) throw new Error(`Entity not found: ${id}`);
 		Object.assign(entity.desired, partial);
+	}
+	/** Typed getter: narrows EntityState by its discriminant type field.
+	*  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
+	get(id, _type) {
+		return this.store.get(id);
 	}
 	commit(opts) {
 		if (!this._uncommitted) throw new Error("begin() required before commit()");
@@ -6225,7 +6064,6 @@ function stage(selector, opts = {}) {
 			};
 		}
 	}
-	const elements = createElements(fm, ctx, p);
 	function steps(defs, opts) {
 		const { start = 0 } = opts ?? {};
 		const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
@@ -6279,11 +6117,6 @@ function stage(selector, opts = {}) {
 		palette: p,
 		stage: ctx.stage,
 		root: ctx.root,
-		dot: elements.dot,
-		zone: elements.zone,
-		arrow: elements.arrow,
-		path: elements.path,
-		tag: elements.tag,
 		steps,
 		frame,
 		play,

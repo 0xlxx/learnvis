@@ -122,12 +122,9 @@ themes.forEach(t => {
 
   names.forEach((c, i) => {
     const y = 24 + i * 42;
-    const col = t.colors[c];
-    s.dot(16, y).fill(col.bg).stroke(col.fg, 1.5).size(0);
-    s.arrow({ _id: 'a'+i, pos: () => ({ x: 16, y }) }, [L, 0]).stroke(col.fg, 2);
-    s.tag({ pos: () => ({ x: 120, y }) }, c).right(4).size(10);
+    s.math.point(c + '-pt', [16, y], { color: c, size: 3 });
+    s.math.vector(c, [16, y], [16 + L, y], { color: c }).strokeW(2);
   });
-  s.draw();
 });
 </script>
 </body>

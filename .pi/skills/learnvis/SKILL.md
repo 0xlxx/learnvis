@@ -1,6 +1,6 @@
 ---
 name: learnvis
-description: D3+SVG visualization — math primitives, common UI, animations, themes
+description: D3+SVG visualization — math, graph, layout primitives for algorithm lessons
 ---
 
 # learnvis
@@ -42,22 +42,30 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 | 签名 | 说明 |
 |------|------|
-| `s.graph.vertex('A',[x,y],{r,fill,label})` | 顶点 |
-| `s.graph.edge(a,b,{directed,weight,label,stroke})` | 边 |
-| `s.graph.layout('force'/'circular'/'tree',v,e)` | 自动布局 |
+| `s.graph.vertex('A',[x,y]).color('primary').label('A').size(12)` | 顶点 |
+| `s.graph.edge(a,b,{directed}).color('dim').strokeW(1.4).weight(5)` | 边（默认有向） |
+| `s.graph.layout('force'/'circular',v,e)` | 自动布局 |
 
 > 详见 `references/api-graph.md`
 
-## common — 通用 UI
+## layout — 布局原语
 
 | 签名 | 说明 |
 |------|------|
-| `s.zone(x,y,w,h,label,color)` | 彩色区域 |
-| `s.dot(x,y).label(t).color(c).to([x,y])` | 可移动点 |
-| `s.arrow(from,[dx,dy]).color(c)` | 向量箭头 |
-| `s.tag(target,html).above(gap).color(c)` | 绑定标签 |
-| `s.line(x1,y1,x2,y2).stroke(c,w).dash(v)` | 直线 |
-| `s.path([[x,y],...],{stroke,dash})` | 路径折线 |
+| `s.layout.node('A',x,y,{w,h,rx}).color('primary').label('A').port('p',pos)` | 节点 + 端口 |
+| `s.layout.block('b',x,y,w,h,{style:'normal'|'muted'|'active'})` | 容器节点 |
+| `s.layout.edge('e','from','to').color('dim').directed(true).strokeW(1.4)` | 边（自动偏移避开端口） |
+| `s.layout.layer('L',rank,{totalRanks,w,color,style:'band'|'swimlane',label})` | 分层色带/泳道 |
+| `s.layout.enclosure('E',x,y,w,h,{color,dash,rx}).label('Group')` | 虚线包围框 |
+
+> 详见 `references/api-layout.md`
+
+## common — 通用工具
+
+| 签名 | 说明 |
+|------|------|
+| `s.ctx.callout({x,y},'text',{place:'right',gap,style})` | HTML overlay 标注 |
+| `s.tag(target,html).above(gap).color(c)` | 绑定标签（自动跟随） |
 
 > 详见 `references/api-common.md`
 
@@ -66,9 +74,10 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 | 签名 | 说明 |
 |------|------|
 | `LearnVis.stage('#sel',{width,height,theme})` | 入口 |
-| `s.steps([{label,frame(s){...}}])` | 声明式步骤动画 |
-| `s.frame(s => { ... })` | 单帧渲染 |
-| `s.play(frames, opts?)` | 程序式动画 |
+| `s.steps([{label, frame(s){...}}])` | 声明式步骤动画（返回 StepsController） |
+| `s.frame(s => { ... }, { ms? })` | 单帧异步渲染 |
+| `s.play([s=>{...}, ...], { ms? })` | 程序式多帧动画 |
+| `s.frames.begin(); ...; s.frames.commit({ ms?, animate? })` | 直接 FrameManager 管线 |
 | `LearnVis.stepper(container, labels, onChange)` | 独立步骤控件 |
 
 **主题：** `stage({theme:'warm'|'cool'|'dark'|'paper'|'vivid'|'soft'})`
@@ -79,23 +88,28 @@ description: D3+SVG visualization — math primitives, common UI, animations, th
 
 | 签名 | 说明 |
 |------|------|
-| `LearnVis.create('#sel',{width,height})` | 低层入口（FrameManager） |
+| `FrameManager` + `SVGRenderer` | ECS 管线：begin → declare → commit |
+| `fm.declare(id, state)` | 创建/更新 entity |
+| `fm.patch(id, partial)` | 局部更新 |
+| `fm.get(id, type)` | 泛型安全 getter |
+| EntityId branded type | `eid(prefix, id)` → `"point:O"` |
 
 > 详见 `references/api-atomic.md`
 
 ## 架构
 
 - **FrameManager** — ECS 风格声明式管线：`begin() → declare() → commit()`
-- **mixins** — 可组合 Builder 特征工厂（`mixColor/mixStrokeW/mixOpacity/...`）
-- **Renderer** — 策略模式，SVGRenderer 为默认实现
-- **EntityId** — 模板字面量类型：`point:A`, `vector:v`, `angle:θ`, `fill:area`
-- **纯数学变换** — `.rotate()/.scale()/.translate()` 修改坐标，不用 SVG transform
+- **Mixins** — 可组合 Builder 特征工厂：`coreNodeMixin`（共享节点特征），`mixColor/mixStrokeW/mixOpacity/...`
+- **Renderer** — 策略模式，`SVGRenderer` 为默认实现（`vis/renderer/svg.ts`）
+- **EntityId** — branded type：`eid(prefix, id)` → `"point:A"`, `"vertex:B"`, `"fill:L"`
+- **Color pipeline** — oklch theme → `resolveColor()` → `svgColor()` → hex SVG attribute
+- **Transform** — 纯描述符 `.rotate()/.scale()/.translate()` 修改坐标，`interpolate()` 平滑插值
+- **Label** — 统一 `label`/`labelPlace`/`labelGap` 字段，region 支持四个方向
 
 ## 构建
 
 ```
-npm run build    # IIFE (dist/learnvis.js) + ESM (dist/learnvis.mjs) + .d.ts
-npm test         # vitest, 130 tests
+pnpm build    # IIFE (dist/learnvis.iife.js) + ESM (dist/learnvis.mjs) + .d.ts
+pnpm check    # tsc --noEmit 类型检查
+pnpm test     # vitest, 150 tests
 ```
-
-**CLI：** `cat data.json \| npx tsx cli.ts --svg > out.svg`

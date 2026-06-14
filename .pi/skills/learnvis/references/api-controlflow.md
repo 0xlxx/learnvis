@@ -10,55 +10,67 @@ const s = LearnVis.stage('#svg-container', {
 })
 ```
 
-- `s.palette` — 调色板 `{ primary, accent, danger, warning, info, success, dim, muted }`，每个 `.fg` / `.bg` / `.a(pct)`
+- `s.palette` — 调色板 `{ primary, accent, danger, warning, info, success, dim }`，每个 `.fg` / `.bg` / `.a(pct)`
+- `s.math` — 数学原语 API
+- `s.graph` — 图论原语 API
+- `s.layout` — 布局原语 API
+- `s.ctx` — 底层 StageCtx（callout, marker, SVG layers）
 
-## 渲染管线
-
-每次元素变更自动触发渲染，内部走两条路径：
-
-| 帧序 | 行为 | 机制 |
-|------|------|------|
-| 第 1 帧 | 全清画布，创建所有 SVG 元素，fade in | `show` — 无旧元素可参考，白纸重绘 |
-| 后续帧 | 新旧元素比对，同名元素 svg attr 插值过渡 | `flow` — 保留上一帧状态，只变化差异 |
-
-- **`show`**（帧 1）：硬刷新。前帧不存在，必须全量创建。
-- **`flow`**（帧 2+）：软过渡。元素按 `data-id` 匹配：颜色渐变、位置移动、大小缩放全部自动插值 500ms。
-
-无需手动调 `s.draw()` — API 调用自动 microtask 批量渲染。
-
-## animate — 步骤动画
+## steps — 声明式步骤动画
 
 ```js
-s.animate(n, (i) => {
-  // 第 i 步：声明本步的所有元素
-  s.math.point(pts[i]).color('danger')
-  s.math.vector(origins[i], tips[i]).label('v⃗')
-}, {
-  labels: ['步骤 1', '步骤 2', ...],
-  texts: ['<b>步骤 1</b> 说明文字', ...],
-  panel: '#info-panel',   // 显示 texts[i] 的 DOM 元素
-})
+const ctrl = s.steps([
+  { label: 'Step 1', frame: s => { s.math.point('P', [100, 200]).color('danger') } },
+  { label: 'Step 2', frame: s => { s.math.point('P', [200, 150]).color('primary') } },
+])
+ctrl.go(1)  // 跳转到第 2 步
+ctrl.current // 当前步索引
+ctrl.onChange(i => { /* 步骤变化回调 */ })  // 返回 unsubscribe 函数
+ctrl.destroy()
 ```
 
-- 每个步骤函数内用声明式 API 描述该步骤的 SVG 内容
-- 步骤切换自动 flow() 插值 — 颜色、位置、标签全部平滑过渡
-- 内置 `.vis-stepper` 按钮组，无需手写按钮
+- 每个 step 的 `frame(s)` 函数内声明式描述该步骤的 SVG 内容
+- FrameManager 自动计算 enter/update/exit，同名 entity 平滑过渡
+- `StepLike = { label?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void)`
 
-## draw — 手动控制
+## frame — 单帧渲染
 
 ```js
-s.draw()      // 立即渲染
-s.draw(800)   // 指定时长
+await s.frame(s => {
+  s.math.point('P', [100, 200]).color('danger')
+}, { ms: 500 })
 ```
 
-通常不需要 — 元素声明后自动 microtask 渲染。
+- 执行一次 `begin() → draw → commit({ ms })`
 
-## 画布分割
+## play — 程序式动画
 
 ```js
-const [left, right] = s.layout.hsplit([0.4, 0.6])  // → [{x,y,w,h}, {x,y,w,h}]
-const [top, bottom] = s.layout.vsplit([0.3, 0.7])
-const cells = s.layout.grid(2, 3)                   // 2行 × 3列
+const frames = [
+  s => { s.math.point('P', [100, 200]) },
+  s => { s.math.point('P', [200, 150]) },
+]
+await s.play(frames, { ms: 800 })
 ```
 
-返回 `{x, y, w, h}` 矩形，用于布局坐标计算。
+## 直接 FrameManager 访问
+
+```js
+s.frames.begin()
+s.math.point('P', [100, 200])
+// ... more declares ...
+s.frames.commit({ ms: 500, animate: true })
+```
+
+- `begin()` — 开始新帧，重置帧状态
+- `declare(id, state)` — 创建/更新 entity（通过 math/graph/layout 原语调用）
+- `patch(id, partialState)` — 局部更新 entity（通过链式方法调用）
+- `commit({ ms?, animate? })` — 提交帧：计算 enter/update/exit，执行 D3 过渡
+
+## Stepper 控件
+
+```js
+const stepper = LearnVis.stepper(container, ['Step 1', 'Step 2'], i => ctrl.go(i))
+```
+
+- 独立步骤按钮控件，可配合任何 `StepsController`

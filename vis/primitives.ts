@@ -2,6 +2,7 @@
 
 import * as d3 from 'd3';
 import type { BaseType, Selection } from 'd3';
+import { svgColor } from './color';
 
 interface Bounds {
   left: number; top: number; w: number; h: number; cx: number; cy: number;
@@ -9,8 +10,8 @@ interface Bounds {
 
 /** 为形状绘制光晕背景（半透明圆角矩形） */
 export const halo = <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl, unknown, PE, unknown>, cx: number, cy: number, w: number, h: number, rx: number, {
-  pad = 6, fill = 'oklch(0.92 0.015 75)',
-  stroke = 'oklch(0.55 0.02 65 / 0.22)', strokeWidth = 1.5, id = 'h',
+  pad = 6, fill = svgColor('oklch(0.92 0.015 75)'),
+  stroke = svgColor('oklch(0.55 0.02 65 / 0.22)'), strokeWidth = 1.5, id = 'h',
 }: {
   pad?: number; fill?: string; stroke?: string; strokeWidth?: number; id?: string;
 } = {}) => {
@@ -20,7 +21,7 @@ export const halo = <GEl extends BaseType, PE extends BaseType>(g: Selection<GEl
   .attr('x', cx - w / 2 - pad).attr('y', cy - h / 2 - pad)
   .attr('width', w + pad * 2).attr('height', h + pad * 2)
   .attr('rx', rx + pad * 0.66)
-  .attr('fill', fill).attr('stroke', stroke).attr('stroke-width', strokeWidth);
+  .attr('fill', svgColor(fill)).attr('stroke', svgColor(stroke)).attr('stroke-width', strokeWidth);
 };
 
 /** SVG 文本标签，支持 paintOrder（描边扩边可读性） */
@@ -64,7 +65,7 @@ export const defineArrows = <GEl extends BaseType, PE extends BaseType>(svg: Sel
         .attr('refX', refX).attr('refY', refY)
         .attr('markerWidth', mw).attr('markerHeight', mw)
         .attr('markerUnits', 'userSpaceOnUse').attr('orient', 'auto-start-reverse')
-        .append('path').attr('d', 'M0,0.5 L12,5 L0,9.5 Z').attr('fill', c);
+        .append('path').attr('d', 'M0,0.5 L12,5 L0,9.5 Z').attr('fill', svgColor(c));
       _cache[c] = id;
     }
     return `url(#${_cache[c]})`;
