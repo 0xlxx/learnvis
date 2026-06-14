@@ -619,6 +619,7 @@ interface LayoutEdge {
   label(t: string): LayoutEdge;
   directed(v: boolean): LayoutEdge;
   bend(): LayoutEdge;
+  route(pts: Vec2[] | null): LayoutEdge;
 }
 interface LayoutLayer {
   color(c: string): LayoutLayer;

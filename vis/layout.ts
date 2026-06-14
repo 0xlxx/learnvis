@@ -39,6 +39,7 @@ export interface LayoutEdge {
   label(t: string): LayoutEdge;
   directed(v: boolean): LayoutEdge;
   bend(): LayoutEdge;
+  route(pts: Vec2[] | null): LayoutEdge;
 }
 
 export interface LayoutLayer {
@@ -236,6 +237,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       ...mixLabel(eid, fm),
       directed(v: boolean) { patch(eid, fm, { directed: v }); return this; },
       bend() { patch(eid, fm, { _bend: true }); return this; },
+      route(pts: Vec2[] | null) { patch(eid, fm, { points: pts || undefined }); return this; },
     } as unknown as LayoutEdge;
   }
 

@@ -5218,6 +5218,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				bend() {
 					patch(eid$4, fm, { _bend: true });
 					return this;
+				},
+				route(pts) {
+					patch(eid$4, fm, { points: pts || void 0 });
+					return this;
 				}
 			};
 		}
