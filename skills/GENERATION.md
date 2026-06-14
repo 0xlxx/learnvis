@@ -20,11 +20,10 @@ skills/
     ├── SKILL.md               # Main skill file: Compass (Quick start, Theming guidelines, Reference links)
     ├── assets/                # Built artifacts bundled with skill
     │   └── learnvis.iife.js   # IIFE build (auto-copied from dist/)
-    └── references/            # Domain-specific reference docs (7 files)
+    └── references/            # Domain-specific reference docs (6 files)
         ├── api-math.md        # Math primitives API
         ├── api-graph.md       # Graph theory primitives API
         ├── api-layout.md      # Layout primitives API (node/block/port/edge/layer/enclosure)
-        ├── api-common.md      # Shared utilities (card, tag, callout)
         ├── api-controlflow.md # Lifecycle & control flow API
         ├── api-atomic.md      # Low-level atomic API
     └── guide-standalone.md    # Standalone HTML usage (CDN, minimal template)

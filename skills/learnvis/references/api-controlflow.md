@@ -2,6 +2,7 @@
 
 ## 入口
 
+### Stage (SVG 容器)
 ```js
 const s = LearnVis.stage('#svg-container', {
   width: 780, height: 460,
@@ -14,7 +15,18 @@ const s = LearnVis.stage('#svg-container', {
 - `s.math` — 数学原语 API
 - `s.graph` — 图论原语 API
 - `s.layout` — 布局原语 API
-- `s.ctx` — 底层 StageCtx（callout, marker, SVG layers）
+- `s.ctx` — 底层 StageCtx（marker, SVG layers）
+
+### Card (DOM 卡片封装)
+
+```js
+const c = LearnVis.card('#grid', 'My Chart', 'A sine wave', { width: 300, height: 200, theme: 'warm' })
+c.math.fn(Math.sin, { domain: [0, 6.28], x: 0, y: c.cell.h, width: c.cell.w, height: c.cell.h })
+```
+
+- 创建带标题、描述、内嵌 SVG stage 的 DOM 卡片
+- 返回 `CardStage`，有 `c.cell`（`{x,y,w,h}` 可直接传 math 原语）、`c.el`（DOM 元素）
+- 其余 API 与 `Stage` 完全一致，`parent` 可以是 CSS 选择器字符串或 DOM 元素
 
 ## steps — 声明式步骤动画
 
