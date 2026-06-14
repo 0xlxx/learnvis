@@ -63,7 +63,7 @@ The main public API entry point. `stage(selector, opts)` wires up bootstrap → 
 
 2. **Graph** (`vis/graph.ts`): Graph theory primitives — vertex, edge, plus force-directed and circular layout algorithms.
 
-3. **Layout** (`vis/layout.ts`): Compound node layout primitives — node, block (compound with auto-fit), port, edge, layer, enclosure. Port-based edge routing with automatic position computation.
+3. **Layout** (`vis/layout.ts`): Node-link primitives — node, block (container with style presets), port, edge, layer (rank-based bands), enclosure (dashed group box). Port-based edge routing with automatic offset.
 
 ### Mixins (`vis/mixins.ts`)
 
