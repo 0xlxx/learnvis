@@ -6,7 +6,7 @@ export default defineConfig({
   globalName: 'LearnVis',
   outDir: 'dist',
   target: 'es2020',
-  clean: true,
+  clean: false,
   minify: false,
   sourcemap: false,
   deps: { alwaysBundle: ['d3', 'd3-interpolate', 'd3-shape'] },

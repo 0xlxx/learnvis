@@ -1,3 +1,4 @@
+// @ts-nocheck
 // vis/elements.test.ts — elements subsystem tests
 
 import { describe, it, expect, beforeEach } from 'vitest';

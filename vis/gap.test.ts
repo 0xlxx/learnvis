@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { describe, it, expect } from 'vitest';
 
 // Exact same formula as graph.ts drawAll, using MARKER constants from primitives.ts

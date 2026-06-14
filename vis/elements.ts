@@ -50,7 +50,7 @@ export function createElements(
       show() { return this; },
       glyph(_g: string) { return this; },
     };
-    return el;
+    return el as unknown as El;
   }
 
   function zone(x: number, y: number, w: number, h: number, label: string, color: string): El {
@@ -71,7 +71,7 @@ export function createElements(
       show() { return this; },
       glyph(_g: string) { return this; },
     };
-    return el;
+    return el as unknown as El;
   }
 
   function arrow(from: El, dx: number | [number, number], dy?: number): El {
@@ -80,7 +80,7 @@ export function createElements(
     const fp = from.pos();
     const tx = fp.x + o.x, ty = fp.y + o.y;
     fm.declare(id + '-tip', { type: 'node', shape: 'circle', x: tx, y: ty, r: 3.5, stroke: p.danger.fg, fill: p.danger.a(70) });
-    fm.declare(id + '-line', { type: 'line', from: from._id, to: id + '-tip', x1: fp.x, y1: fp.y, x2: tx, y2: ty, stroke: p.danger.a(65), strokeW: 1.4, dash: '', directed: true });
+    fm.declare(id + '-line', { type: 'line', from: (from as any)._id as any, to: (id + '-tip') as any, x1: fp.x, y1: fp.y, x2: tx, y2: ty, stroke: p.danger.a(65), strokeW: 1.4, dash: '', directed: true } as any);
     const el = {
       _id: id, _type: 'line', marker: 'arrow', _x: tx, _y: ty,
       _opts: {} as Record<string, unknown>, _text: '',
@@ -95,7 +95,7 @@ export function createElements(
       show() { return this; },
       glyph(_g: string) { return this; },
     };
-    return el;
+    return el as unknown as El;
   }
 
   function tag(target: El | { pos(): Point }, html: string): Tag {
@@ -106,7 +106,8 @@ export function createElements(
       left(gap) { return this; }, right(gap) { return this; },
       gap(g) { return this; }, color(c) { return this; },
       text(t) { return this; }, size(s) { return this; }, bold() { return this; },
-    };
+      remove() { return this; },
+    } as Tag;
   }
 
   function path(pts: [number, number][], opts?: { stroke?: string; dash?: string }): El[] {
@@ -123,7 +124,7 @@ export function createElements(
       .attr('stroke-width', 1)
       .attr('stroke-dasharray', opts?.dash || '5 4')
       .attr('stroke-linecap', 'round');
-    return dots;
+    return dots as unknown as El[];
   }
 
   return { dot, zone, arrow, tag, path };

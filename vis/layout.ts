@@ -100,8 +100,8 @@ function portPos(ownerId: string, pos: PortPosition, fm: FrameManager): Vec2 {
   if (!e) return [0, 0];
   const d = e.desired as NodeState;
   const cx = d.x ?? 0, cy = d.y ?? 0;
-  const bw = (d._blockW as number) ?? (d.r as number) * 2 ?? 20;
-  const bh = (d._blockH as number) ?? (d.r as number) * 2 ?? 20;
+  const bw = (d._blockW as number | undefined) ?? ((d.r as number | undefined) ?? 10) * 2 ;
+  const bh = (d._blockH as number | undefined) ?? ((d.r as number | undefined) ?? 10) * 2 ;
   const hw = bw / 2, hh = bh / 2;
   if (Array.isArray(pos)) return [cx + pos[0], cy + pos[1]];
   switch (pos) {
@@ -179,7 +179,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
         const d = e.desired as NodeState;
         return [d.x ?? 0, d.y ?? 0];
       },
-    };
+    } as unknown as LayoutPort;
   }
 
   function node(id: string, x: number, y: number, opts: NodeOpts = {}): LayoutNode {
@@ -213,7 +213,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       port(pid: string, pos: PortPosition, portOpts: PortOpts = {}) {
         return port(pid, id, pos, portOpts);
       },
-    };
+    } as unknown as LayoutNode;
   }
 
   function block(id: string, x: number, y: number, w: number, h: number, opts: BlockOpts = {}): LayoutBlock {
@@ -263,7 +263,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
         return this;
       },
     };
-    return n;
+    return n as unknown as LayoutBlock;
   }
 
   function edge(id: string, fromPortId: string, toPortId: string, opts: EdgeOpts = {}): LayoutEdge {
@@ -290,7 +290,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       label(t: string) { patch(eid, fm, { _label: t }); return this; },
       directed(v: boolean) { patch(eid, fm, { directed: v }); return this; },
       bend() { patch(eid, fm, { _bend: true }); return this; },
-    };
+    } as unknown as LayoutEdge;
   }
 
   function layer(id: string, y: number, h: number, opts: LayerOpts = {}): LayoutLayer {
@@ -304,7 +304,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       color(c: string) { patch(eid, fm, { fill: resolveColor(p, c).fill }); return this; },
       ...mixOpacity(eid, fm),
       label(t: string) { patch(eid, fm, { _label: t }); return this; },
-    };
+    } as unknown as LayoutLayer;
   }
 
   function enclosure(id: string, x: number, y: number, w: number, h: number, opts: EnclosureOpts = {}): LayoutEnclosure {
@@ -324,7 +324,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       ...mixStrokeW(eid, fm),
       ...mixOpacity(eid, fm),
       label(t: string) { patch(eid, fm, { _label: t }); return this; },
-    };
+    } as unknown as LayoutEnclosure;
   }
 
   return { node, block, port, edge, layer, enclosure };

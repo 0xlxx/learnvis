@@ -36,8 +36,17 @@ export interface Rect { x: number; y: number; w: number; h: number; rx?: number 
 
 // ── Entity system (v4 - 5 base types) ──
 
-export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge';
-export type EntityId = `${EntityPrefix}:${string}`;
+export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge' | 'port';
+
+declare const EntityIdBrand: unique symbol;
+/** Branded string type for entity identifiers (e.g. "point:O", "vertex:A").
+ *  Use eid() to construct. */
+export type EntityId = string & { [EntityIdBrand]: true };
+
+/** Construct a typed EntityId from a prefix and name. */
+export function eid(prefix: EntityPrefix, id: string): EntityId {
+  return `${prefix}:${id}` as EntityId;
+}
 
 export type NodeShape = 'circle' | 'rect' | 'symbol';
 export type NodeState = {
@@ -46,8 +55,12 @@ export type NodeState = {
   r?: number; w?: number; h?: number; rx?: number;
   fill: string; stroke: string; strokeW?: number; opacity?: number;
   label?: string; labelPlace?: Place; _labelY?: number; _labelAnchor?: string;
+  labelGap?: number;
   symType?: string;  // symbol type for shape='symbol'
   _owner?: string;   // for ports: owner node id
+  _label?: string;   // internal label for blocks
+  _shape?: string;   // internal shape tracker
+  _portPos?: 'top' | 'bottom' | 'left' | 'right' | [number, number];
   _blockW?: number; _blockH?: number;  // for blocks: computed dimensions
   _children?: string[];  // for blocks: child node ids
 };
@@ -69,10 +82,14 @@ export type LineState = WithTransform<{
   type: 'line';
   from?: Vec2; to?: Vec2;  // math coords
   x1?: number; y1?: number; x2?: number; y2?: number;  // screen coords
+  a?: Vec2; b?: Vec2;  // endpoint shorthand (segment)
   stroke: string; strokeW: number;
   dash?: string; opacity?: number; label?: string;
+  labelPlace?: Place; labelGap?: number;
   marker?: LineMarker; directed?: boolean;
   bend?: boolean; _bend?: boolean;
+  _label?: string;
+  _markerCfg?: MarkerConfig | null;
   _fromPort?: string; _toPort?: string;  // for layout edges
 }>;
 
@@ -84,6 +101,8 @@ export type RegionState = WithTransform<{
   fill: string; stroke?: string; strokeW?: number;
   dash?: string; opacity?: number;
   innerR?: number; outerR?: number; startAngle?: number; endAngle?: number;
+  d?: string;  // SVG path data for arbitrary shapes (symbol/arc)
+  x?: number; y?: number; w?: number; h?: number; label?: string;
   _label?: string; _rx?: number;
 }>;
 
@@ -110,8 +129,9 @@ export type GroupState = {
 export type EntityState = NodeState | LineState | RegionState | CurveState | GroupState;
 
 export interface Entity {
-  id: EntityId;
+  id: string;
   desired: EntityState;
+  svg?: any;
 }
 
 // ── Stage context ──
@@ -133,10 +153,14 @@ export interface StageOptions {
   ms?: number; animation?: Partial<AnimationConfig>;
   renderer?: Renderer;
 }
-export interface AxesOptions { x?: number; y?: number; xLen?: number; yLen?: number; xLabel?: string; yLabel?: string }
+export interface AxesOptions {
+  x?: number; y?: number; xLen?: number; yLen?: number; xLabel?: string; yLabel?: string;
+  xRange?: [number, number]; yRange?: [number, number]; ticks?: number; labels?: boolean;
+}
 
 // ── Steps ──
-export interface StepLike { label?: string; frame(s: StageAPI): void }
+export type StageAPI = AgentStage;
+export type StepLike = { label?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void);
 export interface StepsOptions { start?: number }
 export interface StepsController { go(i: number): void; get current(): number; onChange(fn: (i: number) => void): () => void; destroy(): void }
 
@@ -156,8 +180,11 @@ export interface Tag {
   below(gap?: number): Tag;
   left(gap?: number): Tag;
   right(gap?: number): Tag;
+  gap(g: number): Tag;
   color(c: string): Tag;
   text(t: string): Tag;
+  size(s: number): Tag;
+  bold(): Tag;
   remove(): void;
 }
 
@@ -173,6 +200,6 @@ export interface AgentStage extends Disposable {
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void>;
   play(frames: ((s: AgentStage) => void)[], opts?: { ms?: number }): Promise<void>;
-  frames: Record<string, EntityState[]>;
+  frames: any;
   theme?: Record<string, unknown>;
 }

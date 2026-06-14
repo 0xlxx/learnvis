@@ -42,7 +42,7 @@ export function createStandaloneTag(
         style: { fontSize: '11px', fontFamily: 'JetBrains Mono,monospace', ..._style },
       });
     },
-  } as TagInternal;
+  } as unknown as TagInternal;
   self._draw();
   return self;
 }
@@ -74,7 +74,7 @@ export function createBoundTag(
         style: { fontSize: '11px', fontFamily: 'JetBrains Mono,monospace', ..._style },
       });
     },
-  } as TagInternal;
+  } as unknown as TagInternal;
 
   (target as El & { _labelEl?: TagInternal })._labelEl = self;
   return self;

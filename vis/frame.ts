@@ -1,7 +1,7 @@
 // vis/frame.ts — FrameManager: unified ECS frame lifecycle (renderer-agnostic)
 
 import * as d3 from 'd3';
-import type { Entity, EntityState, EntityId, AnimationConfig } from './types';
+import type { Entity, EntityState, AnimationConfig } from './types';
 import type { Renderer, RenderHandle } from './renderer';
 import { SVGRenderer, type SVGHandle } from './renderer/svg';
 import type { StageCtx } from './types';
@@ -35,19 +35,34 @@ export class FrameManager {
     this.renderer.beginFrame();
   }
 
-  declare(id: EntityId, state: EntityState): Entity {
-    this.current.add(id as string);
-    const existing = this.store.get(id as string);
-    if (existing) { Object.assign(existing.desired, state); return existing; }
+  declare(id: string, state: EntityState): Entity {
+    this.current.add(id);
+    const existing = this.store.get(id);
+    if (existing) {
+      // Clear stale transform state when re-declaring without transforms —
+      // prevents _tf accumulation across frames which breaks smooth interpolation.
+      if (!('_tf' in (state as Record<string, unknown>))) delete (existing.desired as Record<string, unknown>)._tf;
+      if (!('_base' in (state as Record<string, unknown>))) delete (existing.desired as Record<string, unknown>)._base;
+      Object.assign(existing.desired, state); return existing;
+    }
     const entity: Entity = { id, desired: { ...state }, svg: null };
-    this.store.set(id as string, entity);
+    this.store.set(id, entity);
     return entity;
   }
 
-  patch(id: EntityId, partial: Partial<EntityState>): void {
-    const entity = this.store.get(id as string);
+  patch(id: string, partial: Partial<EntityState>): void {
+    const entity = this.store.get(id);
     if (!entity) throw new Error(`Entity not found: ${id}`);
     Object.assign(entity.desired, partial);
+  }
+
+  /** Typed getter: narrows EntityState by its discriminant type field.
+   *  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
+  get<T extends EntityState['type']>(
+    id: string,
+    _type: T,
+  ): (Entity & { desired: Extract<EntityState, { type: T }> }) | undefined {
+    return this.store.get(id) as any;
   }
 
   commit(opts?: { ms?: number; animate?: boolean }) {

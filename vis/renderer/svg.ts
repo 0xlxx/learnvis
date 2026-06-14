@@ -5,9 +5,36 @@ import type { EntityState, StageCtx, Vec2, NodeState, LineState, RegionState, Cu
 import type { Renderer, RenderHandle } from './index';
 import { applyLine, applyVertices, interpolate, type Transform } from '../transform';
 
-type E = d3.Selection<SVGElement, unknown, null, undefined>;
+type E = d3.Selection<any, unknown, null, undefined>;
 
 // ── helpers ──
+
+/** Construct identity-equivalent transforms matching the structure of the given list.
+ *  Used to enable smooth attrTween interpolation when one side lacks _tf. */
+function identityTransforms(tf: Transform[]): Transform[] {
+  return tf.map(t => {
+    switch (t.type) {
+      case 'rotate':    return { type: 'rotate' as const, angle: 0, cx: t.cx, cy: t.cy };
+      case 'scale':     return { type: 'scale' as const, sx: 1, sy: 1 };
+      case 'translate': return { type: 'translate' as const, dx: 0, dy: 0 };
+    }
+  });
+}
+
+/** Pad both transform arrays to the same length with identity-equivalent transforms.
+ *  Without this, interpolate() (which maps over the old array) would miss extra
+ *  transforms in the new array — e.g. old=[rotate(45)], new=[rotate(45),scale(2)]
+ *  would never interpolate the scale, causing the animation to appear frozen. */
+function normalizeTransforms(oldTf: Transform[], newTf: Transform[]): { old: Transform[]; new: Transform[] } {
+  const maxLen = Math.max(oldTf.length, newTf.length);
+  if (oldTf.length < maxLen) {
+    oldTf = [...oldTf, ...identityTransforms(newTf.slice(oldTf.length))];
+  }
+  if (newTf.length < maxLen) {
+    newTf = [...newTf, ...identityTransforms(oldTf.slice(newTf.length))];
+  }
+  return { old: oldTf, new: newTf };
+}
 
 function markerFor(stroke: string, cache: Record<string, string>, svg: d3.Selection<any, any, any, any>, config?: { size?: number; width?: number; height?: number; offset?: number; open?: boolean } | null) {
   if (!stroke) return undefined;
@@ -103,7 +130,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const line = edges.append('line').attr('data-id', id)
         .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
         .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW).attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round')
-        .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld.marker) ?? null : null);
+        .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, (ld._markerCfg as any) ?? null) ?? null : null);
       applyCommon(line, ld.opacity);
       return { group: line, text: null };
     }
@@ -180,15 +207,15 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const g = bg.append('g').attr('data-id', id);
       if (gd.subtype === 'axes') {
         const ox = gd.ox ?? 0, oy = gd.oy ?? 0, xl = gd.xl ?? 300, yl = gd.yl ?? 200, sw = gd.strokeW ?? 1.4;
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox + xl + 10).attr('y2', oy).attr('stroke', gd.stroke).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr('fill', gd.stroke);
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox).attr('y2', oy - yl - 10).attr('stroke', gd.stroke).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', gd.stroke);
-        g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', '#fff').attr('stroke', gd.stroke).attr('stroke-width', sw);
+        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox + xl + 10).attr('y2', oy).attr('stroke', gd.stroke!).attr('stroke-width', sw);
+        g.append('polygon').attr('points', `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr('fill', gd.stroke!);
+        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox).attr('y2', oy - yl - 10).attr('stroke', gd.stroke!).attr('stroke-width', sw);
+        g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', gd.stroke!);
+        g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', '#fff').attr('stroke', gd.stroke!).attr('stroke-width', sw);
       } else if (gd.subtype === 'grid') {
         const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
-        for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', gd.stroke).attr('stroke-width', gd.strokeW ?? 0.3);
-        for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', gd.stroke).attr('stroke-width', gd.strokeW ?? 0.3);
+        for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', gd.stroke!).attr('stroke-width', gd.strokeW ?? 0.3);
+        for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', gd.stroke!).attr('stroke-width', gd.strokeW ?? 0.3);
       }
       applyCommon(g, gd.opacity);
       return { group: g, text: null };
@@ -221,13 +248,31 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
     case 'line': {
       const ld = newState as LineState;
       const oldLd = oldState as LineState;
-      if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
-        const base = ld._base as { from: [number, number]; to: [number, number] };
+
+      // Normalize: ensure both sides have _tf/_base for smooth attrTween interpolation.
+      // When one side lacks transforms, construct identity-equivalent ones so rotation/scale
+      // interpolate correctly instead of falling back to linear coordinate lerp.
+      let oldTf: Transform[] | undefined = oldLd._tf;
+      let newTf: Transform[] | undefined = ld._tf;
+      let lineBase: { from: [number, number]; to: [number, number] } | undefined;
+
+      if (ld._tf && ld._base) {
+        lineBase = ld._base as { from: [number, number]; to: [number, number] };
+        if (!oldLd._tf) oldTf = identityTransforms(ld._tf);
+      }
+      if (oldLd._tf && oldLd._base && !lineBase) {
+        lineBase = oldLd._base as { from: [number, number]; to: [number, number] };
+        if (!ld._tf) newTf = identityTransforms(oldLd._tf);
+      }
+
+      if (lineBase && oldTf && newTf) {
+        // Normalize to same length so interpolate() doesn't miss extra transforms
+        const norm = normalizeTransforms(oldTf!, newTf!);
         svg.interrupt().transition(tr)
-           .attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString())
-           .attrTween('y1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString())
-           .attrTween('x2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString())
-           .attrTween('y2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString())
+           .attrTween('x1', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).from[0].toString())
+           .attrTween('y1', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).from[1].toString())
+           .attrTween('x2', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).to[0].toString())
+           .attrTween('y2', () => t => applyLine(lineBase!.from, lineBase!.to, interpolate(norm.old, norm.new, t)).to[1].toString())
            .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
       } else {
         let x1: number, y1: number, x2: number, y2: number;
@@ -253,15 +298,30 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill);
       } else {
         const oldRd = oldState as RegionState;
-        if (rd._tf && rd._base && 'vertices' in rd._base && oldRd._tf && oldRd._base && 'vertices' in oldRd._base) {
-          const baseVerts = rd._base.vertices as [number, number][];
+
+        // Normalize: ensure both sides have _tf/_base for smooth attrTween interpolation.
+        let oldTf: Transform[] | undefined = oldRd._tf;
+        let newTf: Transform[] | undefined = rd._tf;
+        let regionBase: [number, number][] | undefined;
+
+        if (rd._tf && rd._base && 'vertices' in rd._base) {
+          regionBase = (rd._base as { vertices: [number, number][] }).vertices;
+          if (!oldRd._tf) oldTf = identityTransforms(rd._tf);
+        }
+        if (oldRd._tf && oldRd._base && 'vertices' in oldRd._base && !regionBase) {
+          regionBase = (oldRd._base as { vertices: [number, number][] }).vertices;
+          if (!rd._tf) newTf = identityTransforms(oldRd._tf);
+        }
+
+        if (regionBase && oldTf && newTf) {
+          const norm = normalizeTransforms(oldTf!, newTf!);
           svg.interrupt().transition(tr)
-             .attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map(p => p.join(',')).join(' '))
+             .attrTween('points', () => t => applyVertices(regionBase!, interpolate(norm.old, norm.new, t)).map(p => p.join(',')).join(' '))
              .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
         } else {
           let pts: Vec2[];
           if (rd._tf && rd._base && 'vertices' in rd._base) {
-            pts = applyVertices(rd._base.vertices, rd._tf);
+            pts = applyVertices((rd._base as { vertices: [number, number][] }).vertices, rd._tf);
           } else {
             pts = rd.pts ?? rd.vertices ?? [];
           }
@@ -485,7 +545,7 @@ export class SVGHandle implements RenderHandle {
 
   private _clean(id: string) {
     [this.ctx.stage.bg, this.ctx.stage.nodes, this.ctx.stage.edges, this.ctx.stage.overlay].forEach(g =>
-      g.selectAll('[data-id]').filter(function() { const did = this.getAttribute('data-id'); return did === id || did.startsWith(id + '-'); }).remove()
+      g.selectAll('[data-id]').filter(function() { const did = (this as Element).getAttribute('data-id')!; return did === id || did.startsWith(id + '-'); }).remove()
     );
   }
 }

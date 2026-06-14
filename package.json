@@ -4,7 +4,8 @@
   "description": "D3 visualization primitives + agent-friendly API for algorithm lessons",
   "type": "module",
   "scripts": {
-    "build": "tsdown && mv dist/learnvis.iife.js dist/learnvis.js",
+    "build": "tsdown && ln -sf learnvis.iife.js dist/learnvis.js",
+    "dev": "mkdir -p dist && ln -sf learnvis.iife.js dist/learnvis.js; tsdown -w",
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",

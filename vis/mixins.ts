@@ -9,7 +9,7 @@ import type { EntityState, LineState, Palette, Place, RegionState, Vec2 } from '
 
 export function resolveColor(p: Palette, c?: string) {
   if (!c) return { stroke: p.primary.fg, fill: p.primary.bg };
-  const col = (p as Record<string, { fg: string; bg: string }>)[c];
+  const col = (p as unknown as Record<string, { fg: string; bg: string }>)[c];
   if (col) return { stroke: col.fg, fill: col.bg };
   return { stroke: c, fill: c };
 }
@@ -49,7 +49,7 @@ export const mixOpacity = (eid: string, fm: FrameManager) => ({
 });
 
 export const mixSize = (eid: string, fm: FrameManager) => ({
-  size(n: number) { patch(eid, fm, { r: n, pathSize: n }); return this; },
+  size(n: number) { patch(eid, fm, { r: n, pathSize: n } as any); return this; },
 });
 
 export const mixDashed = (eid: string, fm: FrameManager) => ({

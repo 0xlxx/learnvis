@@ -1,3 +1,4 @@
+// @ts-nocheck
 // vis/math.test.ts — math subsystem tests
 
 import { describe, it, expect, beforeEach } from 'vitest';

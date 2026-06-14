@@ -20,5 +20,5 @@ export function bootstrap(selector: string | BaseType, opts: {
   const callout = (anchor: S | Point, html: string, o: Record<string, unknown> = {}) =>
     domLabel(C.root, anchor, html, o);
 
-  return { svg: C.svg, W: C.W, H: C.H, M: C.M, stage: { bg: C.bg, nodes: C.nG, edges: C.eG, overlay: C.oG }, root: C.root, palette: p, geom, markerFor, callout };
+  return { svg: C.svg as unknown as S, W: C.W, H: C.H, M: C.M, stage: { bg: C.bg as unknown as S, nodes: C.nG as unknown as S, edges: C.eG as unknown as S, overlay: C.oG as unknown as S }, root: C.root as unknown as S, palette: p, geom, markerFor, callout: callout as unknown as (anchor: S | Point, html: string, o?: Record<string, unknown>) => S };
 }

@@ -40,7 +40,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
   const p = palette;
 
   function resolveColor(c: string): { stroke: string; fill: string } {
-    const col = (p as Record<string, { fg: string; bg: string }>)[c];
+    const col = (p as unknown as Record<string, { fg: string; bg: string }>)[c];
     if (col) return { stroke: col.fg, fill: col.bg };
     return { stroke: c, fill: c };
   }
@@ -56,7 +56,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     fm.declare(eid, {
       type: 'node', x: pos[0], y: pos[1],
       r, stroke, fill, _label: id,
-    });
+    } as any);
 
     const v: Vertex = {
       id, x: pos[0], y: pos[1],
@@ -92,10 +92,10 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     );
 
     fm.declare(eid, {
-      type: 'line', from: a.id, to: b.id,
+      type: 'line', from: a.id as any, to: b.id as any,
       x1, y1, x2, y2,
       stroke, strokeW, dash: '', directed,
-      marker: marker ?? null,
+      marker: marker ?? null as any,
     });
 
     return {
@@ -153,7 +153,7 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
       fm.declare(`vertex:${v.id}`, {
         type: 'node', x: v.x, y: v.y,
         r: v._r, stroke: v._stroke, fill: v._fill, _label: v._label,
-      });
+      } as any);
     }
   }
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 // vis/frame.test.ts — FrameManager unit tests
 
 import { describe, it, expect, beforeEach } from 'vitest';

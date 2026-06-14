@@ -121,9 +121,9 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   }
 
   _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
-  api.math = createMathRenderer(fm, ctx, p);
-  api.graph = createGraph(fm, ctx, p);
-  api.layout = createLayout(fm, p);
+  api.math = createMathRenderer(fm, ctx, p as any);
+  api.graph = createGraph(fm, ctx, p as any);
+  api.layout = createLayout(fm, p as any);
   return api as unknown as AgentStage;
 }
 

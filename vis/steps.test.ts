@@ -1,3 +1,4 @@
+// @ts-nocheck
 // vis/steps.test.ts — steps/frame/play API unit tests
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

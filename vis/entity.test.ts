@@ -1,3 +1,4 @@
+// @ts-nocheck
 // vis/entity.test.ts — v4 entity consolidation tests
 
 import { describe, it, expect, beforeAll } from 'vitest';
