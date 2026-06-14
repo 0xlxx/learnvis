@@ -18,13 +18,16 @@ This document tracks how learnvis skills are generated and kept in sync with the
 ├── GENERATION.md              # This file
 ├── README.md                  # agentskills.io metadata
 ├── SKILL.md                   # Main skill file: API tables + quick reference
-└── references/                # Domain-specific reference docs (6 files)
+├── assets/                    # Built artifacts bundled with skill
+│   └── learnvis.iife.js       # IIFE build (auto-copied from dist/)
+└── references/                # Domain-specific reference docs (7 files)
     ├── api-math.md            # Math primitives API
     ├── api-graph.md           # Graph theory primitives API
     ├── api-layout.md          # Layout primitives API (node/block/port/edge/layer/enclosure)
     ├── api-common.md          # Shared utilities (card, tag, callout)
     ├── api-controlflow.md     # Lifecycle & control flow API
-    └── api-atomic.md          # Low-level atomic API
+    ├── api-atomic.md          # Low-level atomic API
+    └── guide-standalone.md    # Standalone HTML usage (CDN, minimal template)
 ```
 
 ## File Naming Convention
@@ -95,6 +98,7 @@ git diff HEAD -- vis/
 
 | Date       | Changes                                              |
 |------------|------------------------------------------------------|
+| 2026-06-14 | Added guide-standalone.md (CDN + HTML template), SKILL.md standalone section, 6→7 references |
 | 2026-06-14 | Full skill refresh: all 6 reference files updated, SKILL.md layout section, README.md rewritten, segment a/b render fix, layer dual-style, postinstall multi-platform |
 | 2026-06-14 | Major: elements.ts deleted, layout API (node/block/port/edge/layer/enclosure), CoreNode mixin unified labels, layer style: band/swimlane, EntityId branded type, oklch→hex color pipeline, labelPlace on regions |
 | 2026-06-13 | Added `using` syntax support, `AgentStage extends Disposable`, polyfill |

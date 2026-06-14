@@ -113,3 +113,19 @@ pnpm build    # IIFE (dist/learnvis.iife.js) + ESM (dist/learnvis.mjs) + .d.ts
 pnpm check    # tsc --noEmit 类型检查
 pnpm test     # vitest, 150 tests
 ```
+
+## 独立 HTML 使用
+
+CDN: `https://cdn.jsdelivr.net/gh/0xlxx/skills@main/learnvis/assets/learnvis.iife.js`
+
+```html
+<script src="https://cdn.jsdelivr.net/gh/0xlxx/skills@main/learnvis/assets/learnvis.iife.js"></script>
+<script>
+const s = LearnVis.stage('#stage', { width: 780, height: 460, theme: 'paper' });
+s.frames.begin();
+s.math.point('O', [390, 230]).color('danger').label('O');
+s.frames.commit({ animate: false });
+</script>
+```
+
+> 详见 `references/guide-standalone.md`
