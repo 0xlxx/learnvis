@@ -41,22 +41,40 @@ const COLORS: Record<string, string> = {
   success: TOKENS.success,
 };
 
-/** 给 OKLCH 颜色附加透明度，兼容非 oklch 颜色原样返回 */
+export const SEMANTIC_COLORS = ['primary', 'accent', 'danger', 'warning', 'info', 'muted', 'success', 'dim'];
+
+/** 
+ * Resolves a color string. 
+ * If it's a semantic name (e.g. 'primary'), returns the corresponding CSS variable var(--lv-primary).
+ * Otherwise returns the raw value (e.g. '#e07745').
+ */
+export function resolveColor(val: string): string {
+  if (SEMANTIC_COLORS.includes(val)) {
+    return `var(--lv-${val === 'dim' ? 'muted' : val})`;
+  }
+  return val;
+}
+
+/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
 export const alpha = (c: string, pct = 15): string => {
-  const color = COLORS[c] || TOKENS.fills[c] || c;
-  if (!color.startsWith('oklch(')) return color;
-  const a = (pct / 100).toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-  return color.replace(/ \/ [\d.]+\s*\)$/, '').replace(/\)$/, ` / ${a})`);
+  const resolved = resolveColor(c);
+  // Using oklch space handles both oklch() colors and standard hex/rgb well in modern browsers
+  return `color-mix(in oklch, ${resolved} ${pct}%, transparent)`;
 };
 
-/** 统一调色板工厂：每个语义色返回 { fg, bg, a(pct) } */
-export const palette = () => ({
-  dim:     { fg: TOKENS.muted,   bg: TOKENS.fills.muted,   a: (p: number) => alpha(TOKENS.muted, p) },
-  accent:  { fg: TOKENS.accent,  bg: TOKENS.fills.accent,  a: (p: number) => alpha(TOKENS.accent, p) },
-  danger:  { fg: TOKENS.danger,  bg: TOKENS.fills.danger,  a: (p: number) => alpha(TOKENS.danger, p) },
-  primary: { fg: TOKENS.primary, bg: TOKENS.fills.primary, a: (p: number) => alpha(TOKENS.primary, p) },
-  success: { fg: TOKENS.success, bg: TOKENS.fills.success, a: (p: number) => alpha(TOKENS.success, p) },
-  warning: { fg: TOKENS.warning, bg: TOKENS.fills.warning, a: (p: number) => alpha(TOKENS.warning, p) },
-  info:    { fg: TOKENS.info,    bg: TOKENS.fills.info,    a: (p: number) => alpha(TOKENS.info, p) },
-  muted:   { fg: TOKENS.muted,   bg: TOKENS.fills.muted,   a: (p: number) => alpha(TOKENS.muted, p) },
-});
+/** 
+ * 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
+ * 每个语义色返回 { fg, bg, a(pct) }
+ */
+export const palette = () => {
+  const p: any = {};
+  for (const c of SEMANTIC_COLORS) {
+    const varName = c === 'dim' ? '--lv-muted' : `--lv-${c}`;
+    p[c] = {
+      fg: `var(${varName})`,
+      bg: `var(${varName}-bg)`,
+      a: (pct: number) => `color-mix(in oklch, var(${varName}) ${pct}%, transparent)`
+    };
+  }
+  return p;
+};

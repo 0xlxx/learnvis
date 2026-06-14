@@ -14,51 +14,13 @@ interface TokensType {
 }
 /** 7 语义色 + 7 填充变体，全部使用 OKLCH 色彩空间 */
 declare const TOKENS: TokensType;
-/** 给 OKLCH 颜色附加透明度，兼容非 oklch 颜色原样返回 */
+/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
 declare const alpha: (c: string, pct?: number) => string;
-/** 统一调色板工厂：每个语义色返回 { fg, bg, a(pct) } */
-declare const palette: () => {
-  dim: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  accent: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  danger: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  primary: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  success: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  warning: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  info: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-  muted: {
-    fg: string;
-    bg: string;
-    a: (p: number) => string;
-  };
-};
+/**
+ * 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
+ * 每个语义色返回 { fg, bg, a(pct) }
+ */
+declare const palette: () => any;
 //#endregion
 //#region vis/geometry.d.ts
 interface Nd {
@@ -208,32 +170,6 @@ declare const createCanvas: (selector: string | BaseType, width?: number, height
   H: number;
   M: number;
 };
-//#endregion
-//#region vis/stepper.d.ts
-/**
- * Create stepper buttons in a container element.
- *
- * @param container - CSS selector or HTMLElement to hold buttons
- * @param labels - button labels
- * @param onChange - called with step index when user clicks a button
- * @param opts.start - initial active step (default 0)
- */
-declare function stepper(container: string | HTMLElement, labels: string[], onChange: (i: number) => void, opts?: {
-  start?: number;
-}): {
-  go(i: number): void;
-  destroy(): void;
-};
-//#endregion
-//#region vis/katex.d.ts
-declare global {
-  interface Window {
-    katex?: {
-      renderToString(src: string, opts?: Record<string, unknown>): string;
-    };
-  }
-}
-declare const katexify: (html: string) => string;
 //#endregion
 //#region vis/renderer/index.d.ts
 interface RenderHandle {
@@ -657,6 +593,16 @@ interface LayerOpts {
   rx?: number;
   strokeW?: number;
 }
+interface ArrayOpts {
+  itemW?: number;
+  itemH?: number;
+  gap?: number;
+  label?: string;
+  dir?: 'x' | 'y';
+  color?: string;
+  bg?: string;
+  padding?: number;
+}
 interface LayoutAPI {
   node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
   block(id: string, x: number, y: number, w: number, h: number, opts?: NodeOpts & {
@@ -665,6 +611,7 @@ interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
+  array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): LayoutNode[];
 }
 declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
 //#endregion
@@ -785,6 +732,8 @@ type LineState = WithTransform<{
   _markerCfg?: MarkerConfig | null;
   _fromPort?: string;
   _toPort?: string;
+  _portR?: number;
+  _toR?: number;
 }>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
 type RegionState = WithTransform<{
@@ -901,6 +850,8 @@ interface StageOptions {
 type StageAPI = AgentStage;
 type StepLike = {
   label?: string;
+  title?: string;
+  desc?: string;
   frame(s: StageAPI): void;
 } | ((s: StageAPI) => void);
 interface StepsOptions {
@@ -908,8 +859,12 @@ interface StepsOptions {
 }
 interface StepsController {
   go(i: number): void;
+  next(): void;
+  prev(): void;
   get current(): number;
-  onChange(fn: (i: number) => void): () => void;
+  get total(): number;
+  get currentStepDef(): StepLike | null;
+  onChange(fn: (i: number, step: StepLike) => void): () => void;
   destroy(): void;
 }
 interface AgentStage extends Disposable {
@@ -935,6 +890,39 @@ interface AgentStage extends Disposable {
   frames: any;
   theme?: Record<string, unknown>;
 }
+//#endregion
+//#region vis/stepper.d.ts
+interface StepperOpts {
+  layout?: 'tabs' | 'prev-next';
+}
+/**
+ * Creates a step control bar.
+ * Supports legacy signature (labels array) and progressive signature (StepsController).
+ */
+declare function stepper(container: string | HTMLElement, ctrlOrLabels: StepsController | string[], onChangeOrOpts?: ((i: number) => void) | StepperOpts, legacyOpts?: {
+  start?: number;
+}): {
+  go?(i: number): void;
+  destroy(): void;
+};
+/**
+ * Creates a description box bound to a StepsController.
+ */
+declare function descBox(container: string | HTMLElement, ctrl: StepsController, opts?: {
+  minHeight?: string;
+}): {
+  destroy(): void;
+};
+//#endregion
+//#region vis/katex.d.ts
+declare global {
+  interface Window {
+    katex?: {
+      renderToString(src: string, opts?: Record<string, unknown>): string;
+    };
+  }
+}
+declare const katexify: (html: string) => string;
 //#endregion
 //#region vis/bootstrap.d.ts
 declare function bootstrap(selector: string | BaseType, opts?: {
@@ -1247,4 +1235,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

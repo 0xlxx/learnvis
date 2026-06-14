@@ -81,6 +81,17 @@ export interface LayerOpts {
   rx?: number;          // corner radius, default 8
   strokeW?: number;     // swimlane border width, default 1.2
 }
+export interface ArrayOpts {
+  itemW?: number;
+  itemH?: number;
+  gap?: number;
+  label?: string;
+  dir?: 'x' | 'y';
+  color?: string;
+  bg?: string;
+  padding?: number;
+}
+
 // ── Layout API ──
 
 export interface LayoutAPI {
@@ -89,6 +100,7 @@ export interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
+  array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): LayoutNode[];
 }
 
 // ── Private helpers ──
@@ -184,7 +196,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
   function block(id: string, x: number, y: number, w: number, h: number, opts: NodeOpts & { style?: 'muted' | 'normal' | 'active' } = {}): LayoutNode {
     const eid = mkId('vertex', id);
     const s = BLOCK_STYLE[opts.style ?? 'normal'];
-    const stroke = resolveColor(p, s.stroke).stroke;
+    const stroke = opts.stroke ?? resolveColor(p, s.stroke).stroke;
     const fill = opts.fill ?? resolveColor(p, s.fill).fill;
 
     fm.declare(eid, {
@@ -208,27 +220,12 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const eid = mkId('edge', id);
     const r = resolveColor(p, opts.color ?? 'dim');
     
-    // Smart Fallback: Try finding it as a port first, otherwise fall back to the vertex center.
-    let fpe = fm.entities.get(`port:${fromId}`) ?? fm.entities.get(`vertex:${fromId}`);
-    let tpe = fm.entities.get(`port:${toId}`) ?? fm.entities.get(`vertex:${toId}`);
-
-    if (!fpe) console.warn(`[vis.js] Edge '${id}': Source '${fromId}' not found. Did you forget to create the node or port?`);
-    if (!tpe) console.warn(`[vis.js] Edge '${id}': Destination '${toId}' not found. Did you forget to create the node or port?`);
-
-    const fx = (fpe?.desired as NodeState)?.x ?? 0, fy = (fpe?.desired as NodeState)?.y ?? 0;
-    const tx = (tpe?.desired as NodeState)?.x ?? 0, ty = (tpe?.desired as NodeState)?.y ?? 0;
     const directed = opts.directed ?? false;
 
-    // Offset so the arrowhead stops 2px before the port edge, never overlapping.
-    // Port radius fallback: 4 (layout default). Marker tip: ~9.3px for default 2px arrow.
-    const portR = (fpe?.desired as NodeState)?.r ?? 4;
-    const toR   = (tpe?.desired as NodeState)?.r ?? 4;
-    const mt = directed ? markerTip() : 0;
-    const GAP = 2; // visual separation between arrow tip and port edge
-    const { x1, y1, x2, y2 } = offsetLine([fx, fy], [tx, ty], portR, toR + mt + GAP, directed);
-
+    // Lazy Evaluation: We don't fetch from/to entities or compute coordinates here.
+    // Instead, we store the topological intent. `resolveGeometry` in frame.ts will populate x1..y2 later.
     fm.declare(eid, {
-      type: 'line', x1, y1, x2, y2,
+      type: 'line', x1: 0, y1: 0, x2: 0, y2: 0,
       stroke: r.stroke, strokeW: opts.strokeW ?? 1.5, dash: opts.dash ?? '',
       directed, _bend: opts.bend ?? false,
       _fromPort: fromId, _toPort: toId,
@@ -316,5 +313,47 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     } as unknown as LayoutLayer;
   }
 
-  return { node, block, port, edge, layer };
+  function array(id: string, x: number, y: number, items: string[], opts: ArrayOpts = {}): LayoutNode[] {
+    const itemW = opts.itemW ?? 30;
+    const itemH = opts.itemH ?? 30;
+    const gap = opts.gap ?? 8;
+    const pad = opts.padding ?? 10;
+    const dir = opts.dir ?? 'x';
+    const color = opts.color ?? 'dim';
+
+    const n = items.length;
+    let w = 0, h = 0;
+    if (n === 0) {
+      w = pad * 2; h = pad * 2;
+    } else if (dir === 'x') {
+      w = pad * 2 + n * itemW + (n - 1) * gap;
+      h = pad * 2 + itemH;
+    } else {
+      w = pad * 2 + itemW;
+      h = pad * 2 + n * itemH + (n - 1) * gap;
+    }
+
+    // array bg
+    block(`array-bg-${id}`, x, y, w, h, {
+      fill: opts.bg ?? '#f8fafc', stroke: opts.color ?? '#cbd5e1', strokeW: 1.2, rx: 6,
+      label: opts.label, labelPlace: 'left'
+    });
+
+    const res: LayoutNode[] = [];
+    const startX = x + pad + itemW / 2;
+    const startY = y + pad + itemH / 2;
+
+    items.forEach((item, i) => {
+      const ix = dir === 'x' ? startX + i * (itemW + gap) : startX;
+      const iy = dir === 'y' ? startY + i * (itemH + gap) : startY;
+      const nd = node(`array-${id}-item-${item}`, ix, iy, {
+        w: itemW, h: itemH, rx: 4, shape: 'rect'
+      }).color(color).label(item);
+      res.push(nd);
+    });
+
+    return res;
+  }
+
+  return { node, block, port, edge, layer, array };
 }

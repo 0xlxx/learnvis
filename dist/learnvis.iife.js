@@ -22,65 +22,46 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			success: "oklch(0.88 0.06 150)"
 		}
 	};
-	const COLORS = {
-		primary: TOKENS.primary,
-		accent: TOKENS.accent,
-		danger: TOKENS.danger,
-		warning: TOKENS.warning,
-		info: TOKENS.info,
-		muted: TOKENS.muted,
-		success: TOKENS.success
-	};
-	/** 给 OKLCH 颜色附加透明度，兼容非 oklch 颜色原样返回 */
+	TOKENS.primary, TOKENS.accent, TOKENS.danger, TOKENS.warning, TOKENS.info, TOKENS.muted, TOKENS.success;
+	const SEMANTIC_COLORS = [
+		"primary",
+		"accent",
+		"danger",
+		"warning",
+		"info",
+		"muted",
+		"success",
+		"dim"
+	];
+	/** 
+	* Resolves a color string. 
+	* If it's a semantic name (e.g. 'primary'), returns the corresponding CSS variable var(--lv-primary).
+	* Otherwise returns the raw value (e.g. '#e07745').
+	*/
+	function resolveColor$1(val) {
+		if (SEMANTIC_COLORS.includes(val)) return `var(--lv-${val === "dim" ? "muted" : val})`;
+		return val;
+	}
+	/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
 	const alpha = (c, pct = 15) => {
-		const color = COLORS[c] || TOKENS.fills[c] || c;
-		if (!color.startsWith("oklch(")) return color;
-		const a = (pct / 100).toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
-		return color.replace(/ \/ [\d.]+\s*\)$/, "").replace(/\)$/, ` / ${a})`);
+		return `color-mix(in oklch, ${resolveColor$1(c)} ${pct}%, transparent)`;
 	};
-	/** 统一调色板工厂：每个语义色返回 { fg, bg, a(pct) } */
-	const palette = () => ({
-		dim: {
-			fg: TOKENS.muted,
-			bg: TOKENS.fills.muted,
-			a: (p) => alpha(TOKENS.muted, p)
-		},
-		accent: {
-			fg: TOKENS.accent,
-			bg: TOKENS.fills.accent,
-			a: (p) => alpha(TOKENS.accent, p)
-		},
-		danger: {
-			fg: TOKENS.danger,
-			bg: TOKENS.fills.danger,
-			a: (p) => alpha(TOKENS.danger, p)
-		},
-		primary: {
-			fg: TOKENS.primary,
-			bg: TOKENS.fills.primary,
-			a: (p) => alpha(TOKENS.primary, p)
-		},
-		success: {
-			fg: TOKENS.success,
-			bg: TOKENS.fills.success,
-			a: (p) => alpha(TOKENS.success, p)
-		},
-		warning: {
-			fg: TOKENS.warning,
-			bg: TOKENS.fills.warning,
-			a: (p) => alpha(TOKENS.warning, p)
-		},
-		info: {
-			fg: TOKENS.info,
-			bg: TOKENS.fills.info,
-			a: (p) => alpha(TOKENS.info, p)
-		},
-		muted: {
-			fg: TOKENS.muted,
-			bg: TOKENS.fills.muted,
-			a: (p) => alpha(TOKENS.muted, p)
+	/** 
+	* 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
+	* 每个语义色返回 { fg, bg, a(pct) }
+	*/
+	const palette = () => {
+		const p = {};
+		for (const c of SEMANTIC_COLORS) {
+			const varName = c === "dim" ? "--lv-muted" : `--lv-${c}`;
+			p[c] = {
+				fg: `var(${varName})`,
+				bg: `var(${varName}-bg)`,
+				a: (pct) => `color-mix(in oklch, var(${varName}) ${pct}%, transparent)`
+			};
 		}
-	});
+		return p;
+	};
 
 //#endregion
 //#region vis/geometry.ts
@@ -181,6 +162,24 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			x2: to[0] - ux * toR,
 			y2: to[1] - uy * toR
 		};
+	}
+	/** Returns the intersection point on a rectangle's boundary towards a target point. */
+	function intersectRect(cx, cy, w, h, tx, ty, margin = 0) {
+		const dx = tx - cx, dy = ty - cy;
+		if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return [cx, cy];
+		const hw = w / 2 + margin, hh = h / 2 + margin;
+		const scaleX = dx !== 0 ? Math.abs(hw / dx) : Infinity;
+		const scaleY = dy !== 0 ? Math.abs(hh / dy) : Infinity;
+		const t = Math.min(scaleX, scaleY);
+		return [cx + dx * t, cy + dy * t];
+	}
+	/** Returns the intersection point on a circle's boundary towards a target point. */
+	function intersectCircle(cx, cy, r, tx, ty, margin = 0) {
+		const dx = tx - cx, dy = ty - cy;
+		const l = len(dx, dy);
+		if (l < 1e-9) return [cx, cy];
+		const totalR = r + margin;
+		return [cx + dx / l * totalR, cy + dy / l * totalR];
 	}
 
 //#endregion
@@ -3652,40 +3651,84 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 //#endregion
 //#region vis/stepper.ts
 /**
-	* Create stepper buttons in a container element.
-	*
-	* @param container - CSS selector or HTMLElement to hold buttons
-	* @param labels - button labels
-	* @param onChange - called with step index when user clicks a button
-	* @param opts.start - initial active step (default 0)
+	* Creates a step control bar.
+	* Supports legacy signature (labels array) and progressive signature (StepsController).
 	*/
-	function stepper(container, labels, onChange, opts) {
+	function stepper(container, ctrlOrLabels, onChangeOrOpts, legacyOpts) {
 		const ct = typeof container === "string" ? document.querySelector(container) : container;
 		if (!ct) throw new Error(`Stepper container not found: ${container}`);
-		const start = opts?.start ?? 0;
-		const buttons = [];
 		ct.innerHTML = "";
-		for (let i = 0; i < labels.length; i++) {
-			const btn = document.createElement("button");
-			btn.textContent = labels[i];
-			if (i === start) btn.classList.add("active");
-			btn.addEventListener("click", () => go(i));
-			ct.appendChild(btn);
-			buttons.push(btn);
+		if (Array.isArray(ctrlOrLabels)) {
+			const labels = ctrlOrLabels;
+			const onChange = onChangeOrOpts;
+			const start = legacyOpts?.start ?? 0;
+			const buttons = [];
+			for (let i = 0; i < labels.length; i++) {
+				const btn = document.createElement("button");
+				btn.textContent = labels[i];
+				if (i === start) btn.classList.add("active");
+				btn.addEventListener("click", () => go(i));
+				ct.appendChild(btn);
+				buttons.push(btn);
+			}
+			function go(i) {
+				if (i < 0 || i >= labels.length) return;
+				buttons.forEach((b, j) => b.classList.toggle("active", j === i));
+				onChange(i);
+			}
+			return {
+				go,
+				destroy: () => {
+					ct.innerHTML = "";
+					buttons.length = 0;
+				}
+			};
 		}
-		function go(i) {
-			if (i < 0 || i >= labels.length) return;
-			buttons.forEach((b, j) => b.classList.toggle("active", j === i));
-			onChange(i);
-		}
-		function destroy() {
+		const ctrl = ctrlOrLabels;
+		const layout = (onChangeOrOpts ?? {}).layout ?? "prev-next";
+		let cleanup;
+		if (layout === "prev-next") {
+			ct.classList.add("step-controls");
+			const prevBtn = document.createElement("button");
+			prevBtn.innerHTML = "◀ 上一步";
+			prevBtn.onclick = () => ctrl.prev();
+			const labelSpan = document.createElement("span");
+			labelSpan.className = "step-label";
+			const nextBtn = document.createElement("button");
+			nextBtn.innerHTML = "下一步 ▶";
+			nextBtn.onclick = () => ctrl.next();
+			ct.append(prevBtn, labelSpan, nextBtn);
+			cleanup = ctrl.onChange((i, step) => {
+				prevBtn.disabled = i <= 0;
+				nextBtn.disabled = i >= ctrl.total - 1;
+				labelSpan.textContent = step.title ?? step.label ?? `步骤 ${i + 1}`;
+			});
+			prevBtn.disabled = ctrl.current <= 0;
+			nextBtn.disabled = ctrl.current >= ctrl.total - 1;
+			const initialStep = ctrl.currentStepDef;
+			if (initialStep) labelSpan.textContent = initialStep.title ?? initialStep.label ?? `步骤 ${ctrl.current + 1}`;
+		} else throw new Error("layout: tabs not fully implemented for controller mode yet");
+		return { destroy: () => {
+			cleanup?.();
 			ct.innerHTML = "";
-			buttons.length = 0;
-		}
-		return {
-			go,
-			destroy
-		};
+		} };
+	}
+	/**
+	* Creates a description box bound to a StepsController.
+	*/
+	function descBox(container, ctrl, opts) {
+		const ct = typeof container === "string" ? document.querySelector(container) : container;
+		if (!ct) throw new Error(`descBox container not found: ${container}`);
+		if (opts?.minHeight) ct.style.minHeight = opts.minHeight;
+		const cleanup = ctrl.onChange((_, step) => {
+			ct.innerHTML = step.desc ?? "";
+		});
+		const initialStep = ctrl.currentStepDef;
+		if (initialStep) ct.innerHTML = initialStep.desc ?? "";
+		return { destroy: () => {
+			cleanup();
+			ct.innerHTML = "";
+		} };
 	}
 
 //#endregion
@@ -5044,7 +5087,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		function block(id, x, y, w, h, opts = {}) {
 			const eid$3 = eid("vertex", id);
 			const s = BLOCK_STYLE[opts.style ?? "normal"];
-			const stroke = resolveColor(p, s.stroke).stroke;
+			const stroke = opts.stroke ?? resolveColor(p, s.stroke).stroke;
 			const fill = opts.fill ?? resolveColor(p, s.fill).fill;
 			fm.declare(eid$3, {
 				type: "node",
@@ -5075,31 +5118,23 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				}
 			};
 		}
-		function edge(id, fromPortId, toPortId, opts = {}) {
+		function edge(id, fromId, toId, opts = {}) {
 			const eid$4 = eid("edge", id);
 			const r = resolveColor(p, opts.color ?? "dim");
-			const fpe = fm.entities.get(`port:${fromPortId}`);
-			const tpe = fm.entities.get(`port:${toPortId}`);
-			const fx = (fpe?.desired)?.x ?? 0, fy = (fpe?.desired)?.y ?? 0;
-			const tx = (tpe?.desired)?.x ?? 0, ty = (tpe?.desired)?.y ?? 0;
 			const directed = opts.directed ?? false;
-			const portR = (fpe?.desired)?.r ?? 4;
-			const toR = (tpe?.desired)?.r ?? 4;
-			const mt = directed ? markerTip() : 0;
-			const { x1, y1, x2, y2 } = offsetLine([fx, fy], [tx, ty], portR, toR + mt + 2, directed);
 			fm.declare(eid$4, {
 				type: "line",
-				x1,
-				y1,
-				x2,
-				y2,
+				x1: 0,
+				y1: 0,
+				x2: 0,
+				y2: 0,
 				stroke: r.stroke,
 				strokeW: opts.strokeW ?? 1.5,
 				dash: opts.dash ?? "",
 				directed,
 				_bend: opts.bend ?? false,
-				_fromPort: fromPortId,
-				_toPort: toPortId,
+				_fromPort: fromId,
+				_toPort: toId,
 				label: opts.label ?? ""
 			});
 			return {
@@ -5211,12 +5246,56 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				...mixStrokeW(eid$5, fm)
 			};
 		}
+		function array(id, x, y, items, opts = {}) {
+			const itemW = opts.itemW ?? 30;
+			const itemH = opts.itemH ?? 30;
+			const gap = opts.gap ?? 8;
+			const pad = opts.padding ?? 10;
+			const dir = opts.dir ?? "x";
+			const color = opts.color ?? "dim";
+			const n = items.length;
+			let w = 0, h = 0;
+			if (n === 0) {
+				w = pad * 2;
+				h = pad * 2;
+			} else if (dir === "x") {
+				w = pad * 2 + n * itemW + (n - 1) * gap;
+				h = pad * 2 + itemH;
+			} else {
+				w = pad * 2 + itemW;
+				h = pad * 2 + n * itemH + (n - 1) * gap;
+			}
+			block(`array-bg-${id}`, x, y, w, h, {
+				fill: opts.bg ?? "#f8fafc",
+				stroke: opts.color ?? "#cbd5e1",
+				strokeW: 1.2,
+				rx: 6,
+				label: opts.label,
+				labelPlace: "left"
+			});
+			const res = [];
+			const startX = x + pad + itemW / 2;
+			const startY = y + pad + itemH / 2;
+			items.forEach((item, i) => {
+				const ix = dir === "x" ? startX + i * (itemW + gap) : startX;
+				const iy = dir === "y" ? startY + i * (itemH + gap) : startY;
+				const nd = node(`array-${id}-item-${item}`, ix, iy, {
+					w: itemW,
+					h: itemH,
+					rx: 4,
+					shape: "rect"
+				}).color(color).label(item);
+				res.push(nd);
+			});
+			return res;
+		}
 		return {
 			node,
 			block,
 			port,
 			edge,
-			layer
+			layer,
+			array
 		};
 	}
 
@@ -5833,6 +5912,54 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	};
 
 //#endregion
+//#region vis/resolver.ts
+	function resolveGeometry(store) {
+		for (const entity of store.values()) if (entity.desired.type === "line" && entity.desired._fromPort && entity.desired._toPort) {
+			const ld = entity.desired;
+			const fromId = ld._fromPort;
+			const toId = ld._toPort;
+			const isFromFallback = !store.has(`port:${fromId}`);
+			const isToFallback = !store.has(`port:${toId}`);
+			const fpe = store.get(isFromFallback ? `vertex:${fromId}` : `port:${fromId}`);
+			const tpe = store.get(isToFallback ? `vertex:${toId}` : `port:${toId}`);
+			if (!fpe) console.warn(`[vis.js] Edge '${entity.id}': Source '${fromId}' not found.`);
+			if (!tpe) console.warn(`[vis.js] Edge '${entity.id}': Destination '${toId}' not found.`);
+			const fs = fpe?.desired;
+			const ts = tpe?.desired;
+			const fx = fs?.x ?? 0, fy = fs?.y ?? 0;
+			const tx = ts?.x ?? 0, ty = ts?.y ?? 0;
+			const mt = ld.directed ? markerTip() : 0;
+			const GAP = 2;
+			if (isFromFallback && fs) {
+				const margin = 0;
+				let pt;
+				if (fs.shape === "rect") pt = intersectRect(fx, fy, fs._blockW ?? 60, fs._blockH ?? 36, tx, ty, margin);
+				else pt = intersectCircle(fx, fy, fs.r ?? 10, tx, ty, margin);
+				ld.x1 = pt[0];
+				ld.y1 = pt[1];
+			} else {
+				const portR = ld._portR ?? fs?.r ?? 4;
+				const pt = offsetLine([fx, fy], [tx, ty], portR, 0, ld.directed);
+				ld.x1 = pt.x1;
+				ld.y1 = pt.y1;
+			}
+			if (isToFallback && ts) {
+				const margin = mt + GAP;
+				let pt;
+				if (ts.shape === "rect") pt = intersectRect(tx, ty, ts._blockW ?? 60, ts._blockH ?? 36, fx, fy, margin);
+				else pt = intersectCircle(tx, ty, ts.r ?? 10, fx, fy, margin);
+				ld.x2 = pt[0];
+				ld.y2 = pt[1];
+			} else {
+				const toR = ld._toR ?? ts?.r ?? 4;
+				const pt = offsetLine([tx, ty], [fx, fy], toR + mt + GAP, 0, ld.directed);
+				ld.x2 = pt.x1;
+				ld.y2 = pt.y1;
+			}
+		}
+	}
+
+//#endregion
 //#region vis/frame.ts
 	const defaultAnimation = {
 		duration: 500,
@@ -5899,6 +6026,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		commit(opts) {
 			if (!this._uncommitted) throw new Error("begin() required before commit()");
 			this._uncommitted = false;
+			resolveGeometry(this.store);
 			if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
 				this._commitStatic();
 				this.renderer.commitFrame({ animate: false });
@@ -5974,19 +6102,37 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		});
 		const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
 		const _theme = resolveTheme(theme);
-		const p = { ...ctx.palette };
-		if (_theme.palette) {
-			const tp = _theme.palette;
-			for (const key of Object.keys(tp)) {
-				const v = tp[key];
-				if (v && v.fg) p[key] = {
-					fg: v.fg,
-					bg: v.bg || v.fg,
-					a(pct) {
-						const a = (pct / 100).toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
-						return (v.fg.lastIndexOf(")") > 0 ? v.fg.slice(0, v.fg.lastIndexOf(")")) : v.fg) + " / " + a + ")";
-					}
-				};
+		const p = ctx.palette;
+		const tp = _theme.palette ? {
+			...TOKENS,
+			..._theme.palette
+		} : TOKENS;
+		const fills = {
+			...TOKENS.fills,
+			..._theme.palette?.fills || {}
+		};
+		let cssVars = "";
+		for (const key of Object.keys(tp)) {
+			if (key === "fills") continue;
+			const v = tp[key];
+			const bgV = fills[key];
+			const fgColor = typeof v === "object" ? v.fg : v;
+			const bgColor = typeof v === "object" ? v.bg || bgV : bgV;
+			const varName = key === "dim" ? "muted" : key;
+			if (fgColor) cssVars += `--lv-${varName}: ${fgColor}; `;
+			if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
+		}
+		if (cssVars) {
+			const themeClassName = `lv-theme-${theme || "custom"}`;
+			ctx.svg.classed(themeClassName, true);
+			if (typeof document !== "undefined") {
+				const styleId = `lv-style-${themeClassName}`;
+				if (!document.getElementById(styleId)) {
+					const styleEl = document.createElement("style");
+					styleEl.id = styleId;
+					styleEl.textContent = `@layer learnvis.theme { .${themeClassName} { ${cssVars} } }`;
+					document.head.appendChild(styleEl);
+				}
 			}
 		}
 		function steps(defs, opts) {
@@ -6006,13 +6152,25 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				} finally {
 					busy = false;
 				}
-				listeners.forEach((fn) => fn(i));
+				listeners.forEach((fn) => fn(i, normalized[i]));
 			}
 			go(start);
 			return {
 				go,
+				next() {
+					go(current + 1);
+				},
+				prev() {
+					go(current - 1);
+				},
 				get current() {
 					return current;
+				},
+				get total() {
+					return normalized.length;
+				},
+				get currentStepDef() {
+					return current >= 0 && current < normalized.length ? normalized[current] : null;
 				},
 				onChange(fn) {
 					listeners.push(fn);
@@ -6097,6 +6255,7 @@ exports.centerIn = centerIn;
 exports.createCanvas = createCanvas;
 exports.createLayout = createLayout;
 exports.defineArrows = defineArrows;
+exports.descBox = descBox;
 exports.distribute = distribute;
 exports.entryPt = entryPt;
 exports.exitPt = exitPt;

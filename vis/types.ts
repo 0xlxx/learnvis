@@ -89,6 +89,7 @@ export type LineState = WithTransform<{
   bend?: boolean; _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
   _fromPort?: string; _toPort?: string;  // for layout edges
+  _portR?: number; _toR?: number;  // for lazy evaluation of port radius
 }>;
 
 export type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
@@ -158,9 +159,18 @@ export interface AxesOptions {
 
 // ── Steps ──
 export type StageAPI = AgentStage;
-export type StepLike = { label?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void);
+export type StepLike = { label?: string; title?: string; desc?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void);
 export interface StepsOptions { start?: number }
-export interface StepsController { go(i: number): void; get current(): number; onChange(fn: (i: number) => void): () => void; destroy(): void }
+export interface StepsController {
+  go(i: number): void;
+  next(): void;
+  prev(): void;
+  get current(): number;
+  get total(): number;
+  get currentStepDef(): StepLike | null;
+  onChange(fn: (i: number, step: StepLike) => void): () => void;
+  destroy(): void;
+}
 
 export interface AgentStage extends Disposable {
   ctx: StageCtx; palette: Palette;

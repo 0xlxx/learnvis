@@ -6,9 +6,9 @@ This document tracks how learnvis skills are generated and kept in sync with the
 
 **Generated from source at:**
 
-- **Commit SHA**: `26c2086`
-- **Date**: 2026-06-14
-- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, layout.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts, color.ts)
+- **Commit SHA**: `latest`
+- **Date**: 2026-06-15
+- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, layout.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts)
 - **Tooling**: `scripts/postinstall.mjs` — multi-platform skill symlink (Claude Code, Codex, Pi, OpenCode)
 
 ## Structure
@@ -17,8 +17,7 @@ This document tracks how learnvis skills are generated and kept in sync with the
 skills/
 ├── GENERATION.md              # This file (project-level, not distributed)
 └── learnvis/
-    ├── README.md              # agentskills.io metadata
-    ├── SKILL.md               # Main skill file: API tables + quick reference
+    ├── SKILL.md               # Main skill file: Compass (Quick start, Theming guidelines, Reference links)
     ├── assets/                # Built artifacts bundled with skill
     │   └── learnvis.iife.js   # IIFE build (auto-copied from dist/)
     └── references/            # Domain-specific reference docs (7 files)
@@ -56,14 +55,13 @@ git diff HEAD -- vis/
 
 **For new methods/params:**
 - Update the relevant `api-*.md` reference file
-- Add entry to the domain table in `SKILL.md`
 
 **For new domains:**
 - Add `api-<domain>.md` in `references/`
-- Add a new section to `SKILL.md` with API table
+- Add a link to the new reference in `SKILL.md`
 
 **For deleted APIs:**
-- Remove from `api-*.md` and `SKILL.md`
+- Remove from `api-*.md`
 - If an entire domain is removed, delete the reference file
 
 **For theme/marker changes:**
@@ -73,7 +71,6 @@ git diff HEAD -- vis/
 
 - [ ] Verify exported API signatures match source
 - [ ] Update affected `api-*.md` files
-- [ ] Update `SKILL.md` tables
 - [ ] Update this `GENERATION.md` with date/SHA
 - [ ] Run `pnpm build && pnpm test` to verify nothing broke
 - [ ] Run `pnpm build:skill` to sync to skills repo (`../skills/`)
@@ -83,7 +80,7 @@ git diff HEAD -- vis/
 - **EntityId** — branded type `string & { [EntityIdBrand]: true }`, constructed via `eid(prefix, id)` from `vis/types.ts`
 - **FrameManager** — ECS-style: `begin() → declare(id, state) → commit({ ms?, animate? })`
 - **Renderer** — Strategy pattern, SVGRenderer in `vis/renderer/svg.ts`
-- **Color pipeline** — oklch theme tokens → `resolveColor()` → `svgColor()` converts to hex at render boundary
+- **Color pipeline** — Semantic tokens → `resolveColor()` → injected `<style>` block mapped to CSS Custom Properties (`var(--lv-*)`) wrapped in `@layer` for low specificity overriding.
 - **Mixins** — Composable fluent builders (Hejlsberg pattern): `coreNodeMixin`, `mixColor`, `mixStrokeW`, `mixOpacity`, `mixLabel`, etc.
 - **CoreNode** — `coreNodeMixin(eid, fm, p)` shared across all domains (color, strokeW, fill, opacity, size, label, moveTo)
 - **elements.ts** — DELETED. `zone`, `dot`, `arrow`, `line`, `path` no longer exist. Use `math` or `layout` primitives instead.
@@ -94,12 +91,13 @@ git diff HEAD -- vis/
 - API tables use columns: Signature | Description
 - Common patterns shown as concise code blocks
 - No redundant information between SKILL.md and references
-- SKILL.md has quick-lookup tables; references have full details + examples
+- SKILL.md acts as a clean compass/entry point; references contain all API details, parameters, and localized best practices.
 
 ## Version History
 
 | Date       | Changes                                              |
 |------------|------------------------------------------------------|
+| 2026-06-15 | Removed API tables from SKILL.md for concise navigation, deleted README.md, moved patterns/best-practices to references, refactored color pipeline to CSS variables & @layer. |
 | 2026-06-14 | Added guide-standalone.md (CDN + HTML template), SKILL.md standalone section, 6→7 references |
 | 2026-06-14 | Full skill refresh: all 6 reference files updated, SKILL.md layout section, README.md rewritten, segment a/b render fix, layer dual-style, postinstall multi-platform |
 | 2026-06-14 | Major: elements.ts deleted, layout API (node/block/port/edge/layer/enclosure), CoreNode mixin unified labels, layer style: band/swimlane, EntityId branded type, oklch→hex color pipeline, labelPlace on regions |

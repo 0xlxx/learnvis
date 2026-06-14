@@ -7,10 +7,13 @@ import type { EntityState, LineState, Palette, Place, RegionState, Vec2 } from '
 
 // ── Shared utilities ──
 
+type SemanticColorHint = 'primary' | 'danger' | 'warning' | 'info' | 'success' | 'accent' | 'dim' | 'muted' | (string & {});
+
 export function resolveColor(p: Palette, c?: string) {
   if (!c) return { stroke: p.primary.fg, fill: p.primary.bg };
   const col = (p as unknown as Record<string, { fg: string; bg: string }>)[c];
   if (col) return { stroke: col.fg, fill: col.bg };
+  
   return { stroke: c, fill: c };
 }
 
@@ -21,16 +24,16 @@ function patch(eid: string, fm: FrameManager, props: Partial<EntityState>) {
 // ── Public mixins ──
 
 export const mixColor = (eid: string, fm: FrameManager, p: Palette) => ({
-  color(c: string) {
-    const r = resolveColor(p, c);
+  color(c: SemanticColorHint) {
+    const r = resolveColor(p, c as string);
     patch(eid, fm, { stroke: r.stroke, fill: r.fill });
     return this;
   },
 });
 
 export const mixStroke = (eid: string, fm: FrameManager, p: Palette) => ({
-  color(c: string) {
-    const r = resolveColor(p, c);
+  color(c: SemanticColorHint) {
+    const r = resolveColor(p, c as string);
     patch(eid, fm, { stroke: r.stroke });
     return this;
   },
@@ -41,7 +44,7 @@ export const mixStrokeW = (eid: string, fm: FrameManager) => ({
 });
 
 export const mixFill = (eid: string, fm: FrameManager, p: Palette) => ({
-  fill(c: string) { patch(eid, fm, { fill: resolveColor(p, c).fill }); return this; },
+  fill(c: SemanticColorHint) { patch(eid, fm, { fill: resolveColor(p, c as string).fill }); return this; },
 });
 
 export const mixOpacity = (eid: string, fm: FrameManager) => ({

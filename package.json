@@ -4,7 +4,7 @@
   "description": "D3 visualization primitives + agent-friendly API for algorithm lessons",
   "type": "module",
   "scripts": {
-    "build": "tsdown && ln -sf learnvis.iife.js dist/learnvis.js && cp dist/learnvis.iife.js skills/learnvis/assets/",
+    "build": "tsdown && ln -sf learnvis.iife.js dist/learnvis.js && cp dist/learnvis.iife.js /Users/bjorn/learn/layout-algorithm/assets/",
     "dev": "mkdir -p dist && ln -sf learnvis.iife.js dist/learnvis.js; tsdown -w",
     "check": "tsc --noEmit",
     "test": "vitest run",

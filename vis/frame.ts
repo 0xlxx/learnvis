@@ -5,6 +5,7 @@ import type { Entity, EntityState, AnimationConfig } from './types';
 import type { Renderer, RenderHandle } from './renderer';
 import { SVGRenderer, type SVGHandle } from './renderer/svg';
 import type { StageCtx } from './types';
+import { resolveGeometry } from './resolver';
 
 const defaultAnimation: AnimationConfig = {
   duration: 500,
@@ -68,6 +69,10 @@ export class FrameManager {
   commit(opts?: { ms?: number; animate?: boolean }) {
     if (!this._uncommitted) throw new Error('begin() required before commit()');
     this._uncommitted = false;
+
+    // --- Geometry Late-Binding ---
+    // Resolve declarative layout logic (like edge coordinates) right before rendering
+    resolveGeometry(this.store);
 
     if (opts?.animate === false || typeof requestAnimationFrame === 'undefined') {
       this._commitStatic();

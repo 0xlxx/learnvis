@@ -67,3 +67,23 @@ export function offsetLine(from: Vec2, to: Vec2, fromR: number, toR: number, _di
   const ux = dx / l, uy = dy / l;
   return { x1: from[0] + ux * fromR, y1: from[1] + uy * fromR, x2: to[0] - ux * toR, y2: to[1] - uy * toR };
 }
+
+/** Returns the intersection point on a rectangle's boundary towards a target point. */
+export function intersectRect(cx: number, cy: number, w: number, h: number, tx: number, ty: number, margin = 0): Vec2 {
+  const dx = tx - cx, dy = ty - cy;
+  if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return [cx, cy];
+  const hw = w / 2 + margin, hh = h / 2 + margin;
+  const scaleX = dx !== 0 ? Math.abs(hw / dx) : Infinity;
+  const scaleY = dy !== 0 ? Math.abs(hh / dy) : Infinity;
+  const t = Math.min(scaleX, scaleY);
+  return [cx + dx * t, cy + dy * t];
+}
+
+/** Returns the intersection point on a circle's boundary towards a target point. */
+export function intersectCircle(cx: number, cy: number, r: number, tx: number, ty: number, margin = 0): Vec2 {
+  const dx = tx - cx, dy = ty - cy;
+  const l = len(dx, dy);
+  if (l < 1e-9) return [cx, cy];
+  const totalR = r + margin;
+  return [cx + dx / l * totalR, cy + dy / l * totalR];
+}

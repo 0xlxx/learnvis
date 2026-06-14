@@ -182,6 +182,24 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			y2: to[1] - uy * toR
 		};
 	}
+	/** Returns the intersection point on a rectangle's boundary towards a target point. */
+	function intersectRect(cx, cy, w, h, tx, ty, margin = 0) {
+		const dx = tx - cx, dy = ty - cy;
+		if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return [cx, cy];
+		const hw = w / 2 + margin, hh = h / 2 + margin;
+		const scaleX = dx !== 0 ? Math.abs(hw / dx) : Infinity;
+		const scaleY = dy !== 0 ? Math.abs(hh / dy) : Infinity;
+		const t = Math.min(scaleX, scaleY);
+		return [cx + dx * t, cy + dy * t];
+	}
+	/** Returns the intersection point on a circle's boundary towards a target point. */
+	function intersectCircle(cx, cy, r, tx, ty, margin = 0) {
+		const dx = tx - cx, dy = ty - cy;
+		const l = len(dx, dy);
+		if (l < 1e-9) return [cx, cy];
+		const totalR = r + margin;
+		return [cx + dx / l * totalR, cy + dy / l * totalR];
+	}
 
 //#endregion
 //#region node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/dispatch.js
@@ -5075,31 +5093,23 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				}
 			};
 		}
-		function edge(id, fromPortId, toPortId, opts = {}) {
+		function edge(id, fromId, toId, opts = {}) {
 			const eid$4 = eid("edge", id);
 			const r = resolveColor(p, opts.color ?? "dim");
-			const fpe = fm.entities.get(`port:${fromPortId}`);
-			const tpe = fm.entities.get(`port:${toPortId}`);
-			const fx = (fpe?.desired)?.x ?? 0, fy = (fpe?.desired)?.y ?? 0;
-			const tx = (tpe?.desired)?.x ?? 0, ty = (tpe?.desired)?.y ?? 0;
 			const directed = opts.directed ?? false;
-			const portR = (fpe?.desired)?.r ?? 4;
-			const toR = (tpe?.desired)?.r ?? 4;
-			const mt = directed ? markerTip() : 0;
-			const { x1, y1, x2, y2 } = offsetLine([fx, fy], [tx, ty], portR, toR + mt + 2, directed);
 			fm.declare(eid$4, {
 				type: "line",
-				x1,
-				y1,
-				x2,
-				y2,
+				x1: 0,
+				y1: 0,
+				x2: 0,
+				y2: 0,
 				stroke: r.stroke,
 				strokeW: opts.strokeW ?? 1.5,
 				dash: opts.dash ?? "",
 				directed,
 				_bend: opts.bend ?? false,
-				_fromPort: fromPortId,
-				_toPort: toPortId,
+				_fromPort: fromId,
+				_toPort: toId,
 				label: opts.label ?? ""
 			});
 			return {
@@ -5833,6 +5843,54 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	};
 
 //#endregion
+//#region vis/resolver.ts
+	function resolveGeometry(store) {
+		for (const entity of store.values()) if (entity.desired.type === "line" && entity.desired._fromPort && entity.desired._toPort) {
+			const ld = entity.desired;
+			const fromId = ld._fromPort;
+			const toId = ld._toPort;
+			const isFromFallback = !store.has(`port:${fromId}`);
+			const isToFallback = !store.has(`port:${toId}`);
+			const fpe = store.get(isFromFallback ? `vertex:${fromId}` : `port:${fromId}`);
+			const tpe = store.get(isToFallback ? `vertex:${toId}` : `port:${toId}`);
+			if (!fpe) console.warn(`[vis.js] Edge '${entity.id}': Source '${fromId}' not found.`);
+			if (!tpe) console.warn(`[vis.js] Edge '${entity.id}': Destination '${toId}' not found.`);
+			const fs = fpe?.desired;
+			const ts = tpe?.desired;
+			const fx = fs?.x ?? 0, fy = fs?.y ?? 0;
+			const tx = ts?.x ?? 0, ty = ts?.y ?? 0;
+			const mt = ld.directed ? markerTip() : 0;
+			const GAP = 2;
+			if (isFromFallback && fs) {
+				const margin = 0;
+				let pt;
+				if (fs.shape === "rect") pt = intersectRect(fx, fy, fs._blockW ?? 60, fs._blockH ?? 36, tx, ty, margin);
+				else pt = intersectCircle(fx, fy, fs.r ?? 10, tx, ty, margin);
+				ld.x1 = pt[0];
+				ld.y1 = pt[1];
+			} else {
+				const portR = ld._portR ?? fs?.r ?? 4;
+				const pt = offsetLine([fx, fy], [tx, ty], portR, 0, ld.directed);
+				ld.x1 = pt.x1;
+				ld.y1 = pt.y1;
+			}
+			if (isToFallback && ts) {
+				const margin = mt + GAP;
+				let pt;
+				if (ts.shape === "rect") pt = intersectRect(tx, ty, ts._blockW ?? 60, ts._blockH ?? 36, fx, fy, margin);
+				else pt = intersectCircle(tx, ty, ts.r ?? 10, fx, fy, margin);
+				ld.x2 = pt[0];
+				ld.y2 = pt[1];
+			} else {
+				const toR = ld._toR ?? ts?.r ?? 4;
+				const pt = offsetLine([tx, ty], [fx, fy], toR + mt + GAP, 0, ld.directed);
+				ld.x2 = pt.x1;
+				ld.y2 = pt.y1;
+			}
+		}
+	}
+
+//#endregion
 //#region vis/frame.ts
 	const defaultAnimation = {
 		duration: 500,
@@ -5899,6 +5957,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		commit(opts) {
 			if (!this._uncommitted) throw new Error("begin() required before commit()");
 			this._uncommitted = false;
+			resolveGeometry(this.store);
 			if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
 				this._commitStatic();
 				this.renderer.commitFrame({ animate: false });

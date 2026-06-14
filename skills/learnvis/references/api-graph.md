@@ -28,3 +28,7 @@ s.graph.layout('force', vertices, edges)
 - `circular` — 圆周均分（默认半径 `min(W,H)*0.35`）
 - `force` — D3 forceSimulation（300 tick，charge -300）
 - layout 后自动更新所有顶点坐标
+
+## Best Practices
+
+1. **变量名隔离** — 在遍历图的边时（如 `for (const [s,d] of edges)`），注意规避解构变量名 `s` 覆盖外部全局的舞台实例 `const s = LearnVis.stage(...)`，从而引发运行时崩溃。

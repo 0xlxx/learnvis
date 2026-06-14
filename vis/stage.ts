@@ -1,5 +1,6 @@
 // vis/stage.ts — lifecycle: steps, frame, play via FrameManager
 
+import { TOKENS } from './tokens';
 import { bootstrap } from './bootstrap';
 import { resolveTheme } from './themes';
 import { createMathRenderer } from './math';
@@ -22,22 +23,38 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   const ctx = bootstrap(selector, { width, height, margin, geom });
   const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
   const _theme = resolveTheme(theme);
-  const defaultP: Palette = ctx.palette;
+  const p: Palette = ctx.palette;
 
-  const p: Record<string, SemColor> = { ...defaultP };
-  if (_theme.palette) {
-    const tp = _theme.palette;
-    for (const key of Object.keys(tp)) {
-      const v = tp[key as keyof typeof tp];
-      if (v && v.fg) {
-        (p as Record<string, SemColor>)[key] = {
-          fg: v.fg, bg: v.bg || v.fg,
-          a(pct: number) {
-            const a = (pct / 100).toFixed(2).replace(/0+$/, '').replace(/\.$/, '');
-            const base = v.fg.lastIndexOf(')') > 0 ? v.fg.slice(0, v.fg.lastIndexOf(')')) : v.fg;
-            return base + ' / ' + a + ')';
-          },
-        };
+  // Combine baseline TOKENS with theme specific palette
+  const tp = _theme.palette ? { ...TOKENS, ..._theme.palette } : TOKENS;
+  const fills = { ...TOKENS.fills, ...(_theme.palette?.fills || {}) };
+  
+  let cssVars = '';
+  for (const key of Object.keys(tp)) {
+    if (key === 'fills') continue;
+    const v = (tp as any)[key];
+    const bgV = (fills as any)[key];
+    
+    // Some older themes may define fg/bg object directly, otherwise we read direct colors
+    const fgColor = typeof v === 'object' ? v.fg : v;
+    const bgColor = typeof v === 'object' ? (v.bg || bgV) : bgV;
+    
+    const varName = key === 'dim' ? 'muted' : key;
+    if (fgColor) cssVars += `--lv-${varName}: ${fgColor}; `;
+    if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
+  }
+
+  if (cssVars) {
+    const themeClassName = `lv-theme-${theme || 'custom'}`;
+    ctx.svg.classed(themeClassName, true);
+    
+    if (typeof document !== 'undefined') {
+      const styleId = `lv-style-${themeClassName}`;
+      if (!document.getElementById(styleId)) {
+        const styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        styleEl.textContent = `@layer learnvis.theme { .${themeClassName} { ${cssVars} } }`;
+        document.head.appendChild(styleEl);
       }
     }
   }
@@ -47,7 +64,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     const normalized = defs.map(d => typeof d === 'function' ? { frame: d } : d);
     let current = -1;
     let busy = false;
-    const listeners: ((i: number) => void)[] = [];
+    const listeners: ((i: number, step: StepLike) => void)[] = [];
 
     function go(i: number) {
       if (i === current || busy || i < 0 || i >= normalized.length) return;
@@ -60,14 +77,18 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
       } finally {
         busy = false;
       }
-      listeners.forEach(fn => fn(i));
+      listeners.forEach(fn => fn(i, normalized[i]));
     }
 
     go(start);
 
     return {
       go,
+      next() { go(current + 1); },
+      prev() { go(current - 1); },
       get current() { return current; },
+      get total() { return normalized.length; },
+      get currentStepDef() { return current >= 0 && current < normalized.length ? normalized[current] : null; },
       onChange(fn) { listeners.push(fn); return () => { const idx = listeners.indexOf(fn); if (idx >= 0) listeners.splice(idx, 1); }; },
       destroy() { listeners.length = 0; },
     };
