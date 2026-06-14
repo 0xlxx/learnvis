@@ -9,10 +9,10 @@ description: 高阶 SVG 可视化库 — 开箱即用的绘制原语。Use when 
 
 ## Quick Start
 
-skill 自带 IIFE 文件。生成 HTML 时复制到输出目录：
+skill 自带 IIFE 文件。建议在生成 HTML 时，使用**软连接（symlink）**接入项目，这样当技能库更新时，本地代码将自动同步而无需再次操作：
 
 ```bash
-cp ~/.claude/skills/learnvis/assets/learnvis.iife.js ./lessons/
+ln -sf ~/.claude/skills/learnvis/assets/learnvis.iife.js ./lessons/learnvis.iife.js
 ```
 
 ```html
