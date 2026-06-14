@@ -5540,16 +5540,17 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
 		if (a1 < 0) a1 += 2 * Math.PI;
 		if (a2 < 0) a2 += 2 * Math.PI;
-		if (a2 < a1) [a2, a1] = [a1, a2];
-		const sweep = a2 - a1 <= Math.PI ? 0 : 1;
 		if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
+		const cwA2 = a2 < a1 ? a2 : a2 - 2 * Math.PI;
+		const ma = (a1 + cwA2) / 2;
 		const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
 		const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
 		return {
 			a1,
 			a2,
-			sweep,
-			path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
+			sweep: 1,
+			ma,
+			path: `M${x1},${y1} A${arcR},${arcR} 0 0,1 ${x2},${y2}`
 		};
 	}
 	function drawEntity(ctx, id, d, markerCache) {
@@ -5658,7 +5659,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					let text = null;
 					const label = d.label ?? "";
 					if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-						const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+						const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
 						text = gv.append("text").attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", d.stroke ?? "#000").text(label);
 					}
 					applyCommon(gv, d);
@@ -5717,7 +5718,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					if (text) {
 						const label = d.label ?? "";
 						if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-							const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+							const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
 							text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
 						} else text.text("");
 					}
@@ -5744,7 +5745,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					if (text) {
 						const label = d.label ?? "";
 						if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-							const ma = (arc.a1 + arc.a2) / 2, lr = (d.arcR ?? 30) + 12;
+							const ma = arc.ma, lr = (d.arcR ?? 30) + 12;
 							text.attr("x", vx + lr * Math.cos(ma)).attr("y", vy + lr * Math.sin(ma)).text(label);
 						} else text.text("");
 					}
