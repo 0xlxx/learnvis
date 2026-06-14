@@ -30,7 +30,7 @@ interface Edge {
   weight(n: number): Edge;
 }
 
-interface GraphAPI {
+export interface GraphAPI {
   vertex(id: string, pos: Vec2): Vertex;
   edge(a: Vertex, b: Vertex, opts?: { directed?: boolean; gap?: number }): Edge;
   layout(type: 'force' | 'circular', vertices: Vertex[], edges?: { from: Vertex; to: Vertex }[], opts?: { center?: Vec2; radius?: number }): void;

@@ -271,27 +271,22 @@ describe('vector transform', () => {
     fm.begin();
     math.vector('v', [10, 20], [50, 60]).translate(5, -5);
     fm.commit({ animate: false });
-    const d = fm.entities.get('vector:v')!.desired;
-    const from = d.from as [number, number], to = d.to as [number, number];
-    // offset: from=[14,24], to=[46,56] shifted by (5,-5) → from=[19,19], to=[51,51]
-    // Wait, need to compute: fromR=4, toR=4+6=10, dx=40, dy=40, len≈56.57
-    // from=[10+40/56.57*4, 20+40/56.57*4]=[12.83,22.83], to=[50-40/56.57*10, 60-40/56.57*10]=[42.93,52.93]
-    // shifted: from=[17.83,17.83], to=[47.93,47.93]
-    expect(from[0]).toBeCloseTo(17.83, 1);
-    expect(from[1]).toBeCloseTo(17.83, 1);
-    expect(to[0]).toBeCloseTo(47.93, 1);
-    expect(to[1]).toBeCloseTo(47.93, 1);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.from[0]).toBeCloseTo(17.83, 1);
+    expect(res.from[1]).toBeCloseTo(17.83, 1);
+    expect(res.to[0]).toBeCloseTo(47.93, 1);
+    expect(res.to[1]).toBeCloseTo(47.93, 1);
   });
 
   it('chained rotate then scale composes correctly', () => {
     fm.begin();
     math.vector('v', [0, 0], [100, 0]).rotate(90, 0, 0).scale(2);
     fm.commit({ animate: false });
-    const to = fm.entities.get('vector:v')!.desired.to as [number, number];
-    // rotate: [4,0]→[90,0] → [0,4]→[0,90]
-    // scale 2x from start: dx=0, dy=86 → to=[0+0, 4+86*2]=[0,176]
-    expect(to[0]).toBeCloseTo(0);
-    expect(to[1]).toBeCloseTo(176);
+    const d = fm.entities.get('vector:v')!.desired as any;
+    const res = applyLine(d._base.from, d._base.to, d._tf as Transform[]);
+    expect(res.to[0]).toBeCloseTo(0);
+    expect(res.to[1]).toBeCloseTo(176);
   });
 });
 

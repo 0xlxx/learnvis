@@ -432,7 +432,7 @@ export class SVGRenderer implements Renderer {
   }
 }
 
-class SVGHandle implements RenderHandle {
+export class SVGHandle implements RenderHandle {
   private ctx: StageCtx;
   private _cache: Record<string, string>;
   svg: E | null = null;

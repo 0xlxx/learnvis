@@ -114,7 +114,7 @@ export function createElements(
     const dots = pts.map(([px, py]) => {
       const did = `${id}-d${_counter++}`;
       fm.declare(did, { type: 'node', shape: 'circle', x: px, y: py, r: 2, stroke: p.dim.fg, fill: 'var(--bg-node)' });
-      return { _id: did, _type: 'node', shape: 'circle', _x: px, _y: py, _opts: {}, _text: '', pos() { return { x: px, y: py }; }, color() { return this as any; }, size() { return this as any; } };
+      return { _id: did, _type: 'node', shape: 'circle', _x: px, _y: py, _opts: {}, _text: '', pos() { return { x: px, y: py }; }, color(this: El): El { return this; }, size(this: El): El { return this; } };
     });
     ctx.stage.edges.append('polyline')
       .attr('points', pts.map(p => p.join(',')).join(' '))

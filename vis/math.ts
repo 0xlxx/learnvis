@@ -287,7 +287,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       [vx + u2x * sz, vy + u2y * sz],
     ];
     const ptsStr = pts.map(p => p.join(',')).join(' ');
-    fm.declare(eid, { type: 'region', shape: 'polygon' as any, d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
+    fm.declare(eid, { type: 'region', shape: 'polygon', d: `M${ptsStr}`, x: 0, y: 0, stroke, fill: 'none', strokeW: 1.5 });
     return {
       ...mixStroke(eid, fm, p),
       ...mixStrokeW(eid, fm),
@@ -387,7 +387,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
 
   function symbol(id: string, pos: Vec2, opts: { type?: 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye'; size?: number; color?: string; fill?: string } = {}): MathShape {
     const eid: `path:${string}` = `path:${id}`;
-    const types: Record<string, any> = { circle: symbolCircle, cross: symbolCross, diamond: symbolDiamond, square: symbolSquare, star: symbolStar, triangle: symbolTriangle, wye: symbolWye };
+    const types: Record<string, typeof symbolCircle> = { circle: symbolCircle, cross: symbolCross, diamond: symbolDiamond, square: symbolSquare, star: symbolStar, triangle: symbolTriangle, wye: symbolWye };
     const t = types[opts.type ?? 'circle'] ?? symbolCircle;
     const sy = d3Symbol().type(t).size((opts.size ?? 8) ** 2)();
     const d = sy ? `${sy}` : '';

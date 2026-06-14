@@ -4515,23 +4515,23 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		}
 	});
 	function _stashBase(d, getKey) {
-		if (getKey === "vector") d._base = {
+		if (getKey === "vector" && "from" in d) d._base = {
 			from: [...d.from || [0, 0]],
 			to: [...d.to || [0, 0]]
 		};
-		else if (getKey === "polygon") d._base = { vertices: (d.vertices || []).map((v) => [...v]) };
+		else if (getKey === "polygon" && "vertices" in d) d._base = { vertices: (d.vertices || []).map((v) => [...v]) };
 	}
 	const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
 		const e = fm.entities.get(eid);
 		if (!e) return this;
 		const d = e.desired;
-		if (d.x != null) patch$1(eid, fm, {
+		if ("x" in d && d.x != null) patch$1(eid, fm, {
 			x: d.x + dx,
 			y: (d.y ?? 0) + dy
 		});
-		else if (d.cx != null) patch$1(eid, fm, {
+		else if ("cx" in d && d.cx != null) patch$1(eid, fm, {
 			cx: d.cx + dx,
-			cy: d.cy + dy
+			cy: (d.cy ?? 0) + dy
 		});
 		return this;
 	} });
@@ -5286,12 +5286,15 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			x,
 			y
 		});
-		for (const [pid, pe] of fm.entities) if (pid.startsWith(`port:`) && pe.desired._owner === eid) {
-			const px = pe.desired.x ?? 0, py = pe.desired.y ?? 0;
-			patch(pid, fm, {
-				x: px + dx,
-				y: py + dy
-			});
+		for (const [pid, pe] of fm.entities) {
+			const pd = pe.desired;
+			if (pid.startsWith(`port:`) && pd._owner === eid) {
+				const px = pd.x ?? 0, py = pd.y ?? 0;
+				patch(pid, fm, {
+					x: px + dx,
+					y: py + dy
+				});
+			}
 		}
 		return this;
 	} });
@@ -5330,7 +5333,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				pos() {
 					const e = fm.entities.get(eid);
 					if (!e) return [0, 0];
-					return [e.desired.x ?? 0, e.desired.y ?? 0];
+					const d = e.desired;
+					return [d.x ?? 0, d.y ?? 0];
 				}
 			};
 		}
@@ -5342,6 +5346,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			opts.r;
 			fm.declare(eid, {
 				type: "node",
+				shape: opts.shape ?? "rect",
 				x,
 				y,
 				r: opts.rx ?? 5,
@@ -5387,6 +5392,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			const fill = opts.fill ?? (emph ? p.accent?.a?.(15) : p.accent?.a?.(8)) ?? r.fill;
 			fm.declare(eid, {
 				type: "node",
+				shape: "rect",
 				x: x + w / 2,
 				y: y + h / 2,
 				r: opts.rx ?? 8,
@@ -5398,7 +5404,6 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				_labelPlace: "above",
 				_blockW: w,
 				_blockH: h,
-				_shape: "rect",
 				_children: opts.childIds ?? []
 			});
 			return {
@@ -6114,7 +6119,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				this.handles.set(id, h);
 				e.svg = h.svg ?? null;
 				const to = e.desired.opacity ?? 1;
-				h.svg?.attr?.("opacity", 0)?.transition?.(enterTr)?.attr?.("opacity", to);
+				const svgEl = h.svg;
+				if (svgEl) svgEl.attr("opacity", 0).transition(enterTr).attr("opacity", to);
 			}
 			for (const id of this.current) if (this.previous.has(id)) {
 				const e = this.store.get(id);

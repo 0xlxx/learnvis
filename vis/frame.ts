@@ -3,7 +3,7 @@
 import * as d3 from 'd3';
 import type { Entity, EntityState, EntityId, AnimationConfig } from './types';
 import type { Renderer, RenderHandle } from './renderer';
-import { SVGRenderer } from './renderer/svg';
+import { SVGRenderer, type SVGHandle } from './renderer/svg';
 import type { StageCtx } from './types';
 
 const defaultAnimation: AnimationConfig = {
@@ -80,9 +80,13 @@ export class FrameManager {
         const e = this.store.get(id)!;
         const h = this.renderer.create(id, e.desired);
         this.handles.set(id, h);
-        e.svg = (h as any).svg ?? null;
+        e.svg = (h as SVGHandle).svg ?? null;
         const to = e.desired.opacity ?? 1;
-        (h as any).svg?.attr?.('opacity', 0)?.transition?.(enterTr)?.attr?.('opacity', to);
+        const svgEl = (h as SVGHandle).svg;
+        if (svgEl) {
+          const tr = svgEl.attr('opacity', 0).transition(enterTr);
+          tr.attr('opacity', to);
+        }
       }
     }
 
@@ -117,7 +121,7 @@ export class FrameManager {
       if (!this.previous.has(id)) {
         const h = this.renderer.create(id, e.desired);
         this.handles.set(id, h);
-        e.svg = (h as any).svg ?? null;
+        e.svg = (h as SVGHandle).svg ?? null;
       } else {
         this.handles.get(id)?.update(e.desired);
       }

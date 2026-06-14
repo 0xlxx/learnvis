@@ -2,7 +2,7 @@
 // node, block(compound), port, edge, layer, enclosure
 // Composable mixin factories: mixPorts, mixBend, mixChildren, mixAnchor
 
-import type { Vec2, Palette, Place } from './types';
+import type { Vec2, Palette, Place, NodeState, LineState, RegionState, EntityState } from './types';
 import type { FrameManager } from './frame';
 import { resolveColor, mixOpacity, mixDashed, mixStrokeW, mixSize } from './mixins';
 
@@ -91,14 +91,14 @@ export interface LayoutAPI {
 // ── Private helpers ──
 
 function patch(eid: string, fm: FrameManager, props: Record<string, unknown>) {
-  fm.patch(eid, props as any);
+  fm.patch(eid, props as Partial<EntityState>);
 }
 
 /** Compute absolute port position from owner node position + port placement */
 function portPos(ownerId: string, pos: PortPosition, fm: FrameManager): Vec2 {
   const e = fm.entities.get(`vertex:${ownerId}`);
   if (!e) return [0, 0];
-  const d = e.desired as any;
+  const d = e.desired as NodeState;
   const cx = d.x ?? 0, cy = d.y ?? 0;
   const bw = (d._blockW as number) ?? (d.r as number) * 2 ?? 20;
   const bh = (d._blockH as number) ?? (d.r as number) * 2 ?? 20;
@@ -124,7 +124,7 @@ const mixLabelNode = (eid: string, fm: FrameManager) => ({
   label(t: string, place: Place = 'above') {
     const e = fm.entities.get(eid);
     if (!e) return this;
-    const d = e.desired as any;
+    const d = e.desired as NodeState;
     const cx = d.x ?? 0, cy = d.y ?? 0;
     const hh = ((d._blockH ?? (d.r ?? 10) * 2) as number) / 2 + 12;
     let ly = cy - hh, la = 'middle';
@@ -140,13 +140,14 @@ const mixMoveTo = (eid: string, fm: FrameManager) => ({
   moveTo(x: number, y: number) {
     const e = fm.entities.get(eid);
     if (!e) return this;
-    const d = e.desired as any;
+    const d = e.desired as NodeState;
     const dx = x - (d.x ?? 0), dy = y - (d.y ?? 0);
     patch(eid, fm, { x, y });
     // Move attached ports
     for (const [pid, pe] of fm.entities) {
-      if (pid.startsWith(`port:`) && (pe.desired as any)._owner === eid) {
-        const px = (pe.desired as any).x ?? 0, py = (pe.desired as any).y ?? 0;
+      const pd = pe.desired as NodeState;
+      if (pid.startsWith(`port:`) && pd._owner === eid) {
+        const px = pd.x ?? 0, py = pd.y ?? 0;
         patch(pid, fm, { x: px + dx, y: py + dy });
       }
     }
@@ -162,10 +163,10 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const r = resolveColor(p, opts.stroke);
     const [px, py] = portPos(ownerId, pos, fm);
     fm.declare(eid, {
-      type: 'node', shape: 'circle' as any, x: px, y: py, r: opts.size ?? 4,
+      type: 'node', shape: 'circle', x: px, y: py, r: opts.size ?? 4,
       stroke: r.stroke, fill: opts.fill ?? r.fill,
       label: opts.label ?? '', _owner: `vertex:${ownerId}`, _portPos: pos,
-    } as any);
+    } as unknown as NodeState);
 
     return {
       ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },
@@ -175,7 +176,8 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       label(t: string) { patch(eid, fm, { label: t }); return this; },
       pos() {
         const e = fm.entities.get(eid); if (!e) return [0, 0];
-        return [(e.desired as any).x ?? 0, (e.desired as any).y ?? 0];
+        const d = e.desired as NodeState;
+        return [d.x ?? 0, d.y ?? 0];
       },
     };
   }
@@ -188,14 +190,14 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const radius = opts.r ?? 10;
 
     fm.declare(eid, {
-      type: 'node' as any, x, y, r: opts.rx ?? 5,
+      type: 'node', shape: opts.shape ?? 'rect', x, y, r: opts.rx ?? 5,
       fill: opts.fill ?? r.fill, stroke: r.stroke, strokeW: opts.strokeW ?? 1.5,
       opacity: opts.opacity ?? 1,
       _label: opts.label ?? '', _labelPlace: opts.labelPlace ?? 'above',
       _blockW: isCircle ? undefined : sizeW,
       _blockH: isCircle ? undefined : sizeH,
       _shape: opts.shape ?? 'rect',
-    } as any);
+    } as unknown as NodeState);
 
     return {
       ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },
@@ -218,16 +220,16 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const eid: `vertex:${string}` = `vertex:${id}`;
     const r = resolveColor(p, opts.stroke ?? (opts.emph ? 'accent' : 'dim'));
     const emph = opts.emph ?? false;
-    const fill = opts.fill ?? (emph ? (p as any).accent?.a?.(15) : (p as any).accent?.a?.(8)) ?? r.fill;
+    const fill = opts.fill ?? (emph ? p.accent?.a?.(15) : p.accent?.a?.(8)) ?? r.fill;
 
     fm.declare(eid, {
-      type: 'node' as any, x: x + w / 2, y: y + h / 2, r: opts.rx ?? 8,
+      type: 'node', shape: 'rect', x: x + w / 2, y: y + h / 2, r: opts.rx ?? 8,
       fill, stroke: r.stroke, strokeW: opts.strokeW ?? (emph ? 2 : 1.2),
       opacity: opts.opacity ?? 1,
       _label: opts.label ?? '', _labelPlace: 'above',
-      _blockW: w, _blockH: h, _shape: 'rect',
+      _blockW: w, _blockH: h,
       _children: opts.childIds ?? [],
-    } as any);
+    } as unknown as NodeState);
 
     const n = {
       ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },
@@ -242,13 +244,13 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       },
       fit(pad: number = 16) {
         const e = fm.entities.get(eid); if (!e) return this;
-        const children = ((e.desired as any)._children ?? []) as string[];
+        const children = ((e.desired as NodeState)._children ?? []) as string[];
         if (children.length === 0) return this;
         let mx = Infinity, My = Infinity, Mx = -Infinity, my = -Infinity;
         for (const cid of children) {
           const ce = fm.entities.get(`vertex:${cid}`);
           if (!ce) continue;
-          const cd = ce.desired as any;
+          const cd = ce.desired as NodeState;
           const bw = (cd._blockW ?? (cd.r ?? 10) * 2) as number;
           const bh = (cd._blockH ?? (cd.r ?? 10) * 2) as number;
           const l = (cd.x ?? 0) - bw / 2, t = (cd.y ?? 0) - bh / 2;
@@ -269,16 +271,16 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const r = resolveColor(p, opts.color ?? 'dim');
     const fpe = fm.entities.get(`port:${fromPortId}`);
     const tpe = fm.entities.get(`port:${toPortId}`);
-    const fx = (fpe?.desired as any)?.x ?? 0, fy = (fpe?.desired as any)?.y ?? 0;
-    const tx = (tpe?.desired as any)?.x ?? 0, ty = (tpe?.desired as any)?.y ?? 0;
+    const fx = (fpe?.desired as NodeState)?.x ?? 0, fy = (fpe?.desired as NodeState)?.y ?? 0;
+    const tx = (tpe?.desired as NodeState)?.x ?? 0, ty = (tpe?.desired as NodeState)?.y ?? 0;
 
     fm.declare(eid, {
-      type: 'line' as any, x1: fx, y1: fy, x2: tx, y2: ty,
+      type: 'line', x1: fx, y1: fy, x2: tx, y2: ty,
       stroke: r.stroke, strokeW: opts.strokeW ?? 1.5, dash: opts.dash ?? '',
       directed: opts.directed ?? false, _bend: opts.bend ?? false,
       _fromPort: fromPortId, _toPort: toPortId,
       _label: opts.label ?? '',
-    } as any);
+    } as unknown as LineState);
 
     return {
       ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },
@@ -296,7 +298,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const r = resolveColor(p, opts.color ?? 'accent');
     const x = opts.x ?? 0, w = opts.w ?? 780;
     const pts: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
-    fm.declare(eid, { type: 'region', shape: 'fill' as any, pts, fill: r.fill, opacity: opts.opacity ?? 0.12, _label: opts.label ?? '' } as any);
+    fm.declare(eid, { type: 'region', shape: 'fill', pts, fill: r.fill, opacity: opts.opacity ?? 0.12, _label: opts.label ?? '' } as unknown as RegionState);
 
     return {
       color(c: string) { patch(eid, fm, { fill: resolveColor(p, c).fill }); return this; },
@@ -311,10 +313,10 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     const rx = opts.rx ?? 8;
     const pts: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
     fm.declare(eid, {
-      type: 'region', shape: 'polygon' as any, vertices: pts, stroke: r.stroke, fill: r.fill + ' / 0.05',
+      type: 'region', shape: 'polygon', vertices: pts, stroke: r.stroke, fill: r.fill + ' / 0.05',
       strokeW: opts.strokeW ?? 1.5, dash: opts.dash ?? '6 3', opacity: opts.opacity ?? 1,
       _rx: rx, _label: opts.label ?? '',
-    } as any);
+    } as unknown as RegionState);
 
     return {
       ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },

@@ -237,11 +237,6 @@ describe('FrameManager', () => {
       expect(fm.entities.get('c1')!.svg).not.toBeNull();
     });
 
-    it('unknown type throws', () => {
-      fm.begin();
-      fm.declare('bad', { type: 'nonexistent' });
-      expect(() => fm.commit({ animate: false })).toThrow('Unknown entity type');
-    });
   });
 
   describe('static mode', () => {

@@ -2,6 +2,10 @@
 // Hejlsberg pattern: structural typing, no inheritance
 
 import type { BaseType, Selection } from 'd3';
+import type { MathAPI } from './math';
+import type { GraphAPI } from './graph';
+import type { LayoutAPI } from './layout';
+import type { Renderer } from './renderer';
 
 // ── Primitives ──
 export type Vec2 = [number, number];
@@ -44,7 +48,6 @@ export type NodeState = {
   label?: string; labelPlace?: Place; _labelY?: number; _labelAnchor?: string;
   symType?: string;  // symbol type for shape='symbol'
   _owner?: string;   // for ports: owner node id
-  _portPos?: any;    // for ports: original port position
   _blockW?: number; _blockH?: number;  // for blocks: computed dimensions
   _children?: string[];  // for blocks: child node ids
 };
@@ -116,7 +119,7 @@ export interface StageCtx {
   palette: Palette;
   geom: { nW: number; nH: number; dR: number; rx: number; gap: number };
   markerFor: (c: string) => string;
-  callout(anchor: any, html: string, o?: Record<string, unknown>): S;
+  callout(anchor: S | { x: number; y: number }, html: string, o?: Record<string, unknown>): S;
 }
 
 // ── Stage options ──
@@ -125,12 +128,12 @@ export interface StageOptions {
   container?: string | HTMLElement;
   geom?: { nW?: number; nH?: number; dR?: number; rx?: number; gap?: number };
   ms?: number; animation?: Partial<AnimationConfig>;
-  renderer?: any;
+  renderer?: Renderer;
 }
 export interface AxesOptions { x?: number; y?: number; xLen?: number; yLen?: number; xLabel?: string; yLabel?: string }
 
 // ── Steps ──
-export interface StepLike { label?: string; frame(s: any): void }
+export interface StepLike { label?: string; frame(s: StageAPI): void }
 export interface StepsOptions { start?: number }
 export interface StepsController { go(i: number): void; get current(): number; onChange(fn: (i: number) => void): () => void; destroy(): void }
 
@@ -155,44 +158,6 @@ export interface Tag {
   remove(): void;
 }
 
-// ── API interfaces ──
-export interface MathAPI {
-  point(id: string, pos: Vec2, opts?: any): any;
-  vector(id: string, from: Vec2, to: Vec2, opts?: any): any;
-  segment(id: string, a: Vec2, b: Vec2, opts?: any): any;
-  circle(id: string, center: Vec2, radius: number, opts?: any): any;
-  polygon(id: string, vertices: Vec2[], opts?: any): any;
-  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: any): any;
-  rightAngle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: any): any;
-  projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: any): any;
-  fill(id: string, pts: Vec2[], opts?: any): any;
-  fillFn(id: string, f: (x: number) => number, opts?: any): any;
-  fn(id: string, f: (x: number) => number, opts?: any): any;
-  grid(id: string, origin: Vec2, opts?: any): void;
-  axes(id: string, origin: Vec2, opts?: any): void;
-  coords(id: string, origin: Vec2, opts?: any): any;
-  rect(id: string, cx: number, cy: number, w: number, h: number): any;
-  ngon(id: string, cx: number, cy: number, r: number, sides: number): any;
-  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): any;
-  symbol(id: string, pos: Vec2, opts?: any): any;
-  arc(id: string, center: Vec2, opts: any): any;
-}
-
-export interface GraphAPI {
-  vertex(id: string, pos: Vec2, opts?: any): any;
-  edge(a: any, b: any, opts?: any): any;
-  layout(type: string, vertices: any[], edges?: any[], opts?: any): void;
-}
-
-export interface LayoutAPI {
-  node(id: string, x: number, y: number, opts?: any): any;
-  block(id: string, x: number, y: number, w: number, h: number, opts?: any): any;
-  port(id: string, ownerId: string, pos: any, opts?: any): any;
-  edge(id: string, fromPortId: string, toPortId: string, opts?: any): any;
-  layer(id: string, y: number, h: number, opts?: any): any;
-  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: any): any;
-}
-
 export interface AgentStage extends Disposable {
   ctx: StageCtx; palette: Palette;
   stage: { bg: S; nodes: S; edges: S; overlay: S }; root: S;
@@ -205,6 +170,6 @@ export interface AgentStage extends Disposable {
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void>;
   play(frames: ((s: AgentStage) => void)[], opts?: { ms?: number }): Promise<void>;
-  frames: any;
-  theme?: any;
+  frames: Record<string, EntityState[]>;
+  theme?: Record<string, unknown>;
 }

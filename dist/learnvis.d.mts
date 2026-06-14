@@ -254,6 +254,427 @@ declare global {
 }
 declare const katexify: (html: string) => string;
 //#endregion
+//#region vis/renderer/index.d.ts
+interface RenderHandle {
+  /** Update visual to match new state (may animate) */
+  update(state: EntityState, opts?: {
+    animate?: boolean;
+    transition?: any;
+  }): void;
+  /** Remove visual from scene */
+  remove(): void;
+}
+interface Renderer {
+  /** Create visual object for an entity */
+  create(id: string, state: EntityState): RenderHandle;
+  /** Called before frame rendering */
+  beginFrame(): void;
+  /** Called after all entities are processed */
+  commitFrame(opts?: {
+    animate?: boolean;
+    ms?: number;
+  }): void;
+  /** Release resources */
+  dispose(): void;
+}
+//#endregion
+//#region vis/frame.d.ts
+declare class FrameManager {
+  private store;
+  private handles;
+  private current;
+  private previous;
+  private _uncommitted;
+  private animation;
+  private renderer;
+  constructor(ctx: StageCtx, animation?: Partial<AnimationConfig>, renderer?: Renderer);
+  begin(): void;
+  declare(id: EntityId, state: EntityState): Entity;
+  patch(id: EntityId, partial: Partial<EntityState>): void;
+  commit(opts?: {
+    ms?: number;
+    animate?: boolean;
+  }): void;
+  private _commitStatic;
+  get entities(): ReadonlyMap<string, Entity>;
+  get frameIds(): ReadonlySet<string>;
+}
+//#endregion
+//#region vis/math.d.ts
+interface MathAPI {
+  point(id: string, pos: Vec2, opts?: {
+    color?: string;
+    label?: string;
+    size?: number;
+    fill?: string;
+    labelPlace?: Place;
+    labelGap?: number;
+  }): MathPoint;
+  vector(id: string, from: Vec2, to: Vec2, opts?: {
+    color?: string;
+    label?: string;
+    strokeW?: number;
+    dash?: string;
+    labelPlace?: Place;
+    labelGap?: number;
+    marker?: MarkerConfig;
+  }): MathVector;
+  segment(id: string, a: Vec2, b: Vec2, opts?: {
+    color?: string;
+    strokeW?: number;
+    dash?: string;
+    label?: string;
+    labelGap?: number;
+  }): MathSegment;
+  circle(id: string, center: Vec2, radius: number, opts?: {
+    color?: string;
+    fill?: string;
+    strokeW?: number;
+    dash?: string;
+    opacity?: number;
+  }): MathCircle;
+  polygon(id: string, vertices: Vec2[], opts?: {
+    color?: string;
+    fill?: string;
+    strokeW?: number;
+    opacity?: number;
+  }): MathPolygon;
+  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: {
+    color?: string;
+    fill?: string;
+    label?: string;
+    size?: number;
+  }): MathAngle;
+  rightAngle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: {
+    color?: string;
+    size?: number;
+  }): MathRightAngle;
+  projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: {
+    color?: string;
+    dash?: string;
+    pointColor?: string;
+  }): MathProjection;
+  fill(id: string, pts: Vec2[], opts?: {
+    color?: string;
+    opacity?: number;
+  }): MathFill;
+  fillFn(id: string, f: (x: number) => number, opts?: {
+    domain?: [number, number];
+    range?: [number, number];
+    x?: number;
+    y?: number;
+    width?: number;
+    height?: number;
+    samples?: number;
+    color?: string;
+    opacity?: number;
+    baseline?: number;
+  }): MathFill;
+  coords(id: string, origin: Vec2, opts?: CoordsOpts): MathCoords;
+  fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
+  grid(id: string, origin: Vec2, opts?: GridOpts): void;
+  axes(id: string, origin: Vec2, opts?: AxesOpts): void;
+  rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
+  ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
+  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
+  symbol(id: string, pos: Vec2, opts?: {
+    type?: 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye';
+    size?: number;
+    color?: string;
+    fill?: string;
+  }): MathShape;
+  arc(id: string, center: Vec2, opts: {
+    innerR?: number;
+    outerR: number;
+    startAngle: number;
+    endAngle: number;
+    color?: string;
+    fill?: string;
+    strokeW?: number;
+  }): MathShape;
+}
+interface MathPoint {
+  pos(): Vec2;
+  color(c: string): MathPoint;
+  label(t: string, place?: Place, gap?: number): MathPoint;
+  size(r: number): MathPoint;
+  fill(c: string): MathPoint;
+  opacity(v: number): MathPoint;
+  translate(dx: number, dy: number): MathPoint;
+}
+interface MathVector {
+  color(c: string): MathVector;
+  label(t: string, place?: Place, gap?: number): MathVector;
+  strokeW(n: number): MathVector;
+  dashed(d?: string): MathVector;
+  opacity(v: number): MathVector;
+  rotate(a: number, cx: number, cy: number): MathVector;
+  translate(dx: number, dy: number): MathVector;
+  scale(sx: number, sy?: number): MathVector;
+}
+interface MathSegment {
+  color(c: string): MathSegment;
+  strokeW(n: number): MathSegment;
+  dashed(d?: string): MathSegment;
+  label(t: string): MathSegment;
+  opacity(v: number): MathSegment;
+}
+interface MathCircle {
+  color(c: string): MathCircle;
+  strokeW(n: number): MathCircle;
+  fill(c: string): MathCircle;
+  dashed(d?: string): MathCircle;
+  opacity(v: number): MathCircle;
+  translate(dx: number, dy: number): MathCircle;
+}
+interface MathPolygon {
+  color(c: string): MathPolygon;
+  strokeW(n: number): MathPolygon;
+  fill(c: string): MathPolygon;
+  dashed(d?: string): MathPolygon;
+  opacity(v: number): MathPolygon;
+  rotate(a: number, cx: number, cy: number): MathPolygon;
+  translate(dx: number, dy: number): MathPolygon;
+  scale(sx: number, sy?: number): MathPolygon;
+}
+interface MathAngle {
+  color(c: string): MathAngle;
+  strokeW(n: number): MathAngle;
+  fill(c: string): MathAngle;
+  dashed(d?: string): MathAngle;
+  opacity(v: number): MathAngle;
+  label(t: string): MathAngle;
+}
+interface MathRightAngle {
+  color(c: string): MathRightAngle;
+  size(n: number): MathRightAngle;
+  strokeW(n: number): MathRightAngle;
+  opacity(v: number): MathRightAngle;
+}
+interface MathProjection {
+  color(c: string): MathProjection;
+  dash(d: string): MathProjection;
+  strokeW(n: number): MathProjection;
+}
+interface MathFill {
+  color(c: string): MathFill;
+  opacity(v: number): MathFill;
+}
+interface MathFn {
+  color(c: string): MathFn;
+  strokeW(n: number): MathFn;
+  dashed(d?: string): MathFn;
+  opacity(v: number): MathFn;
+  label(t: string): MathFn;
+}
+interface MathShape {
+  color(c: string): MathShape;
+  size(n: number): MathShape;
+  fill(c: string): MathShape;
+  strokeW(n: number): MathShape;
+  dashed(d?: string): MathShape;
+  opacity(v: number): MathShape;
+  translate(dx: number, dy: number): MathShape;
+}
+interface FnOpts {
+  domain?: [number, number];
+  range?: [number, number];
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  samples?: number;
+  color?: string;
+  label?: string;
+  strokeW?: number;
+  dash?: string;
+  opacity?: number;
+}
+interface GridOpts {
+  width?: number;
+  height?: number;
+  spacing?: number;
+  color?: string;
+  strokeW?: number;
+}
+interface AxesOpts {
+  xLen?: number;
+  yLen?: number;
+  xLabel?: string;
+  yLabel?: string;
+  color?: string;
+  strokeW?: number;
+}
+interface CoordsOpts {
+  xLen?: number;
+  yLen?: number;
+  xDomain?: [number, number];
+  yDomain?: [number, number];
+  xLabel?: string;
+  yLabel?: string;
+}
+interface MathCoords {
+  axes(opts?: {
+    color?: string;
+    strokeW?: number;
+  }): void;
+  grid(opts?: {
+    spacing?: number;
+    color?: string;
+  }): void;
+  fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
+  fillFn(id: string, f: (x: number) => number, opts?: {
+    color?: string;
+    opacity?: number;
+    baseline?: number;
+  }): MathFill;
+  point(id: string, x: number, y: number, opts?: {
+    color?: string;
+    label?: string;
+    size?: number;
+    fill?: string;
+  }): MathPoint;
+}
+//#endregion
+//#region vis/graph.d.ts
+type Vec2$1 = [number, number];
+interface Vertex {
+  id: string;
+  x: number;
+  y: number;
+  _r: number;
+  _stroke: string;
+  _fill: string;
+  _label: string;
+  pos(): Vec2$1;
+  color(c: string): Vertex;
+  label(t: string): Vertex;
+  size(r: number): Vertex;
+  fill(c: string): Vertex;
+}
+interface Edge {
+  color(c: string): Edge;
+  strokeW(n: number): Edge;
+  dashed(d?: string): Edge;
+  label(t: string): Edge;
+  weight(n: number): Edge;
+}
+interface GraphAPI {
+  vertex(id: string, pos: Vec2$1): Vertex;
+  edge(a: Vertex, b: Vertex, opts?: {
+    directed?: boolean;
+    gap?: number;
+  }): Edge;
+  layout(type: 'force' | 'circular', vertices: Vertex[], edges?: {
+    from: Vertex;
+    to: Vertex;
+  }[], opts?: {
+    center?: Vec2$1;
+    radius?: number;
+  }): void;
+}
+//#endregion
+//#region vis/layout.d.ts
+interface LayoutNode {
+  color(c: string): LayoutNode;
+  fill(c: string): LayoutNode;
+  strokeW(n: number): LayoutNode;
+  opacity(v: number): LayoutNode;
+  label(t: string, place?: Place): LayoutNode;
+  size(w: number, h?: number): LayoutNode;
+  moveTo(x: number, y: number): LayoutNode;
+  port(id: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
+}
+interface LayoutBlock extends LayoutNode {
+  fit(pad?: number): LayoutBlock;
+}
+interface LayoutPort {
+  color(c: string): LayoutPort;
+  size(r: number): LayoutPort;
+  fill(c: string): LayoutPort;
+  opacity(v: number): LayoutPort;
+  label(t: string): LayoutPort;
+  pos(): Vec2;
+}
+interface LayoutEdge {
+  color(c: string): LayoutEdge;
+  strokeW(n: number): LayoutEdge;
+  dash(d: string): LayoutEdge;
+  opacity(v: number): LayoutEdge;
+  label(t: string): LayoutEdge;
+  directed(v: boolean): LayoutEdge;
+  bend(): LayoutEdge;
+}
+interface LayoutLayer {
+  color(c: string): LayoutLayer;
+  opacity(v: number): LayoutLayer;
+  label(t: string): LayoutLayer;
+}
+interface LayoutEnclosure {
+  color(c: string): LayoutEnclosure;
+  dash(d: string): LayoutEnclosure;
+  strokeW(n: number): LayoutEnclosure;
+  opacity(v: number): LayoutEnclosure;
+  label(t: string): LayoutEnclosure;
+}
+interface NodeOpts {
+  w?: number;
+  h?: number;
+  r?: number;
+  fill?: string;
+  stroke?: string;
+  strokeW?: number;
+  opacity?: number;
+  rx?: number;
+  label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
+  shape?: 'rect' | 'circle';
+}
+interface BlockOpts extends NodeOpts {
+  childIds?: string[];
+  emph?: boolean;
+}
+type PortPosition = 'top' | 'bottom' | 'left' | 'right' | [number, number];
+interface PortOpts {
+  size?: number;
+  fill?: string;
+  stroke?: string;
+  label?: string;
+}
+interface EdgeOpts {
+  color?: string;
+  strokeW?: number;
+  dash?: string;
+  directed?: boolean;
+  bend?: boolean;
+  label?: string;
+}
+interface LayerOpts {
+  color?: string;
+  opacity?: number;
+  x?: number;
+  w?: number;
+  label?: string;
+}
+interface EnclosureOpts {
+  color?: string;
+  dash?: string;
+  strokeW?: number;
+  opacity?: number;
+  rx?: number;
+  label?: string;
+}
+interface LayoutAPI {
+  node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
+  block(id: string, x: number, y: number, w: number, h: number, opts?: BlockOpts): LayoutBlock;
+  port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
+  edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
+  layer(id: string, y: number, h: number, opts?: LayerOpts): LayoutLayer;
+  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: EnclosureOpts): LayoutEnclosure;
+}
+declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
+//#endregion
 //#region vis/types.d.ts
 type Vec2 = [number, number];
 type Point = {
@@ -275,6 +696,13 @@ interface Palette {
   info: SemColor;
   accent: SemColor;
   dim: SemColor;
+}
+interface MarkerConfig {
+  size?: number;
+  width?: number;
+  height?: number;
+  offset?: number;
+  open?: boolean;
 }
 interface AnimationConfig {
   duration: number;
@@ -313,7 +741,6 @@ type NodeState = {
   _labelAnchor?: string;
   symType?: string;
   _owner?: string;
-  _portPos?: any;
   _blockW?: number;
   _blockH?: number;
   _children?: string[];
@@ -446,7 +873,10 @@ interface StageCtx {
     gap: number;
   };
   markerFor: (c: string) => string;
-  callout(anchor: any, html: string, o?: Record<string, unknown>): S;
+  callout(anchor: S | {
+    x: number;
+    y: number;
+  }, html: string, o?: Record<string, unknown>): S;
 }
 interface StageOptions {
   theme?: string;
@@ -463,11 +893,11 @@ interface StageOptions {
   };
   ms?: number;
   animation?: Partial<AnimationConfig>;
-  renderer?: any;
+  renderer?: Renderer;
 }
 interface StepLike {
   label?: string;
-  frame(s: any): void;
+  frame(s: StageAPI): void;
 }
 interface StepsOptions {
   start?: number;
@@ -497,40 +927,6 @@ interface Tag {
   text(t: string): Tag;
   remove(): void;
 }
-interface MathAPI {
-  point(id: string, pos: Vec2, opts?: any): any;
-  vector(id: string, from: Vec2, to: Vec2, opts?: any): any;
-  segment(id: string, a: Vec2, b: Vec2, opts?: any): any;
-  circle(id: string, center: Vec2, radius: number, opts?: any): any;
-  polygon(id: string, vertices: Vec2[], opts?: any): any;
-  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: any): any;
-  rightAngle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: any): any;
-  projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: any): any;
-  fill(id: string, pts: Vec2[], opts?: any): any;
-  fillFn(id: string, f: (x: number) => number, opts?: any): any;
-  fn(id: string, f: (x: number) => number, opts?: any): any;
-  grid(id: string, origin: Vec2, opts?: any): void;
-  axes(id: string, origin: Vec2, opts?: any): void;
-  coords(id: string, origin: Vec2, opts?: any): any;
-  rect(id: string, cx: number, cy: number, w: number, h: number): any;
-  ngon(id: string, cx: number, cy: number, r: number, sides: number): any;
-  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): any;
-  symbol(id: string, pos: Vec2, opts?: any): any;
-  arc(id: string, center: Vec2, opts: any): any;
-}
-interface GraphAPI {
-  vertex(id: string, pos: Vec2, opts?: any): any;
-  edge(a: any, b: any, opts?: any): any;
-  layout(type: string, vertices: any[], edges?: any[], opts?: any): void;
-}
-interface LayoutAPI$1 {
-  node(id: string, x: number, y: number, opts?: any): any;
-  block(id: string, x: number, y: number, w: number, h: number, opts?: any): any;
-  port(id: string, ownerId: string, pos: any, opts?: any): any;
-  edge(id: string, fromPortId: string, toPortId: string, opts?: any): any;
-  layer(id: string, y: number, h: number, opts?: any): any;
-  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: any): any;
-}
 interface AgentStage extends Disposable {
   ctx: StageCtx;
   palette: Palette;
@@ -543,7 +939,7 @@ interface AgentStage extends Disposable {
   root: S;
   math: MathAPI;
   graph: GraphAPI;
-  layout: LayoutAPI$1;
+  layout: LayoutAPI;
   dot(x: number | Vec2, y?: number): El;
   zone(x: number, y: number, w: number, h: number, label: string, color: string): El;
   arrow(from: El, dx: number | Vec2, dy?: number): El;
@@ -561,8 +957,8 @@ interface AgentStage extends Disposable {
   play(frames: ((s: AgentStage) => void)[], opts?: {
     ms?: number;
   }): Promise<void>;
-  frames: any;
-  theme?: any;
+  frames: Record<string, EntityState[]>;
+  theme?: Record<string, unknown>;
 }
 //#endregion
 //#region vis/bootstrap.d.ts
@@ -579,30 +975,6 @@ declare function bootstrap(selector: string | BaseType, opts?: {
   };
 }): StageCtx;
 //#endregion
-//#region vis/renderer/index.d.ts
-interface RenderHandle {
-  /** Update visual to match new state (may animate) */
-  update(state: EntityState, opts?: {
-    animate?: boolean;
-    transition?: any;
-  }): void;
-  /** Remove visual from scene */
-  remove(): void;
-}
-interface Renderer {
-  /** Create visual object for an entity */
-  create(id: string, state: EntityState): RenderHandle;
-  /** Called before frame rendering */
-  beginFrame(): void;
-  /** Called after all entities are processed */
-  commitFrame(opts?: {
-    animate?: boolean;
-    ms?: number;
-  }): void;
-  /** Release resources */
-  dispose(): void;
-}
-//#endregion
 //#region vis/stage.d.ts
 declare function stage(selector: string, opts?: StageOptions): AgentStage;
 /** 3D stage (placeholder — requires three.js renderer) */
@@ -613,129 +985,6 @@ declare function stage3D(selector: string, opts: StageOptions & {
     lookAt: [number, number, number];
   };
 }): AgentStage;
-//#endregion
-//#region vis/frame.d.ts
-declare class FrameManager {
-  private store;
-  private handles;
-  private current;
-  private previous;
-  private _uncommitted;
-  private animation;
-  private renderer;
-  constructor(ctx: StageCtx, animation?: Partial<AnimationConfig>, renderer?: Renderer);
-  begin(): void;
-  declare(id: EntityId, state: EntityState): Entity;
-  patch(id: EntityId, partial: Partial<EntityState>): void;
-  commit(opts?: {
-    ms?: number;
-    animate?: boolean;
-  }): void;
-  private _commitStatic;
-  get entities(): ReadonlyMap<string, Entity>;
-  get frameIds(): ReadonlySet<string>;
-}
-//#endregion
-//#region vis/layout.d.ts
-interface LayoutNode {
-  color(c: string): LayoutNode;
-  fill(c: string): LayoutNode;
-  strokeW(n: number): LayoutNode;
-  opacity(v: number): LayoutNode;
-  label(t: string, place?: Place): LayoutNode;
-  size(w: number, h?: number): LayoutNode;
-  moveTo(x: number, y: number): LayoutNode;
-  port(id: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
-}
-interface LayoutBlock extends LayoutNode {
-  fit(pad?: number): LayoutBlock;
-}
-interface LayoutPort {
-  color(c: string): LayoutPort;
-  size(r: number): LayoutPort;
-  fill(c: string): LayoutPort;
-  opacity(v: number): LayoutPort;
-  label(t: string): LayoutPort;
-  pos(): Vec2;
-}
-interface LayoutEdge {
-  color(c: string): LayoutEdge;
-  strokeW(n: number): LayoutEdge;
-  dash(d: string): LayoutEdge;
-  opacity(v: number): LayoutEdge;
-  label(t: string): LayoutEdge;
-  directed(v: boolean): LayoutEdge;
-  bend(): LayoutEdge;
-}
-interface LayoutLayer {
-  color(c: string): LayoutLayer;
-  opacity(v: number): LayoutLayer;
-  label(t: string): LayoutLayer;
-}
-interface LayoutEnclosure {
-  color(c: string): LayoutEnclosure;
-  dash(d: string): LayoutEnclosure;
-  strokeW(n: number): LayoutEnclosure;
-  opacity(v: number): LayoutEnclosure;
-  label(t: string): LayoutEnclosure;
-}
-interface NodeOpts {
-  w?: number;
-  h?: number;
-  r?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  opacity?: number;
-  rx?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  shape?: 'rect' | 'circle';
-}
-interface BlockOpts extends NodeOpts {
-  childIds?: string[];
-  emph?: boolean;
-}
-type PortPosition = 'top' | 'bottom' | 'left' | 'right' | [number, number];
-interface PortOpts {
-  size?: number;
-  fill?: string;
-  stroke?: string;
-  label?: string;
-}
-interface EdgeOpts {
-  color?: string;
-  strokeW?: number;
-  dash?: string;
-  directed?: boolean;
-  bend?: boolean;
-  label?: string;
-}
-interface LayerOpts {
-  color?: string;
-  opacity?: number;
-  x?: number;
-  w?: number;
-  label?: string;
-}
-interface EnclosureOpts {
-  color?: string;
-  dash?: string;
-  strokeW?: number;
-  opacity?: number;
-  rx?: number;
-  label?: string;
-}
-interface LayoutAPI {
-  node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
-  block(id: string, x: number, y: number, w: number, h: number, opts?: BlockOpts): LayoutBlock;
-  port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
-  edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
-  layer(id: string, y: number, h: number, opts?: LayerOpts): LayoutLayer;
-  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: EnclosureOpts): LayoutEnclosure;
-}
-declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
 //#endregion
 //#region vis/renderer/svg.d.ts
 declare class SVGRenderer implements Renderer {

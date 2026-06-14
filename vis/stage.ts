@@ -129,5 +129,5 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
 
 /** 3D stage (placeholder — requires three.js renderer) */
 export function stage3D(selector: string, opts: StageOptions & { renderer: Renderer; camera?: { position: [number, number, number]; lookAt: [number, number, number] } }): AgentStage {
-  return stage(selector, { ...opts, renderer: opts.renderer } as any);
+  return stage(selector, { ...opts, renderer: opts.renderer } as StageOptions);
 }

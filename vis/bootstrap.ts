@@ -3,7 +3,7 @@
 
 import * as d3 from 'd3';
 import type { BaseType } from 'd3';
-import type { StageCtx } from './types';
+import type { Point, S, StageCtx } from './types';
 import { palette } from './tokens';
 import { createCanvas, defineArrows, domLabel } from './primitives';
 
@@ -17,8 +17,8 @@ export function bootstrap(selector: string | BaseType, opts: {
   const geom = Object.freeze({ nW: 34, nH: 26, dR: 8, rx: 5, gap: 4, ...gOpts });
   const { markerFor } = defineArrows(C.svg, { sw: 2.0 });
 
-  const callout = (anchor: any, html: string, o: Record<string, unknown> = {}) =>
-    domLabel(C.root, anchor, html, o) as unknown as any;
+  const callout = (anchor: S | Point, html: string, o: Record<string, unknown> = {}) =>
+    domLabel(C.root, anchor, html, o);
 
   return { svg: C.svg, W: C.W, H: C.H, M: C.M, stage: { bg: C.bg, nodes: C.nG, edges: C.eG, overlay: C.oG }, root: C.root, palette: p, geom, markerFor, callout };
 }

@@ -1,6 +1,6 @@
 // vis/axes.ts — coordinate axes renderer
+import type { BaseType, Selection } from 'd3';
 import type { Point, SemColor, Tag, AxesOptions } from './types';
-import type { Selection } from 'd3';
 
 export type AxesRenderer = () => void;
 
@@ -11,7 +11,7 @@ function formatTick(v: number): string {
 }
 
 export function createAxes(
-  bg: Selection<any, any, any, any>,
+  bg: Selection<BaseType, unknown, null, undefined>,
   p: Record<string, SemColor>,
   tagFn: (pos: Point, html: string) => Tag,
   schedule: () => void,
