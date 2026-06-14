@@ -4360,6 +4360,31 @@ function translate(dx, dy) {
 		dy
 	};
 }
+function lerp(a, b, t) {
+	return a + (b - a) * t;
+}
+/** Interpolate between two transform arrays (must be same structure) */
+function interpolate(a, b, t) {
+	return a.map((tf, i) => {
+		const bt = b[i] ?? tf;
+		switch (tf.type) {
+			case "rotate": return {
+				...tf,
+				angle: lerp(tf.angle, bt.angle, t)
+			};
+			case "scale": return {
+				...tf,
+				sx: lerp(tf.sx, bt.sx, t),
+				sy: lerp(tf.sy, bt.sy, t)
+			};
+			case "translate": return {
+				...tf,
+				dx: lerp(tf.dx, bt.dx, t),
+				dy: lerp(tf.dy, bt.dy, t)
+			};
+		}
+	});
+}
 /** Apply transforms to line geometry (from→to) */
 function applyLine(from, to, tf) {
 	let nf = [...from], nt = [...to];
@@ -5771,10 +5796,10 @@ function drawEntity(ctx, id, d, markerCache) {
 		}
 	}
 }
-function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
-	switch (d.type) {
+function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoot) {
+	switch (newState.type) {
 		case "node": {
-			const nd = d;
+			const nd = newState;
 			if (nd.shape === "rect") {
 				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
 				svg.select("rect").interrupt().transition(tr).attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", nd.fill).attr("stroke", nd.stroke).attr("stroke-width", nd.strokeW ?? 1.5);
@@ -5783,39 +5808,53 @@ function transitionEntity(svg, text, d, tr, markerCache, svgRoot) {
 			break;
 		}
 		case "line": {
-			const ld = d;
-			let x1, y1, x2, y2;
-			if (ld._tf && ld._base) {
-				const b = ld._base;
-				const res = applyLine(b.from, b.to, ld._tf);
-				x1 = res.from[0];
-				y1 = res.from[1];
-				x2 = res.to[0];
-				y2 = res.to[1];
+			const ld = newState;
+			const oldLd = oldState;
+			if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
+				const base = ld._base;
+				svg.interrupt();
+				svg.attrTween("x1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString()).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
 			} else {
-				x1 = ld.x1 ?? ld.from?.[0] ?? 0;
-				y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-				x2 = ld.x2 ?? ld.to?.[0] ?? 0;
-				y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+				let x1, y1, x2, y2;
+				if (ld._tf && ld._base) {
+					const b = ld._base;
+					const res = applyLine(b.from, b.to, ld._tf);
+					x1 = res.from[0];
+					y1 = res.from[1];
+					x2 = res.to[0];
+					y2 = res.to[1];
+				} else {
+					x1 = ld.x1 ?? ld.from?.[0] ?? 0;
+					y1 = ld.y1 ?? ld.from?.[1] ?? 0;
+					x2 = ld.x2 ?? ld.to?.[0] ?? 0;
+					y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+				}
+				svg.interrupt().transition(tr).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
 			}
-			svg.interrupt().transition(tr).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
 			if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
 			break;
 		}
 		case "region": {
-			const rd = d;
+			const rd = newState;
 			if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", rd.fill).attr("stroke", rd.stroke ?? rd.fill);
 			else {
-				let pts;
-				if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
-				else pts = rd.pts ?? rd.vertices ?? [];
-				svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+				const oldRd = oldState;
+				if (rd._tf && rd._base?.vertices && oldRd._tf && oldRd._base?.vertices) {
+					const baseVerts = rd._base.vertices;
+					svg.interrupt();
+					svg.attrTween("points", () => (t) => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+				} else {
+					let pts;
+					if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
+					else pts = rd.pts ?? rd.vertices ?? [];
+					svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+				}
 			}
 			if (rd.opacity != null) svg.transition(tr).attr("opacity", rd.opacity);
 			break;
 		}
 		case "group": {
-			const gd = d;
+			const gd = newState;
 			if (gd.subtype === "angle") {
 				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
 				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
@@ -6005,10 +6044,13 @@ var SVGHandle = class {
 		this._text = result.text;
 	}
 	update(state, opts) {
-		this.state = { ...state };
-		if (!this.svg) return;
-		if (opts?.transition) transitionEntity(this.svg, this._text, state, opts.transition, this._cache, this.ctx.svg);
+		if (!this.svg) {
+			this.state = { ...state };
+			return;
+		}
+		if (opts?.transition) transitionEntity(this.svg, this._text, this.state, state, opts.transition, this._cache, this.ctx.svg);
 		else updateEntityImmediate(this.svg, this._text, state);
+		this.state = { ...state };
 	}
 	setTextPosition(x, y, anchor, dyAttr) {
 		if (!this._text) return;

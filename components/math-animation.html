@@ -113,20 +113,19 @@ const sections = [
   },
   {
     name: '矩形旋转',
-    desc: 'D3 插值顶点坐标，全统一方案。',
+    desc: '.rotate() 声明态分离，参数插值。',
     steps: (function() {
-      var angles = [0, Math.PI/4, Math.PI/2, 3*Math.PI/4, Math.PI, 5*Math.PI/4, 3*Math.PI/2, 7*Math.PI/4, 2*Math.PI];
+      var angles = [0, 45, 90, 135, 180, 225, 270, 315, 360];
       var hw = 50, hh = 30, cx = 170, cy = 150;
       return angles.map(function(a) {
         return {
-          label: Math.round(a*180/Math.PI) + '\u00b0',
+          label: a + '\u00b0',
           frame: function(s) {
             s.math.axes('ax', [cx,cy], { xLen:140, yLen:120, color:'dim' });
             s.math.point('O', [cx,cy]).color('primary').label('O');
-            var cos = Math.cos(a), sin = Math.sin(a);
-            var vt = function(dx, dy) { return [cx + dx*cos - dy*sin, cy + dx*sin + dy*cos]; };
-            s.math.polygon('rect', [vt(-hw,-hh), vt(hw,-hh), vt(hw,hh), vt(-hw,hh)]).color('info').opacity(0.6);
-            s.math.vector('diag', [cx,cy], vt(hw,hh)).color('danger').strokeW(1.6);
+            var baseVerts = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(function(v){ return [cx+v[0],cy+v[1]]; });
+            s.math.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(a, cx, cy);
+            s.math.vector('diag', [cx,cy], [cx+hw,cy+hh]).color('danger').strokeW(1.6).rotate(a, cx, cy);
           }
         };
       });

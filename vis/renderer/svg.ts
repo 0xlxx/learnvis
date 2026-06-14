@@ -200,10 +200,10 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 //  transitionEntity
 // ══════════════════════════════════════════════════════════════
 
-function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transition<d3.BaseType, unknown, null, undefined>, markerCache: Record<string, string>, svgRoot: d3.Selection<any, any, any, any>) {
-  switch (d.type) {
+function transitionEntity(svg: E, text: E | null, oldState: EntityState, newState: EntityState, tr: d3.Transition<d3.BaseType, unknown, null, undefined>, markerCache: Record<string, string>, svgRoot: d3.Selection<any, any, any, any>) {
+  switch (newState.type) {
     case 'node': {
-      const nd = d as NodeState;
+      const nd = newState as NodeState;
       if (nd.shape === 'rect') {
         const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
         svg.select('rect').interrupt().transition(tr)
@@ -219,43 +219,62 @@ function transitionEntity(svg: E, text: E | null, d: EntityState, tr: d3.Transit
       break;
     }
     case 'line': {
-      const ld = d as LineState;
-      let x1: number, y1: number, x2: number, y2: number;
-      if (ld._tf && ld._base) {
-        const b = ld._base as { from: [number, number]; to: [number, number] };
-        const res = applyLine(b.from, b.to, ld._tf as Transform[]);
-        x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
+      const ld = newState as LineState;
+      const oldLd = oldState as LineState;
+      if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
+        const base = ld._base as { from: [number, number]; to: [number, number] };
+        svg.interrupt();
+        svg.attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[0].toString())
+           .attrTween('y1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[1].toString())
+           .attrTween('x2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[0].toString())
+           .attrTween('y2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[1].toString())
+           .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
       } else {
-        x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-        x2 = ld.x2 ?? ld.to?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+        let x1: number, y1: number, x2: number, y2: number;
+        if (ld._tf && ld._base) {
+          const b = ld._base as { from: [number, number]; to: [number, number] };
+          const res = applyLine(b.from, b.to, ld._tf as Transform[]);
+          x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
+        } else {
+          x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
+          x2 = ld.x2 ?? ld.to?.[0] ?? 0; y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+        }
+        svg.interrupt().transition(tr)
+          .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
+          .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
       }
-      svg.interrupt().transition(tr)
-        .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
-        .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
       if (ld.opacity != null) svg.transition(tr).attr('opacity', ld.opacity);
       break;
     }
     case 'region': {
-      const rd = d as RegionState;
+      const rd = newState as RegionState;
       if (rd.shape === 'circle') {
         svg.interrupt().transition(tr).attr('cx', rd.cx ?? 0).attr('cy', rd.cy ?? 0).attr('r', rd.r ?? 0)
           .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill);
       } else {
-        let pts: Vec2[];
-        if (rd._tf && (rd._base as any)?.vertices) {
-          pts = applyVertices((rd._base as any).vertices, rd._tf as Transform[]);
+        const oldRd = oldState as RegionState;
+        if (rd._tf && (rd._base as any)?.vertices && oldRd._tf && (oldRd._base as any)?.vertices) {
+          const baseVerts = (rd._base as any).vertices as [number, number][];
+          svg.interrupt();
+          svg.attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf as Transform[], rd._tf as Transform[], t)).map(p => p.join(',')).join(' '))
+             .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
         } else {
-          pts = rd.pts ?? rd.vertices ?? [];
+          let pts: Vec2[];
+          if (rd._tf && (rd._base as any)?.vertices) {
+            pts = applyVertices((rd._base as any).vertices, rd._tf as Transform[]);
+          } else {
+            pts = rd.pts ?? rd.vertices ?? [];
+          }
+          svg.interrupt().transition(tr)
+            .attr('points', pts.map(p => p.join(',')).join(' '))
+            .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
         }
-        svg.interrupt().transition(tr)
-          .attr('points', pts.map(p => p.join(',')).join(' '))
-          .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
       }
       if (rd.opacity != null) svg.transition(tr).attr('opacity', rd.opacity);
       break;
     }
     case 'group': {
-      const gd = d as GroupState;
+      const gd = newState as GroupState;
       if (gd.subtype === 'angle') {
         const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
         const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
@@ -447,10 +466,13 @@ export class SVGHandle implements RenderHandle {
   }
 
   update(state: EntityState, opts?: { animate?: boolean; transition?: d3.Transition<d3.BaseType, unknown, null, undefined> }) {
+    if (!this.svg) { this.state = { ...state }; return; }
+    if (opts?.transition) {
+      transitionEntity(this.svg, this._text, this.state, state, opts.transition, this._cache, this.ctx.svg);
+    } else {
+      updateEntityImmediate(this.svg, this._text, state);
+    }
     this.state = { ...state };
-    if (!this.svg) return;
-    if (opts?.transition) transitionEntity(this.svg, this._text, state, opts.transition, this._cache, this.ctx.svg);
-    else updateEntityImmediate(this.svg, this._text, state);
   }
 
   setTextPosition(x: number, y: number, anchor: string, dyAttr?: string | null) {
