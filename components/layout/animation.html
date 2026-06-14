@@ -121,8 +121,7 @@ const phaseSteps = [
     label: '空分区',
     frame: s => {
       phases.forEach((p, i) => {
-        s.layout.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25 });
-        s.ctx.callout({ x: 380, y: 60 + i * 70 + 30 }, p, { place: 'right', gap: 6, style: { fontSize: '10px' } });
+        s.layout.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25, label: p });
       });
     },
   },
@@ -131,8 +130,7 @@ const phaseSteps = [
     frame: s => {
       const ly = s.layout;
       phases.forEach((p, i) => {
-        ly.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25 });
-        s.ctx.callout({ x: 380, y: 60 + i * 70 + 30 }, p, { place: 'right', gap: 6, style: { fontSize: '10px' } });
+        ly.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25, label: p });
       });
       ly.node('in', 130, 95, { w: 50, h: 28, rx: 5 }).color('info').label('data');
       ly.node('proc', 130, 165, { w: 60, h: 28, rx: 5 }).color('warning').label('work');
@@ -144,8 +142,7 @@ const phaseSteps = [
     frame: s => {
       const ly = s.layout;
       phases.forEach((p, i) => {
-        ly.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25 });
-        s.ctx.callout({ x: 380, y: 60 + i * 70 + 30 }, p, { place: 'right', gap: 6, style: { fontSize: '10px' } });
+        ly.layer(p, i, { totalRanks: phases.length, w: W, color: phaseColors[i], style: 'band', opacity: 0.25, label: p });
       });
       const inp  = ly.node('in', 130, 95, { w: 50, h: 28, rx: 5 }).color('info').label('data');
       const proc = ly.node('proc', 130, 165, { w: 60, h: 28, rx: 5 }).color('warning').label('work');
