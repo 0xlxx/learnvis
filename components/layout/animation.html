@@ -23,7 +23,7 @@
 <body>
 
 <h1>Layout Primitives</h1>
-<p class="sub">node · block · port · edge · layer · enclosure — composable algorithm visualization</p>
+<p class="sub">node · block · port · edge · layer — composable algorithm visualization</p>
 <div class="row" id="sections"></div>
 
 <script src="../../dist/learnvis.js"></script>
@@ -62,7 +62,7 @@ const linkedListSteps = linkedItems.map(keys => ({
 }));
 
 // ═══════════════════════════════════════════════════════════
-//  2. 调用栈 — block + enclosure
+//  2. 调用栈 — block
 // ═══════════════════════════════════════════════════════════
 
 const callstackData = [
@@ -82,9 +82,7 @@ const callstackSteps = callstackData.map((frames, idx) => ({
   frame: s => {
     const ly = s.layout;
     if (frames.length > 1) {
-      ly.enclosure('stack', 60, 110, 280, frames.length * 56 + 16, {
-        color: 'muted', dash: '6 3', rx: 12,
-      }).strokeW(1);
+      ly.layer('stack', 0, { y: 110, h: frames.length * 56 + 16, w: 280, x: 60, color: 'muted', style: 'swimlane', label: 'Call Stack' });
     }
     frames.forEach(f => {
       const b = ly.block(f.id, f.x, f.y, f.w, f.h, {
@@ -95,7 +93,7 @@ const callstackSteps = callstackData.map((frames, idx) => ({
 }));
 
 // ═══════════════════════════════════════════════════════════
-//  3. 阶段分区 — layer + enclosure + port/edge
+//  3. 阶段分区 — layer + port/edge
 // ═══════════════════════════════════════════════════════════
 
 const phases = ['Input', 'Process', 'Output'];
@@ -121,9 +119,7 @@ const phaseSteps = [
       });
       ly.node('in', 130, 95, { w: 50, h: 28, rx: 5 }).color('info').label('data');
       ly.node('proc', 130, 165, { w: 60, h: 28, rx: 5 }).color('warning').label('work');
-      ly.enclosure('active', 55, 40, 190, 180, {
-        color: 'accent', dash: '8 4', rx: 12,
-      }).strokeW(1.5).label('Phase 1–2').opacity(0.6);
+      ly.layer('active-phase', 0, { y: 40, h: 180, w: 190, x: 55, color: 'accent', style: 'swimlane', label: 'Phase 1–2', opacity: 0.6 });
     },
   },
   {
@@ -257,8 +253,8 @@ const sugiyamaSteps = [
 
 const demos = [
   { name: '链表',     desc: 'node() 节点, port() 端口, edge() 有向边。逐步构建。', steps: linkedListSteps },
-  { name: '调用栈',   desc: 'block() 栈帧 (muted/normal/active) + enclosure() 包围框。', steps: callstackSteps },
-  { name: '阶段分区', desc: 'layer() 背景色带 + enclosure() 虚线框 + port/edge 连线。', steps: phaseSteps },
+  { name: '调用栈',   desc: 'block() 栈帧 (muted/normal/active) + layer(swimlane) 包围。', steps: callstackSteps },
+  { name: '阶段分区', desc: 'layer() band 色带 + swimlane 聚焦 + port/edge 连线。', steps: phaseSteps },
   { name: '二叉树',   desc: 'BFS 层序遍历, port + edge 父子连线。', steps: treeSteps },
   { name: 'Sugiyama', desc: 'layer() 分层 + edge() 直线 + polyline() 正交路由。', steps: sugiyamaSteps },
 ];

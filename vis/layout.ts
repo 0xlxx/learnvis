@@ -49,14 +49,6 @@ export interface LayoutLayer {
   strokeW(n: number): LayoutLayer;
 }
 
-export interface LayoutEnclosure {
-  color(c: string): LayoutEnclosure;
-  dash(d: string): LayoutEnclosure;
-  strokeW(n: number): LayoutEnclosure;
-  opacity(v: number): LayoutEnclosure;
-  label(t: string): LayoutEnclosure;
-}
-
 // ── Options ──
 
 export interface NodeOpts {
@@ -88,8 +80,6 @@ export interface LayerOpts {
   rx?: number;          // corner radius, default 8
   strokeW?: number;     // swimlane border width, default 1.2
 }
-export interface EnclosureOpts { color?: string; dash?: string; strokeW?: number; opacity?: number; rx?: number; label?: string }
-
 // ── Layout API ──
 
 export interface LayoutAPI {
@@ -98,7 +88,6 @@ export interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
-  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: EnclosureOpts): LayoutEnclosure;
 }
 
 // ── Private helpers ──
@@ -319,25 +308,5 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     } as unknown as LayoutLayer;
   }
 
-  function enclosure(id: string, x: number, y: number, w: number, h: number, opts: EnclosureOpts = {}): LayoutEnclosure {
-    const eid = mkId('polygon', id);
-    const r = resolveColor(p, opts.color ?? 'dim');
-    const rx = opts.rx ?? 8;
-    const pts: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
-    fm.declare(eid, {
-      type: 'region', shape: 'polygon', vertices: pts, stroke: r.stroke, fill: r.fill + ' / 0.05',
-      strokeW: opts.strokeW ?? 1.5, dash: opts.dash ?? '6 3', opacity: opts.opacity ?? 1,
-      _rx: rx, label: opts.label ?? '',
-    } as unknown as RegionState);
-
-    return {
-      ...{ color(c: string) { patch(eid, fm, { stroke: resolveColor(p, c).stroke }); return this; } },
-      ...mixDashed(eid, fm),
-      ...mixStrokeW(eid, fm),
-      ...mixOpacity(eid, fm),
-      ...mixLabel(eid, fm),
-    } as unknown as LayoutEnclosure;
-  }
-
-  return { node, block, port, edge, layer, enclosure };
+  return { node, block, port, edge, layer };
 }

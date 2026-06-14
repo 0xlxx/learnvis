@@ -57,8 +57,6 @@ description: D3+SVG visualization — math, graph, layout primitives for algorit
 | `s.layout.block('b',x,y,w,h,{style:'normal'|'muted'|'active'})` | 容器节点 |
 | `s.layout.edge('e','from','to').color('dim').directed(true).strokeW(1.4)` | 边（自动偏移避开端口） |
 | `s.layout.layer('L',rank,{totalRanks,w,color,style:'band'|'swimlane',label})` | 分层色带/泳道（rank 为 0-based 整数层级索引，非像素 Y） |
-| `s.layout.enclosure('E',x,y,w,h,{color,dash,rx}).label('Group')` | 虚线包围框 |
-
 > 详见 `references/api-layout.md`
 
 ## common — 通用工具

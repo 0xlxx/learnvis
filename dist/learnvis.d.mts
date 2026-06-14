@@ -627,13 +627,6 @@ interface LayoutLayer {
   dash(d: string): LayoutLayer;
   strokeW(n: number): LayoutLayer;
 }
-interface LayoutEnclosure {
-  color(c: string): LayoutEnclosure;
-  dash(d: string): LayoutEnclosure;
-  strokeW(n: number): LayoutEnclosure;
-  opacity(v: number): LayoutEnclosure;
-  label(t: string): LayoutEnclosure;
-}
 interface NodeOpts {
   w?: number;
   h?: number;
@@ -682,14 +675,6 @@ interface LayerOpts {
   rx?: number;
   strokeW?: number;
 }
-interface EnclosureOpts {
-  color?: string;
-  dash?: string;
-  strokeW?: number;
-  opacity?: number;
-  rx?: number;
-  label?: string;
-}
 interface LayoutAPI {
   node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
   block(id: string, x: number, y: number, w: number, h: number, opts?: NodeOpts & {
@@ -698,7 +683,6 @@ interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
-  enclosure(id: string, x: number, y: number, w: number, h: number, opts?: EnclosureOpts): LayoutEnclosure;
 }
 declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
 //#endregion
@@ -1285,4 +1269,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutEnclosure, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, distribute, domLabel, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

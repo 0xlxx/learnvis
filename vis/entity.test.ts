@@ -256,15 +256,6 @@ describe('layout API (v4 entity types)', () => {
     expect((e!.desired as any).stroke).toBeTruthy();
   });
 
-  it('enclosure() creates region entity', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    layout.enclosure('enc', 10, 10, 200, 150);
-    fm.commit();
-    const e = fm.entities.get('polygon:enc');
-    expect(e!.desired.type).toBe('region');
-    expect((e!.desired as any).shape).toBe('polygon');
-  });
 });
 
 // ═══════════════════════════════════════════════════════════

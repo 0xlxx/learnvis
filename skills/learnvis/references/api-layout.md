@@ -1,6 +1,6 @@
 # layout — 布局原语
 
-图论/算法可视化的布局系统：node, block, port, edge, layer, enclosure。
+图论/算法可视化的布局系统：node, block, port, edge, layer。
 
 ## node
 
@@ -23,8 +23,8 @@ n.port('A-in', 'top', { size: 4 }).color('dim')
 s.layout.block('blk', x, y, w, h, { style: 'normal', rx: 8 }).label('Container')
 ```
 
-- 容器节点，三种预设样式：`'muted'` | `'normal'` | `'active'`
-- 支持 `.port()` 和 `.label()`
+- 复合节点/容器，三种预设样式：`'muted'` | `'normal'` | `'active'`
+- 和 `node` 一样支持 `.port()` `.label()` `.color()` `.size()`
 - `x, y` 为左上角坐标
 
 ## port
@@ -84,17 +84,6 @@ s.layout.layer('L', 0, { totalRanks: 4, w: 640, color: 'info', style: 'swimlane'
 **rank 自动定位：** 提供 `totalRanks` 后自动计算 `y = startY + rank * (h + layerGap)`。
 
 **链式方法：** `.color()` `.opacity()` `.label()` `.dash()` `.strokeW()`
-
-## enclosure
-
-```js
-s.layout.enclosure('E', x, y, w, h, { color: 'accent', dash: '6 3', rx: 10 })
-  .strokeW(1.5).label('Group')
-```
-
-- 虚线圆角包围框（多边形 region）
-- `.color()` `.dash()` `.strokeW()` `.opacity()` `.label()`
-- 标签渲染在质心
 
 ## 完整示例
 
