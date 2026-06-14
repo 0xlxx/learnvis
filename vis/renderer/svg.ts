@@ -531,11 +531,18 @@ export class SVGRenderer implements Renderer {
       const dx = x2 - x1, dy = y2 - y1;
       const ang = Math.atan2(dy, dx);
       const rev = ang > 0 ? ang - Math.PI : ang + Math.PI;
-      const from = ld._fromPort ?? '', to = ld._toPort ?? '';
-      if (!edgeAngles.has(from)) edgeAngles.set(from, []);
-      if (!edgeAngles.has(to)) edgeAngles.set(to, []);
-      edgeAngles.get(from)!.push(ang);
-      edgeAngles.get(to)!.push(rev);
+
+      // Extract node id from port name ("A-out"→"A") or from/to vertex id
+      const fromNode = (ld._fromPort ?? '').split('-')[0] || ((ld.from as any)?.id);
+      const toNode   = (ld._toPort ?? '').split('-')[0]   || ((ld.to as any)?.id);
+      if (fromNode) {
+        if (!edgeAngles.has(fromNode)) edgeAngles.set(fromNode, []);
+        edgeAngles.get(fromNode)!.push(ang);
+      }
+      if (toNode) {
+        if (!edgeAngles.has(toNode)) edgeAngles.set(toNode, []);
+        edgeAngles.get(toNode)!.push(rev);
+      }
     }
 
     const dirs = [
@@ -551,7 +558,9 @@ export class SVGRenderer implements Renderer {
       const nd = h.state as NodeState;
       const label = nd.label || '';
       if (!label) continue;
-      const angles = edgeAngles.get(label) ?? [];
+      // Look up by node id (extracted from entity id: "vertex:A" → "A")
+      const nodeKey = id.includes(':') ? id.split(':')[1] : label;
+      const angles = edgeAngles.get(nodeKey) ?? edgeAngles.get(label) ?? [];
       let place = dirs[0];
       for (const dir of dirs) {
         if (angles.every(a => angleDiff(a, dir.angle) >= Math.PI / 4)) { place = dir; break; }
