@@ -341,7 +341,7 @@ function render(phaseIdx) {
   for (let i = 0; i < nodeKeys.length; i++) {
     const k = nodeKeys[i];
     const n = p.nodes[k];
-    const nd = scene.layout.node(k, n.x, n.y, { w: 50, h: 36, rx: 6 }).color(nodeColors[i]).label(k);
+    const nd = scene.layout.node(k, n.x, n.y, { rx: 4 }).color(nodeColors[i]).label(k);
     nd.port(k+'-in', 'top', { size: 3 }).color('dim');
     nd.port(k+'-out', 'bottom', { size: 3 }).color('dim');
   }
@@ -356,8 +356,8 @@ function render(phaseIdx) {
       const sx = p.nodes[src].x, sy = p.nodes[src].y;
       const dx = p.nodes[dst].x, dy = p.nodes[dst].y;
       const midY = (sy + dy) / 2;
-      const topDst = dy - 18; // half node height: destination top edge
-      const botSrc = sy + 18; // half node height: source bottom edge
+      const topDst = dy - 12; // half node height: destination top edge
+      const botSrc = sy + 12; // half node height: source bottom edge
       
       const pts = [[sx, botSrc], [sx, midY], [dx, midY], [dx, topDst]];
       
