@@ -112,8 +112,8 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
         fm.patch(eid, { dash: d });
         return this;
       },
-      label(t: string) { /* label rendering handled by callout — TODO */ return this; },
-      weight(n: number) { /* weight handled by callout — TODO */ return this; },
+      label(t: string) { /* TODO: implement edge labels natively */ return this; },
+      weight(n: number) { /* TODO: implement edge weight natively */ return this; },
     };
   }
 
