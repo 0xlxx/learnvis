@@ -223,8 +223,8 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       const oldLd = oldState as LineState;
       if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
         const base = ld._base as { from: [number, number]; to: [number, number] };
-        svg.interrupt();
-        svg.attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[0].toString())
+        svg.interrupt().transition(tr)
+           .attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[0].toString())
            .attrTween('y1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[1].toString())
            .attrTween('x2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[0].toString())
            .attrTween('y2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[1].toString())
@@ -255,8 +255,8 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
         const oldRd = oldState as RegionState;
         if (rd._tf && (rd._base as any)?.vertices && oldRd._tf && (oldRd._base as any)?.vertices) {
           const baseVerts = (rd._base as any).vertices as [number, number][];
-          svg.interrupt();
-          svg.attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf as Transform[], rd._tf as Transform[], t)).map(p => p.join(',')).join(' '))
+          svg.interrupt().transition(tr)
+             .attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf as Transform[], rd._tf as Transform[], t)).map(p => p.join(',')).join(' '))
              .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
         } else {
           let pts: Vec2[];

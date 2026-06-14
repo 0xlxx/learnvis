@@ -5812,8 +5812,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 			const oldLd = oldState;
 			if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
 				const base = ld._base;
-				svg.interrupt();
-				svg.attrTween("x1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString()).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
+				svg.interrupt().transition(tr).attrTween("x1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString()).attr("stroke", ld.stroke).attr("stroke-width", ld.strokeW);
 			} else {
 				let x1, y1, x2, y2;
 				if (ld._tf && ld._base) {
@@ -5841,8 +5840,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 				const oldRd = oldState;
 				if (rd._tf && rd._base?.vertices && oldRd._tf && oldRd._base?.vertices) {
 					const baseVerts = rd._base.vertices;
-					svg.interrupt();
-					svg.attrTween("points", () => (t) => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
+					svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
 				} else {
 					let pts;
 					if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
