@@ -10,6 +10,7 @@ import { createMathRenderer } from './math';
 import { createGraph } from './graph';
 import { createLayout } from './layout';
 import { bootstrap } from './bootstrap';
+import { eid } from './types';
 
 let dom: JSDOM, ctx: any, fm: FrameManager;
 
@@ -263,5 +264,66 @@ describe('layout API (v4 entity types)', () => {
     const e = fm.entities.get('polygon:enc');
     expect(e!.desired.type).toBe('region');
     expect((e!.desired as any).shape).toBe('polygon');
+  });
+});
+
+// ═══════════════════════════════════════════════════════════
+//  Regression invariants
+// ═══════════════════════════════════════════════════════════
+
+describe('regression invariants', () => {
+  let fm: FrameManager;
+  let ctx: ReturnType<typeof bootstrap>;
+
+  function setup() {
+    ctx = bootstrap('#app', { width: 400, height: 300 });
+    fm = new FrameManager(ctx);
+  }
+
+  it('edge() with missing port IDs should not produce NaN coordinates', () => {
+    setup();
+    const layout = createLayout(fm, ctx.palette);
+    fm.begin();
+    layout.node('A', 100, 100);
+    layout.node('B', 300, 200);
+    layout.edge('e', 'A-out', 'B-in').color('dim');
+    fm.commit({ animate: false });
+    const e = fm.entities.get('edge:e');
+    const ld = e!.desired as import('./types').LineState;
+    expect(Number.isFinite(ld.x1 ?? 0)).toBe(true);
+    expect(Number.isFinite(ld.y1 ?? 0)).toBe(true);
+    expect(Number.isFinite(ld.x2 ?? 0)).toBe(true);
+    expect(Number.isFinite(ld.y2 ?? 0)).toBe(true);
+  });
+
+  it('edge() with same port (zero-length) should not produce NaN', () => {
+    setup();
+    const layout = createLayout(fm, ctx.palette);
+    fm.begin();
+    const n = layout.node('A', 100, 100);
+    n.port('p', 'right', { size: 4 });
+    layout.edge('e', 'p', 'p');
+    fm.commit({ animate: false });
+    const e = fm.entities.get('edge:e');
+    const ld = e!.desired as import('./types').LineState;
+    expect(Number.isFinite(ld.x1 ?? 0)).toBe(true);
+    expect(Number.isFinite(ld.y1 ?? 0)).toBe(true);
+  });
+
+  it('eid() with empty string produces valid ID', () => {
+    const id = eid('point', '');
+    expect(id).toBeTruthy();
+    expect(id.length).toBeGreaterThan(2);
+    expect(id).toContain(':');
+  });
+
+  it('polyline with 0 points does not crash', () => {
+    setup();
+    const math = createMathRenderer(fm, ctx, ctx.palette);
+    fm.begin();
+    math.polyline('p0', []);
+    fm.commit({ animate: false });
+    const e = fm.entities.get('segment:p0');
+    expect(e).toBeTruthy();
   });
 });

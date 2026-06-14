@@ -63,6 +63,7 @@ export function markerHalf(config?: { size?: number; width?: number; offset?: nu
 export function offsetLine(from: Vec2, to: Vec2, fromR: number, toR: number, _directed = true) {
   const dx = to[0] - from[0], dy = to[1] - from[1];
   const l = len(dx, dy);
+  if (l < 1e-9) return { x1: from[0], y1: from[1], x2: to[0], y2: to[1] }; // zero-length: no offset
   const ux = dx / l, uy = dy / l;
   return { x1: from[0] + ux * fromR, y1: from[1] + uy * fromR, x2: to[0] - ux * toR, y2: to[1] - uy * toR };
 }

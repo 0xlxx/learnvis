@@ -168,6 +168,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 	function offsetLine(from, to, fromR, toR, _directed = true) {
 		const dx = to[0] - from[0], dy = to[1] - from[1];
 		const l = len(dx, dy);
+		if (l < 1e-9) return {
+			x1: from[0],
+			y1: from[1],
+			x2: to[0],
+			y2: to[1]
+		};
 		const ux = dx / l, uy = dy / l;
 		return {
 			x1: from[0] + ux * fromR,
