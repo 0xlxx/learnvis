@@ -372,7 +372,7 @@ function render(phaseIdx) {
   }
 
   // Layer labels - using pure SVG
-  const { svgLabel } = window.learnvis;
+  const { svgLabel } = LearnVis;
   scene.ctx.stage.overlay.selectAll('[data-id^="label-lbl_"]').remove();
 
   if (p.layers) {
