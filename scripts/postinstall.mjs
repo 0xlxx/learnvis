@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // postinstall.mjs — link project skills/agents to all supported AI platforms
 // Handles: fresh install, reinstall, update (new/removed skills)
-import { symlinkSync, existsSync, readdirSync, statSync, realpathSync, mkdirSync, rmSync } from 'fs';
+import { symlinkSync, existsSync, readdirSync, statSync, lstatSync, realpathSync, mkdirSync, rmSync, unlinkSync } from 'fs';
 import { join, resolve, basename } from 'path';
 import { homedir } from 'os';
 
@@ -18,10 +18,11 @@ const PLATFORMS = [
 
 // Source directories in the project (relative to project root)
 const SOURCES = [
-  { rel: '.pi/skills',     type: 'dir' },
-  { rel: '.pi/agents',     type: 'file' },
-  { rel: '.agents/skills', type: 'dir' },
-  { rel: '.agents/agents', type: 'file' },
+  { rel: 'skills',          type: 'dir' },
+  { rel: '.pi/skills',      type: 'dir' },
+  { rel: '.pi/agents',      type: 'file' },
+  { rel: '.agents/skills',  type: 'dir' },
+  { rel: '.agents/agents',  type: 'file' },
 ];
 
 const cwd = process.cwd();
@@ -39,8 +40,11 @@ function linkOne(src, dst) {
     try {
       if (realpathSync(dst) === realpathSync(src)) return 'skip';
     } catch {}
-    // Stale — remove and recreate
-    try { rmSync(dst, { recursive: true, force: true }); } catch { return 'fail'; }
+    // Stale — remove and recreate (symlink or dir)
+    try {
+      if (lstatSync(dst).isSymbolicLink()) unlinkSync(dst);
+      else rmSync(dst, { recursive: true, force: true });
+    } catch { return 'fail'; }
     ensureParent(dst);
     try { symlinkSync(src, dst); } catch { return 'fail'; }
     return 'replace';

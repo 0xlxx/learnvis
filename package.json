@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:cli": "npx tsdown cli.ts --format esm --outDir dist --clean false --minify false",
-    "postinstall": "node scripts/postinstall.mjs"
+    "postinstall": "node scripts/postinstall.mjs",
+    "build:skill": "pnpm build && cp dist/learnvis.iife.js skills/learnvis/assets/ && rsync -a skills/learnvis/ ../skills/learnvis/ --delete"
   },
   "devDependencies": {
     "@types/d3": "^7.4.3",
