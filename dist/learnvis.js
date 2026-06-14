@@ -5719,7 +5719,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 					};
 				}
 				let pts;
-				if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
+				if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 				else pts = rd.pts ?? rd.vertices ?? [];
 				const ptsStr = pts.map((p) => p.join(",")).join(" ");
 				const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none").attr("stroke-width", rd.strokeW ?? 0).attr("stroke-dasharray", rd.dash ?? "");
@@ -5842,12 +5842,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", rd.fill).attr("stroke", rd.stroke ?? rd.fill);
 				else {
 					const oldRd = oldState;
-					if (rd._tf && rd._base?.vertices && oldRd._tf && oldRd._base?.vertices) {
+					if (rd._tf && rd._base && "vertices" in rd._base && oldRd._tf && oldRd._base && "vertices" in oldRd._base) {
 						const baseVerts = rd._base.vertices;
 						svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
 					} else {
 						let pts;
-						if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
+						if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 						else pts = rd.pts ?? rd.vertices ?? [];
 						svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none");
 					}
@@ -5911,7 +5911,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			case "region": {
 				const rd = d;
 				let pts;
-				if (rd._tf && rd._base?.vertices) pts = applyVertices(rd._base.vertices, rd._tf);
+				if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
 				else pts = rd.pts ?? rd.vertices ?? [];
 				svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", rd.fill).attr("stroke", rd.stroke ?? "none").attr("stroke-width", rd.strokeW ?? 0);
 				applyCommon(svg, rd.opacity);

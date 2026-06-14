@@ -59,8 +59,11 @@ export type TfScale = { type: 'scale'; sx: number; sy: number };
 export type TfTranslate = { type: 'translate'; dx: number; dy: number };
 export type Transform = TfRotate | TfScale | TfTranslate;
 
+// ── Stored geometry base (immutable, used by transform pipeline) ──
+export type TfBase = { from: Vec2; to: Vec2 } | { vertices: Vec2[] };
+
 // ── Structural mixin: any entity CAN carry transforms ──
-type WithTransform<T> = T & { _base?: Record<string, unknown>; _tf?: Transform[] };
+type WithTransform<T> = T & { _base?: TfBase; _tf?: Transform[] };
 
 export type LineState = WithTransform<{
   type: 'line';

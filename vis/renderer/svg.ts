@@ -93,7 +93,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       let x1: number, y1: number, x2: number, y2: number;
       if (ld._tf && ld._base) {
         const b = ld._base as { from: [number, number]; to: [number, number] };
-        const res = applyLine(b.from, b.to, ld._tf as Transform[]);
+        const res = applyLine(b.from, b.to, ld._tf);
         x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
       } else {
         x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
@@ -103,7 +103,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const line = edges.append('line').attr('data-id', id)
         .attr('x1', x1).attr('y1', y1).attr('x2', x2).attr('y2', y2)
         .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW).attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round')
-        .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, (ld as any).marker) ?? null : null);
+        .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld.marker) ?? null : null);
       applyCommon(line, ld.opacity);
       return { group: line, text: null };
     }
@@ -125,8 +125,8 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       }
       // polygon / fill — apply transforms if present
       let pts: Vec2[];
-      if (rd._tf && (rd._base as any)?.vertices) {
-        pts = applyVertices((rd._base as any).vertices, rd._tf as Transform[]);
+      if (rd._tf && rd._base && 'vertices' in rd._base) {
+        pts = applyVertices(rd._base.vertices, rd._tf);
       } else {
         pts = rd.pts ?? rd.vertices ?? [];
       }
@@ -224,16 +224,16 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       if (ld._tf && ld._base && oldLd._tf && oldLd._base) {
         const base = ld._base as { from: [number, number]; to: [number, number] };
         svg.interrupt().transition(tr)
-           .attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[0].toString())
-           .attrTween('y1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).from[1].toString())
-           .attrTween('x2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[0].toString())
-           .attrTween('y2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf as Transform[], ld._tf as Transform[], t)).to[1].toString())
+           .attrTween('x1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[0].toString())
+           .attrTween('y1', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).from[1].toString())
+           .attrTween('x2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[0].toString())
+           .attrTween('y2', () => t => applyLine(base.from, base.to, interpolate(oldLd._tf, ld._tf, t)).to[1].toString())
            .attr('stroke', ld.stroke).attr('stroke-width', ld.strokeW);
       } else {
         let x1: number, y1: number, x2: number, y2: number;
         if (ld._tf && ld._base) {
           const b = ld._base as { from: [number, number]; to: [number, number] };
-          const res = applyLine(b.from, b.to, ld._tf as Transform[]);
+          const res = applyLine(b.from, b.to, ld._tf);
           x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
         } else {
           x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
@@ -253,15 +253,15 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           .attr('fill', rd.fill).attr('stroke', rd.stroke ?? rd.fill);
       } else {
         const oldRd = oldState as RegionState;
-        if (rd._tf && (rd._base as any)?.vertices && oldRd._tf && (oldRd._base as any)?.vertices) {
-          const baseVerts = (rd._base as any).vertices as [number, number][];
+        if (rd._tf && rd._base && 'vertices' in rd._base && oldRd._tf && oldRd._base && 'vertices' in oldRd._base) {
+          const baseVerts = rd._base.vertices as [number, number][];
           svg.interrupt().transition(tr)
-             .attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf as Transform[], rd._tf as Transform[], t)).map(p => p.join(',')).join(' '))
+             .attrTween('points', () => t => applyVertices(baseVerts, interpolate(oldRd._tf, rd._tf, t)).map(p => p.join(',')).join(' '))
              .attr('fill', rd.fill).attr('stroke', rd.stroke ?? 'none');
         } else {
           let pts: Vec2[];
-          if (rd._tf && (rd._base as any)?.vertices) {
-            pts = applyVertices((rd._base as any).vertices, rd._tf as Transform[]);
+          if (rd._tf && rd._base && 'vertices' in rd._base) {
+            pts = applyVertices(rd._base.vertices, rd._tf);
           } else {
             pts = rd.pts ?? rd.vertices ?? [];
           }
@@ -329,7 +329,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
       let x1: number, y1: number, x2: number, y2: number;
       if (ld._tf && ld._base) {
         const b = ld._base as { from: [number, number]; to: [number, number] };
-        const res = applyLine(b.from, b.to, ld._tf as Transform[]);
+        const res = applyLine(b.from, b.to, ld._tf);
         x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
       } else {
         x1 = ld.x1 ?? ld.from?.[0] ?? 0; y1 = ld.y1 ?? ld.from?.[1] ?? 0;
@@ -343,8 +343,8 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
     case 'region': {
       const rd = d as RegionState;
       let pts: Vec2[];
-      if (rd._tf && (rd._base as any)?.vertices) {
-        pts = applyVertices((rd._base as any).vertices, rd._tf as Transform[]);
+      if (rd._tf && rd._base && 'vertices' in rd._base) {
+        pts = applyVertices(rd._base.vertices, rd._tf);
       } else {
         pts = rd.pts ?? rd.vertices ?? [];
       }

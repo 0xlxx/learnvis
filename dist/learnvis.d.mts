@@ -763,8 +763,14 @@ type TfTranslate = {
   dy: number;
 };
 type Transform = TfRotate | TfScale | TfTranslate;
+type TfBase = {
+  from: Vec2;
+  to: Vec2;
+} | {
+  vertices: Vec2[];
+};
 type WithTransform<T> = T & {
-  _base?: Record<string, unknown>;
+  _base?: TfBase;
   _tf?: Transform[];
 };
 type LineState = WithTransform<{
