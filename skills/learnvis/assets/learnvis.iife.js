@@ -5318,7 +5318,57 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 
 //#endregion
 //#region vis/renderer/svg.ts
-/** Construct identity-equivalent transforms matching the structure of the given list.
+	function resamplePoints(pts, count) {
+		if (pts.length === count) return pts;
+		if (pts.length < 2) return Array(count).fill(pts[0] || [0, 0]);
+		let totalLength = 0;
+		const segs = [];
+		for (let i = 0; i < pts.length - 1; i++) {
+			const p1 = pts[i], p2 = pts[i + 1];
+			const len = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+			segs.push({
+				p1,
+				p2,
+				len
+			});
+			totalLength += len;
+		}
+		const out = [];
+		out.push(pts[0]);
+		for (let i = 1; i < count - 1; i++) {
+			const targetDist = i / (count - 1) * totalLength;
+			let d = 0;
+			for (const seg of segs) {
+				if (d + seg.len >= targetDist - 1e-6) {
+					const t = seg.len === 0 ? 0 : (targetDist - d) / seg.len;
+					out.push([seg.p1[0] + (seg.p2[0] - seg.p1[0]) * t, seg.p1[1] + (seg.p2[1] - seg.p1[1]) * t]);
+					break;
+				}
+				d += seg.len;
+			}
+		}
+		out.push(pts[pts.length - 1]);
+		return out;
+	}
+	function resolveLinePoints(ld) {
+		if (ld.points && ld.points.length >= 2) return ld.points;
+		let x1, y1, x2, y2;
+		if (ld._tf && ld._base) {
+			const b = ld._base;
+			const res = applyLine(b.from, b.to, ld._tf);
+			x1 = res.from[0];
+			y1 = res.from[1];
+			x2 = res.to[0];
+			y2 = res.to[1];
+		} else {
+			x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
+			y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+			x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
+			y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
+		}
+		return [[x1, y1], [x2, y2]];
+	}
+	/** Construct identity-equivalent transforms matching the structure of the given list.
 	*  Used to enable smooth attrTween interpolation when one side lacks _tf. */
 	function identityTransforms(tf) {
 		return tf.map((t) => {
@@ -5435,34 +5485,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			}
 			case "line": {
 				const ld = d;
-				if (ld.points && ld.points.length >= 2) {
-					const ptsStr = ld.points.map((p) => p.join(",")).join(" ");
-					const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round");
-					applyCommon(el, ld.opacity);
-					return {
-						group: el,
-						text: null
-					};
-				}
-				let x1, y1, x2, y2;
-				if (ld._tf && ld._base) {
-					const b = ld._base;
-					const res = applyLine(b.from, b.to, ld._tf);
-					x1 = res.from[0];
-					y1 = res.from[1];
-					x2 = res.to[0];
-					y2 = res.to[1];
-				} else {
-					x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
-					y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
-					x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
-					y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
-				}
+				const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
 				const hasMarker = ld.marker === "arrow" || ld.directed;
-				const line = edges.append("line").attr("data-id", id).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
-				applyCommon(line, ld.opacity);
+				const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
+				applyCommon(el, ld.opacity);
 				return {
-					group: line,
+					group: el,
 					text: null
 				};
 			}
@@ -5625,44 +5653,17 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			}
 			case "line": {
 				const ld = newState;
-				const oldLd = oldState;
-				if (ld.points && ld.points.length >= 2) {
-					const ptsStr = ld.points.map((p) => p.join(",")).join(" ");
-					svg.interrupt().transition(tr).attr("points", ptsStr).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
-					applyCommon(svg, ld.opacity);
-					break;
-				}
-				let oldTf = oldLd._tf;
-				let newTf = ld._tf;
-				let lineBase;
-				if (ld._tf && ld._base) {
-					lineBase = ld._base;
-					if (!oldLd._tf) oldTf = identityTransforms(ld._tf);
-				}
-				if (oldLd._tf && oldLd._base && !lineBase) {
-					lineBase = oldLd._base;
-					if (!ld._tf) newTf = identityTransforms(oldLd._tf);
-				}
-				if (lineBase && oldTf && newTf) {
-					const norm = normalizeTransforms(oldTf, newTf);
-					svg.interrupt().transition(tr).attrTween("x1", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).from[0].toString()).attrTween("y1", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).from[1].toString()).attrTween("x2", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).to[0].toString()).attrTween("y2", () => (t) => applyLine(lineBase.from, lineBase.to, interpolate(norm.old, norm.new, t)).to[1].toString()).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
-				} else {
-					let x1, y1, x2, y2;
-					if (ld._tf && ld._base) {
-						const b = ld._base;
-						const res = applyLine(b.from, b.to, ld._tf);
-						x1 = res.from[0];
-						y1 = res.from[1];
-						x2 = res.to[0];
-						y2 = res.to[1];
-					} else {
-						x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
-						y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
-						x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
-						y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
-					}
-					svg.interrupt().transition(tr).attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
-				}
+				const oldPts = resolveLinePoints(oldState);
+				const newPts = resolveLinePoints(ld);
+				const count = Math.max(oldPts.length, newPts.length, 10);
+				const oldResampled = resamplePoints(oldPts, count);
+				const newResampled = resamplePoints(newPts, count);
+				svg.interrupt().transition(tr).attrTween("points", () => (t) => {
+					return oldResampled.map((op, i) => {
+						const np = newResampled[i];
+						return `${op[0] + (np[0] - op[0]) * t},${op[1] + (np[1] - op[1]) * t}`;
+					}).join(" ");
+				}).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
 				if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
 				break;
 			}
@@ -5730,21 +5731,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			}
 			case "line": {
 				const ld = d;
-				let x1, y1, x2, y2;
-				if (ld._tf && ld._base) {
-					const b = ld._base;
-					const res = applyLine(b.from, b.to, ld._tf);
-					x1 = res.from[0];
-					y1 = res.from[1];
-					x2 = res.to[0];
-					y2 = res.to[1];
-				} else {
-					x1 = ld.x1 ?? ld.from?.[0] ?? 0;
-					y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-					x2 = ld.x2 ?? ld.to?.[0] ?? 0;
-					y2 = ld.y2 ?? ld.to?.[1] ?? 0;
-				}
-				svg.attr("x1", x1).attr("y1", y1).attr("x2", x2).attr("y2", y2).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
+				const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
+				svg.attr("points", ptsStr).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 				applyCommon(svg, ld.opacity);
 				break;
 			}
@@ -5788,8 +5776,8 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		beginFrame() {
 			this.ctx.root.selectAll(".vlbl").remove();
 		}
-		commitFrame(_opts) {
-			this._repositionLabels();
+		commitFrame(opts) {
+			this._repositionLabels(opts);
 		}
 		create(id, state) {
 			const h = new SVGHandle(this.ctx, id, state, this._markerCache);
@@ -5799,7 +5787,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		dispose() {
 			this.handles.clear();
 		}
-		_repositionLabels() {
+		_repositionLabels(opts) {
 			const edgeAngles = /* @__PURE__ */ new Map();
 			for (const [id, h] of this.handles) {
 				if (h.state.type !== "line") continue;
@@ -5877,7 +5865,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				const gap = 6;
 				const tx = nd.x + place.dx * (halfW + gap);
 				const ty = nd.y + place.dy * (halfH + gap);
-				h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
+				h.setTextPosition(tx, ty, place.anchor, place.dyAttr, opts);
 			}
 		}
 	};

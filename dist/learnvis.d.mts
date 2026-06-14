@@ -990,7 +990,7 @@ declare class SVGRenderer implements Renderer {
   private _markerCache;
   constructor(ctx: StageCtx);
   beginFrame(): void;
-  commitFrame(_opts?: {
+  commitFrame(opts?: {
     animate?: boolean;
     ms?: number;
   }): void;

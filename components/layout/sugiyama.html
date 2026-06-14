@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lesson 0001 — Sugiyama 框架：层次布局的五大阶段</title>
+<style>
+  :root {
+    --text: #1a1a1a;
+    --muted: #5a5a5a;
+    --accent: #2563eb;
+    --bg: #fefefe;
+    --surface: #f8f8f8;
+    --border: #e0e0e0;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: "Noto Serif SC", "Source Han Serif SC", Georgia, "Times New Roman", serif;
+    line-height: 1.7;
+    color: var(--text);
+    background: var(--bg);
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem;
+  }
+  h1 { font-size: 1.8rem; margin-bottom: 0.3rem; }
+  h2 { font-size: 1.3rem; margin: 2rem 0 0.8rem; border-bottom: 1px solid var(--border); padding-bottom: 0.3rem; }
+  h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+  p, li { margin-bottom: 0.7rem; }
+  .meta { color: var(--muted); font-size: 0.9rem; margin-bottom: 2rem; }
+  .callout {
+    background: #eff6ff; border-left: 4px solid var(--accent);
+    padding: 1rem 1.2rem; margin: 1.5rem 0; border-radius: 0 6px 6px 0;
+  }
+  .callout strong { color: var(--accent); }
+  .warning {
+    background: #fef9c3; border-left: 4px solid #eab308;
+    padding: 1rem 1.2rem; margin: 1.5rem 0; border-radius: 0 6px 6px 0;
+  }
+  .quiz { margin: 1.5rem 0; }
+  .quiz label {
+    display: block; padding: 0.5rem 1rem; margin: 0.3rem 0;
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .quiz label:hover { background: var(--surface); }
+  .quiz input[type="radio"] { margin-right: 0.5rem; }
+  .quiz button {
+    margin-top: 0.8rem; padding: 0.5rem 1.5rem;
+    background: var(--accent); color: white; border: none;
+    border-radius: 6px; cursor: pointer; font-size: 0.95rem;
+  }
+  .quiz button:hover { opacity: 0.9; }
+  .feedback { display: none; padding: 0.6rem 1rem; border-radius: 6px; margin-top: 0.5rem; }
+  .feedback.correct { display: block; background: #dcfce7; color: #166534; }
+  .feedback.wrong { display: block; background: #fee2e2; color: #991b1b; }
+  #stage { margin: 1.5rem 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .step-controls {
+    display: flex; gap: 0.5rem; align-items: center; margin-top: 0.5rem;
+  }
+  .step-controls button {
+    padding: 0.4rem 1rem; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+  }
+  .step-controls button:hover { background: #e8e8e8; }
+  .step-controls .step-label { flex: 1; text-align: center; font-weight: 600; color: var(--accent); }
+  .references { font-size: 0.9rem; }
+  .references a { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+  th, td { border: 1px solid var(--border); padding: 0.5rem 0.7rem; text-align: left; font-size: 0.9rem; }
+  th { background: var(--surface); font-weight: 600; }
+  .tag {
+    display: inline-block; padding: 0.1rem 0.5rem; border-radius: 4px;
+    font-size: 0.8rem; font-weight: 600;
+  }
+  .tag-phase1 { background: #fee2e2; color: #991b1b; }
+  .tag-phase2 { background: #fef3c7; color: #92400e; }
+  .tag-phase3 { background: #dcfce7; color: #166534; }
+  .tag-phase4 { background: #dbeafe; color: #1e40af; }
+  .tag-phase5 { background: #f3e8ff; color: #6b21a8; }
+</style>
+</head>
+<body>
+
+<h1>Lesson 0001 — Sugiyama 框架：层次布局的五大阶段</h1>
+<p class="meta">
+  前置知识：DAG、拓扑排序、BFS/DFS · 关联课程：无（此为第一课）·
+  预计完成时间：15 分钟
+</p>
+
+<h2>你要解决什么问题？</h2>
+
+<p>
+  假设你有一个有向图——比如函数调用链、类继承关系、CI/CD 流水线——你
+  <strong>想让节点按层次排列，边尽量朝一个方向流动</strong>。这不是随便拖拽能做到的，需要算法。
+</p>
+
+<p>
+  <strong>Sugiyama 框架</strong>（Sugiyama, Tagawa & Toda, 1981）是解决这个问题的经典方案。
+  它是 ELK 层次布局引擎的核心，也是几乎所有层次布局算法的基础。它把问题拆成 5 个连续阶段：
+</p>
+
+<table>
+  <tr>
+    <th>阶段</th><th>名称</th><th>输入</th><th>输出</th><th>核心问题</th>
+  </tr>
+  <tr>
+    <td><span class="tag tag-phase1">P1</span></td>
+    <td>消环 Cycle Breaking</td>
+    <td>任意有向图</td>
+    <td>无环图（DAG）</td>
+    <td>哪些边需要反转？</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-phase2">P2</span></td>
+    <td>分层 Layer Assignment</td>
+    <td>DAG</td>
+    <td>每节点一个层级号</td>
+    <td>每个节点放哪一层？</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-phase3">P3</span></td>
+    <td>减少交叉 Crossing Minimization</td>
+    <td>分层节点</td>
+    <td>每层节点排好序</td>
+    <td>怎么排节点让交叉最少？</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-phase4">P4</span></td>
+    <td>节点放置 Node Placement</td>
+    <td>有序分层</td>
+    <td>节点 (x, y) 坐标</td>
+    <td>节点放在什么位置让边尽量直？</td>
+  </tr>
+  <tr>
+    <td><span class="tag tag-phase5">P5</span></td>
+    <td>边路由 Edge Routing</td>
+    <td>节点坐标 + 边</td>
+    <td>边的路径</td>
+    <td>边怎么画才能不穿过节点？</td>
+  </tr>
+</table>
+
+<div class="callout">
+  <strong>关键洞察：</strong>这 5 个阶段是<strong>串行管道</strong>——每个阶段的输出是下一阶段的输入。
+  这也是为什么你可以独立优化每个阶段，而不需要同时处理所有约束。
+  这是一个 <strong>divide and conquer</strong> 策略的经典案例。
+</div>
+
+<h2>可视化演练</h2>
+
+<p>
+  下面是一个简单有向图经历 5 个阶段的过程。点击「下一阶段」逐步观看变化：
+</p>
+
+<div id="stage"></div>
+<div class="step-controls">
+  <button onclick="prev()">◀ 上一阶段</button>
+  <span class="step-label" id="stepLabel">P1: 消环</span>
+  <button onclick="next()">下一阶段 ▶</button>
+</div>
+
+<p style="margin-top:0.8rem; color:var(--muted); font-size:0.85rem;">
+  观察要点：P1 反转了一条边 → P2 分配层级 → P3 调整 A 和 B 的上下顺序减少交叉 → P4 放置坐标 → P5 画出正交边
+</p>
+
+<h2>为什么必须是这个顺序？</h2>
+
+<p>顺序不可调换，因为每一步依赖上一步的结果：</p>
+
+<ul>
+  <li><strong>P1→P2：</strong>如果不先消环，分层算法根本无法处理——在有环图上"上游/下游"没有意义</li>
+  <li><strong>P2→P3：</strong>必须先知道每个节点属于哪一层，才能在层内调整顺序</li>
+  <li><strong>P3→P4：</strong>必须先固定节点在层内的相对顺序，再分配精确坐标</li>
+  <li><strong>P4→P5：</strong>边路由需要知道节点的精确位置才能避开它们</li>
+</ul>
+
+<div class="callout">
+  <strong>记住这个框架。</strong>接下来的每一课都会深入其中一个阶段。
+  理解这 5 阶段的"输入→输出"是你实现整个引擎所需的心理模型。
+</div>
+
+<h2>检验理解</h2>
+
+<div class="quiz" id="q1">
+  <p><strong>Q1:</strong> 为什么消环（P1）必须排在分层（P2）之前？</p>
+  <label><input type="radio" name="q1" value="a">A: 因为消环可以同时确定节点坐标</label>
+  <label><input type="radio" name="q1" value="b">B: 因为分层算法要求图是无环的，否则无法定义"上游/下游"</label>
+  <label><input type="radio" name="q1" value="c">C: 这是历史惯例，其实顺序无所谓</label>
+  <label><input type="radio" name="q1" value="d">D: 因为消环比分层时间复杂度低</label>
+  <div class="feedback" id="q1-feedback"></div>
+</div>
+
+<div class="quiz" id="q2">
+  <p><strong>Q2:</strong> 哪个阶段负责确定节点的精确 (x, y) 坐标？</p>
+  <label><input type="radio" name="q2" value="a">A: P2 分层</label>
+  <label><input type="radio" name="q2" value="b">B: P3 减少交叉</label>
+  <label><input type="radio" name="q2" value="c">C: P4 节点放置</label>
+  <label><input type="radio" name="q2" value="d">D: P5 边路由</label>
+  <div class="feedback" id="q2-feedback"></div>
+</div>
+
+<div class="quiz" id="q3">
+  <p><strong>Q3:</strong> 以下哪个不是 Sugiyama 框架的设计目标？</p>
+  <label><input type="radio" name="q3" value="a">A: 边尽量朝一个方向流动</label>
+  <label><input type="radio" name="q3" value="b">B: 减少边交叉数量</label>
+  <label><input type="radio" name="q3" value="c">C: 最大化节点密度</label>
+  <label><input type="radio" name="q3" value="d">D: 让长边平整（减少弯曲）</label>
+  <div class="feedback" id="q3-feedback"></div>
+</div>
+
+<div class="warning">
+  <strong>注意：</strong>这些阶段中的<strong>大多数问题是 NP-hard 的</strong>。
+  例如，Crossing Minimization（P3）即使是在 2 层之间优化节点顺序也是 NP-hard 的。
+  我们实际使用的是<strong>启发式算法</strong>——在合理时间内找到"足够好"的解，而非最优解。
+  这是整个领域的核心张力：美感目标 vs 计算可行性。
+</div>
+
+<h2>推荐阅读</h2>
+<div class="references">
+  <ul>
+    <li><strong>原始论文：</strong>Sugiyama, Tagawa & Toda (1981).
+      <em>Methods for Visual Understanding of Hierarchical System Structures.</em> IEEE SMC.
+      <a href="https://ieeexplore.ieee.org/document/4308636">→ IEEE Xplore</a>
+    </li>
+    <li><strong>ELK 综述：</strong>
+      <em>The Eclipse Layout Kernel</em> (2023). §3 详细描述了 Layered 算法的架构.
+      <a href="https://arxiv.org/abs/2311.00533">→ arXiv</a>
+    </li>
+    <li><strong>ELK 官方文档：</strong>
+      <a href="https://eclipse.dev/elk/reference/algorithms/org-eclipse-elk-layered.html">Layered Algorithm Reference</a>
+    </li>
+    <li><strong>下节预告：</strong><a href="0002-cycle-breaking.html">Lesson 0002 — 消环：如何让图变成无环</a>
+  </ul>
+</div>
+
+<div class="callout" style="margin-top:2rem;">
+  <strong>💬 有问题吗？</strong>这个 agent 是你的老师——随时追问任何不清楚的地方。
+  比如："为什么交叉最小化是 NP-hard？" "ELK 实际用了什么启发式？"
+</div>
+
+<script src="../../dist/learnvis.iife.js"></script>
+<script>
+// ── Graph definition (consistent across all phases) ──
+const N = {
+  A: 'A', B: 'B', C: 'C', D: 'D', E: 'E'
+};
+
+// Edge list with directions
+const edges = [
+  ['A','C'], ['B','C'], ['C','D'], ['C','E'], ['E','A']  // E→A creates a cycle
+];
+
+// Per-phase data
+const phases = [
+  { // P1: original graph (with cycle)
+    title: 'P1: 消环 — Cycle Breaking',
+    desc: '发现环 A→C→E→A。反转 E→A 为 A→E，图变为 DAG。',
+    nodes: {
+      A: { x: 300, y:  80 }, B: { x: 460, y:  80 },
+      C: { x: 380, y: 220 },
+      D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
+    },
+    edges: [['A','C',true],['B','C',true],['C','D',true],['C','E',true],['E','A',true]],
+    reverseEdges: ['E,A']
+  },
+  { // P2: DAG after cycle breaking (A→E reversed direction)
+    title: 'P2: 分层 — Layer Assignment',
+    desc: '拓扑排序分配层级：A,B→Layer0, C→Layer1, D,E→Layer2',
+    nodes: {
+      A: { x: 300, y:  80 }, B: { x: 460, y:  80 },
+      C: { x: 380, y: 220 },
+      D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
+    },
+    edges: [['A','C',true],['B','C',true],['C','D',true],['C','E',true],['A','E',true]],
+    reverseEdges: [],
+    layers: { labels: ['Layer 0', 'Layer 1', 'Layer 2'], yPositions: [80, 220, 360] }
+  },
+  { // P3: Crossing minimization — swap A and B
+    title: 'P3: 减少交叉 — Crossing Minimization',
+    desc: '原顺序 A,B→C 产生交叉。交换 A,B 后消除。',
+    nodes: {
+      B: { x: 300, y:  80 }, A: { x: 460, y:  80 },
+      C: { x: 380, y: 220 },
+      D: { x: 300, y: 360 }, E: { x: 460, y: 360 }
+    },
+    edges: [['A','C',true],['B','C',true],['C','D',true],['C','E',true],['A','E',true]],
+    reverseEdges: [],
+    layers: { labels: ['Layer 0', 'Layer 1', 'Layer 2'], yPositions: [80, 220, 360] }
+  },
+  { // P4: Node placement — precise coordinates
+    title: 'P4: 节点放置 — Node Placement',
+    desc: 'Brandes & Köpf 算法分配精确 x 坐标，使长边尽可能垂直。',
+    nodes: {
+      B: { x: 340, y:  80 }, A: { x: 420, y:  80 },
+      C: { x: 380, y: 220 },
+      D: { x: 340, y: 360 }, E: { x: 420, y: 360 }
+    },
+    edges: [['A','C',true],['B','C',true],['C','D',true],['C','E',true],['A','E',true]],
+    reverseEdges: [],
+    layers: { labels: ['Layer 0', 'Layer 1', 'Layer 2'], yPositions: [80, 220, 360] }
+  },
+  { // P5: Edge routing — orthogonal
+    title: 'P5: 边路由 — Orthogonal Edge Routing',
+    desc: '边用水平/垂直线段绘制，绕过节点。注意 A→E 的长边用折线段路由。',
+    nodes: {
+      B: { x: 340, y:  80 }, A: { x: 420, y:  80 },
+      C: { x: 380, y: 220 },
+      D: { x: 340, y: 360 }, E: { x: 420, y: 360 }
+    },
+    edges: [['A','C',true],['B','C',true],['C','D',true],['C','E',true],['A','E',true]],
+    reverseEdges: [],
+    layers: { labels: ['Layer 0', 'Layer 1', 'Layer 2'], yPositions: [80, 220, 360] },
+    showRoutes: true
+  }
+];
+
+let currentPhase = 0;
+let scene;
+
+function render(phaseIdx) {
+  currentPhase = phaseIdx;
+  const p = phases[phaseIdx];
+  document.getElementById('stepLabel').textContent = p.title;
+
+  // Clear and redraw
+  const container = document.getElementById('stage');
+  container.innerHTML = '';
+
+  scene = LearnVis.stage('#stage', { width: 700, height: 440, theme: 'paper' });
+  scene.frames.begin();
+
+  // Draw layer bands (rank must be 0-based index, not pixel Y)
+  if (p.layers) {
+    for (let i = 0; i < p.layers.yPositions.length; i++) {
+      scene.layout.layer('L'+i, i, { totalRanks: p.layers.yPositions.length, w: 700, startY: 50, endY: 390, layerGap: 4 });
+    }
+  }
+
+  // Draw nodes + ports FIRST (edge() needs ports to exist beforehand)
+  const nodeKeys = Object.keys(p.nodes);
+  const nodeColors = ['#4f86c6', '#4f86c6', '#e07745', '#4f86c6', '#4f86c6'];
+  for (let i = 0; i < nodeKeys.length; i++) {
+    const k = nodeKeys[i];
+    const n = p.nodes[k];
+    const nd = scene.layout.node(k, n.x, n.y, { w: 50, h: 36, rx: 6 }).color(nodeColors[i]).label(k);
+    nd.port(k+'-in', 'top', { size: 3 }).color('dim');
+    nd.port(k+'-out', 'bottom', { size: 3 }).color('dim');
+  }
+
+  // Draw edges (ports now exist)
+  for (const [src, dst, directed] of p.edges) {
+    const isRev = p.reverseEdges.includes(src + ',' + dst);
+    const edgeId = src+'-'+dst;
+    
+    if (p.showRoutes) {
+      // P5: orthogonal routing with 3-segment polyline
+      const sx = p.nodes[src].x, sy = p.nodes[src].y;
+      const dx = p.nodes[dst].x, dy = p.nodes[dst].y;
+      const midY = (sy + dy) / 2;
+      const topDst = dy - 18; // half node height: destination top edge
+      const botSrc = sy + 18; // half node height: source bottom edge
+      
+      const pts = [[sx, botSrc], [sx, midY], [dx, midY], [dx, topDst]];
+      
+      scene.layout.edge(edgeId, src+'-out', dst+'-in')
+        .color(isRev ? '#e03131' : '#94a3b8').directed(directed).strokeW(1.8)
+        .route(pts); // Use new route method for polylines!
+    } else {
+      scene.layout.edge(edgeId, src+'-out', dst+'-in')
+        .color(isRev ? '#e03131' : '#94a3b8').directed(directed).strokeW(1.8)
+        .route(null); // Clear any routes to be straight
+    }
+  }
+
+  // Layer labels - using DOM overlay so we must clean old ones.
+  // The layout layers are smoothly transitioned above.
+  document.querySelectorAll('.vlbl').forEach(el => el.remove());
+  if (p.layers) {
+    for (let i = 0; i < p.layers.yPositions.length; i++) {
+      scene.ctx.callout({x: 20, y: p.layers.yPositions[i]}, p.layers.labels[i],
+        {place: 'left', style: {fontSize: '11px', color: '#888'}});
+    }
+  }
+
+  // Callout for reversed edges
+  if (p.reverseEdges.length > 0 && phaseIdx === 0) {
+    scene.ctx.callout({x: 540, y: 360}, '此边被反转\n(消环)', {place:'right', style:{color:'#991b1b',fontSize:'11px'}});
+  }
+
+  // Description text
+  scene.ctx.callout({x: 350, y: 430}, p.desc, {place:'bottom', style:{fontSize:'10px',color:'#666'}});
+
+  scene.frames.commit({ animate: true });
+}
+
+function next() {
+  if (currentPhase < phases.length - 1) render(currentPhase + 1);
+}
+function prev() {
+  if (currentPhase > 0) render(currentPhase - 1);
+}
+
+// Quiz handlers
+function makeQuiz(id, correct) {
+  const radios = document.querySelectorAll('#q' + id + ' input');
+  radios.forEach(r => {
+    r.addEventListener('change', () => {
+      const fb = document.getElementById('q' + id + '-feedback');
+      if (r.value === correct) {
+        fb.className = 'feedback correct';
+        fb.textContent = '✓ 正确！';
+      } else {
+        fb.className = 'feedback wrong';
+        fb.textContent = '✗ 再想想——回顾上面的表格和解释。';
+      }
+    });
+  });
+}
+
+// Init
+render(0);
+makeQuiz(1, 'b');
+makeQuiz(2, 'c');
+makeQuiz(3, 'c');
+</script>
+
+
+</body>
+</html>
