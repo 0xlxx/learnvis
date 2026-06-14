@@ -255,7 +255,7 @@ const edges = [
 const phases = [
   { // P1: original graph (with cycle)
     title: 'P1: 消环 — Cycle Breaking',
-    desc: '发现环 A→C→E→A。反转 E→A 为 A→E，图变为 DAG。',
+    desc: '发现红色违规回环 E→A (它逆行向上跨越了层级)。反转它为 A→E，图即变为 DAG。',
     nodes: {
       A: { x: 340, y:  80 }, B: { x: 460, y:  80 },
       C: { x: 380, y: 220 },
@@ -351,7 +351,23 @@ function render(phaseIdx) {
     const isRev = p.reverseEdges.includes(src + ',' + dst);
     const edgeId = src+'-'+dst;
     
-    if (p.showRoutes) {
+    let edge = scene.layout.edge(edgeId, src+'-out', dst+'-in')
+      .color(isRev ? '#e03131' : '#94a3b8').directed(directed).strokeW(1.8);
+      
+    if (phaseIdx === 0 && src === 'E' && dst === 'A') {
+      // P1: Make the cycle edge obvious by routing it around the graph
+      const sx = p.nodes.E.x, sy = p.nodes.E.y;
+      const dx = p.nodes.A.x, dy = p.nodes.A.y;
+      const pts = [
+        [sx, sy + 12],
+        [sx, sy + 40],
+        [sx + 120, sy + 40],
+        [sx + 120, dy - 40],
+        [dx, dy - 40],
+        [dx, dy - 12]
+      ];
+      edge.route(pts);
+    } else if (p.showRoutes) {
       // P5: orthogonal routing with 3-segment polyline
       const sx = p.nodes[src].x, sy = p.nodes[src].y;
       const dx = p.nodes[dst].x, dy = p.nodes[dst].y;
@@ -360,19 +376,14 @@ function render(phaseIdx) {
       const botSrc = sy + 12; // half node height: source bottom edge
       
       const pts = [[sx, botSrc], [sx, midY], [dx, midY], [dx, topDst]];
-      
-      scene.layout.edge(edgeId, src+'-out', dst+'-in')
-        .color(isRev ? '#e03131' : '#94a3b8').directed(directed).strokeW(1.8)
-        .route(pts); // Use new route method for polylines!
+      edge.route(pts);
     } else {
-      scene.layout.edge(edgeId, src+'-out', dst+'-in')
-        .color(isRev ? '#e03131' : '#94a3b8').directed(directed).strokeW(1.8)
-        .route(null); // Clear any routes to be straight
+      edge.route(null); // Clear any routes to be straight
     }
   }
 
   // Layer labels - using pure SVG
-  const { svgLabel } = LearnVis;
+  const { svgLabel } = window.learnvis;
   scene.ctx.stage.overlay.selectAll('[data-id^="label-lbl_"]').remove();
 
   if (p.layers) {
@@ -384,8 +395,8 @@ function render(phaseIdx) {
 
   // Callout for reversed edges
   if (p.reverseEdges.length > 0 && phaseIdx === 0) {
-    svgLabel(scene.ctx.stage.overlay, 520, 350, '此边被反转', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev1' });
-    svgLabel(scene.ctx.stage.overlay, 520, 365, '(消环)', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev2' });
+    svgLabel(scene.ctx.stage.overlay, 600, 220, '违规回边', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev1' });
+    svgLabel(scene.ctx.stage.overlay, 600, 235, 'E→A', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev2' });
   }
 
   // Description text
