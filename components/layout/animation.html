@@ -205,19 +205,15 @@ for (const v of bfsOrder) {
       for (const val of nodeSet) {
         const [px, py] = positions[val] ?? [200, 42];
         const n = ly.node(val, px, py, { w: 36, h: 28, rx: 6 }).color('primary').label(val);
-        n.port(`${val}-L`, 'left', { size: 3 }).color('dim');
-        n.port(`${val}-R`, 'right', { size: 3 }).color('dim');
+        n.port(`${val}-top`, 'top', { size: 3 }).color('dim');
+        n.port(`${val}-btm`, 'bottom', { size: 3 }).color('dim');
       }
-      // edges
-      // edges
+      // edges: parent bottom → child top (top-down tree)
       for (const e of edges) {
         const [parent, dir] = e.split('→');
         const childId = dir === 'L' ? childMap[parent]?.[0] : childMap[parent]?.[1];
         if (!childId || !nodeSet.has(childId)) continue;
-        const fromPort = `${parent}-${dir}`;
-        const toDir = dir === 'L' ? 'R' : 'L';
-        const toPort = `${childId}-${toDir}`;
-        ly.edge(`${parent}-${childId}`, fromPort, toPort)
+        ly.edge(`${parent}-${childId}`, `${parent}-btm`, `${childId}-top`)
           .color('accent').strokeW(1.4);
       }
     },
