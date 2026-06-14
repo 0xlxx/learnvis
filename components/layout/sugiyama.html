@@ -371,23 +371,25 @@ function render(phaseIdx) {
     }
   }
 
-  // Layer labels - using DOM overlay so we must clean old ones.
-  // The layout layers are smoothly transitioned above.
-  document.querySelectorAll('.vlbl').forEach(el => el.remove());
+  // Layer labels - using pure SVG
+  const { svgLabel } = window.learnvis;
+  scene.ctx.stage.overlay.selectAll('[data-id^="label-lbl_"]').remove();
+
   if (p.layers) {
     for (let i = 0; i < p.layers.yPositions.length; i++) {
-      scene.ctx.callout({x: 20, y: p.layers.yPositions[i]}, p.layers.labels[i],
-        {place: 'left', style: {fontSize: '11px', color: '#888'}});
+      svgLabel(scene.ctx.stage.overlay, 20, p.layers.yPositions[i], p.layers.labels[i],
+        { anchor: 'start', size: 11, fill: '#888', id: 'lbl_layer_' + i });
     }
   }
 
   // Callout for reversed edges
   if (p.reverseEdges.length > 0 && phaseIdx === 0) {
-    scene.ctx.callout({x: 540, y: 360}, '此边被反转\n(消环)', {place:'right', style:{color:'#991b1b',fontSize:'11px'}});
+    svgLabel(scene.ctx.stage.overlay, 520, 350, '此边被反转', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev1' });
+    svgLabel(scene.ctx.stage.overlay, 520, 365, '(消环)', { anchor: 'start', size: 11, fill: '#991b1b', id: 'lbl_rev2' });
   }
 
   // Description text
-  scene.ctx.callout({x: 350, y: 430}, p.desc, {place:'bottom', style:{fontSize:'10px',color:'#666'}});
+  svgLabel(scene.ctx.stage.overlay, 350, 440, p.desc, { anchor: 'middle', size: 11, fill: '#666', id: 'lbl_desc' });
 
   scene.frames.commit({ animate: true });
 }
