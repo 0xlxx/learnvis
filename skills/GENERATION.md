@@ -14,19 +14,20 @@ This document tracks how learnvis skills are generated and kept in sync with the
 ## Structure
 
 ```
-skills/learnvis/               # SSOT — project source
-├── GENERATION.md              # This file
-├── README.md                  # agentskills.io metadata
-├── SKILL.md                   # Main skill file: API tables + quick reference
-├── assets/                    # Built artifacts bundled with skill
-│   └── learnvis.iife.js       # IIFE build (auto-copied from dist/)
-└── references/                # Domain-specific reference docs (7 files)
-    ├── api-math.md            # Math primitives API
-    ├── api-graph.md           # Graph theory primitives API
-    ├── api-layout.md          # Layout primitives API (node/block/port/edge/layer/enclosure)
-    ├── api-common.md          # Shared utilities (card, tag, callout)
-    ├── api-controlflow.md     # Lifecycle & control flow API
-    ├── api-atomic.md          # Low-level atomic API
+skills/
+├── GENERATION.md              # This file (project-level, not distributed)
+└── learnvis/
+    ├── README.md              # agentskills.io metadata
+    ├── SKILL.md               # Main skill file: API tables + quick reference
+    ├── assets/                # Built artifacts bundled with skill
+    │   └── learnvis.iife.js   # IIFE build (auto-copied from dist/)
+    └── references/            # Domain-specific reference docs (7 files)
+        ├── api-math.md        # Math primitives API
+        ├── api-graph.md       # Graph theory primitives API
+        ├── api-layout.md      # Layout primitives API (node/block/port/edge/layer/enclosure)
+        ├── api-common.md      # Shared utilities (card, tag, callout)
+        ├── api-controlflow.md # Lifecycle & control flow API
+        ├── api-atomic.md      # Low-level atomic API
     └── guide-standalone.md    # Standalone HTML usage (CDN, minimal template)
 ```
 
