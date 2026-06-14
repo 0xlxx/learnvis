@@ -159,7 +159,7 @@ const sections = [
   },
   {
     name: '矩形旋转 + 角度',
-    desc: '矩形左下角在原点，绕原点旋转。angle arc 标识旋转角。',
+    desc: 'Base 顶点 + .rotate(), angle 弧随顶点动。',
     steps: (function() {
       var degs = [0, 30, 60, 90, 120];
       return degs.map(function(d) {
@@ -170,10 +170,10 @@ const sections = [
             var w = 80, h = 50, ox = 170, oy = 150;
             s.math.axes('ax', [ox, oy], { xLen: 130, yLen: 110, color: 'dim' });
             s.math.point('O', [ox, oy]).color('primary').label('O');
-            var cos = Math.cos(r), sin = Math.sin(r);
-            var rot = function(dx, dy) { return [ox + dx*cos - dy*sin, oy + dx*sin + dy*cos]; };
-            s.math.polygon('rect', [rot(0,0), rot(w,0), rot(w,h), rot(0,h)]).color('info').opacity(0.6);
-            s.math.angle('a', [ox,oy], [ox+40,oy], rot(w,0), { size: 18 }).color('danger').label(d + '°');
+            var baseVerts = [[0,0],[w,0],[w,h],[0,h]].map(function(v){ return [ox+v[0],oy+v[1]]; });
+            s.math.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(d, ox, oy);
+            var rotEnd = [ox + w*Math.cos(r), oy + w*Math.sin(r)];
+            s.math.angle('a', [ox,oy], [ox+40,oy], rotEnd, { size: 18 }).color('danger').label(d + '°');
           }
         };
       });
