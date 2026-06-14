@@ -231,7 +231,7 @@ const sugiyamaSteps = [
         n.port(k+'-in','top',{size:3}).color('dim');
         n.port(k+'-out','bottom',{size:3}).color('dim');
       }
-      for (const [s,d] of sugiyamaEdges) ly.edge(s+'-'+d, s+'-out', d+'-in').color('dim').directed(true).strokeW(1.4);
+      for (const [src,dst] of sugiyamaEdges) ly.edge(src+'-'+dst, src+'-out', dst+'-in').color('dim').directed(true).strokeW(1.4);
     },
   },
   {
@@ -241,11 +241,11 @@ const sugiyamaSteps = [
       for (const [k,[x,y]] of Object.entries(sugiyamaNodes)) {
         s.layout.node(k, x, y, { w: 44, h: 28, rx: 5 }).color('primary').label(k);
       }
-      for (const [s,d] of sugiyamaEdges) {
-        const sx = sugiyamaNodes[s][0], sy = sugiyamaNodes[s][1];
-        const dx = sugiyamaNodes[d][0], dy = sugiyamaNodes[d][1];
+      for (const [src,dst] of sugiyamaEdges) {
+        const sx = sugiyamaNodes[src][0], sy = sugiyamaNodes[src][1];
+        const dx = sugiyamaNodes[dst][0], dy = sugiyamaNodes[dst][1];
         const midY = (sy + dy) / 2;
-        s.math.polyline(s+'-'+d, [[sx,sy],[sx,midY],[dx,midY],[dx,dy]]).color('dim').strokeW(1.5);
+        s.math.polyline(src+'-'+dst, [[sx,sy],[sx,midY],[dx,midY],[dx,dy]]).color('dim').strokeW(1.5);
       }
     },
   },
