@@ -23,7 +23,7 @@
 <body>
 
 <h1>Layout Primitives</h1>
-<p class="sub">node · block · port · edge · layer — composable algorithm visualization</p>
+<p class="sub">node · block (compound) · port · edge · layer — composable algorithm visualization</p>
 <div class="row" id="sections"></div>
 
 <script src="../../dist/learnvis.js"></script>
@@ -62,35 +62,41 @@ const linkedListSteps = linkedItems.map(keys => ({
 }));
 
 // ═══════════════════════════════════════════════════════════
-//  2. 调用栈 — block
+//  2. 复合节点 — block = node container with ports
 // ═══════════════════════════════════════════════════════════
 
-const callstackData = [
-  [{ id: 'main', x: 200, y: 220, w: 140, h: 36, style: 'active' }],
-  [
-    { id: 'main', x: 200, y: 180, w: 140, h: 36, style: 'normal' },
-    { id: 'sort', x: 200, y: 235, w: 170, h: 40, style: 'active' },
-  ],
-  [
-    { id: 'main', x: 200, y: 140, w: 140, h: 36, style: 'muted' },
-    { id: 'sort', x: 200, y: 195, w: 170, h: 40, style: 'normal' },
-    { id: 'swap', x: 200, y: 250, w: 180, h: 40, style: 'active' },
-  ],
-];
-const callstackSteps = callstackData.map((frames, idx) => ({
-  label: `${idx + 1} 帧`,
-  frame: s => {
-    const ly = s.layout;
-    if (frames.length > 1) {
-      ly.layer('stack', 0, { y: 110, h: frames.length * 56 + 16, w: 280, x: 60, color: 'muted', style: 'swimlane', label: 'Call Stack' });
-    }
-    frames.forEach(f => {
-      const b = ly.block(f.id, f.x, f.y, f.w, f.h, {
-        style: f.style ?? 'normal', rx: 6, labelPlace: 'below',
-      }).label(f.id);
-    });
+const compoundSteps = [
+  {
+    label: '单独容器',
+    frame: s => {
+      s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+    },
   },
-}));
+  {
+    label: '带端口',
+    frame: s => {
+      const blk = s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      blk.port('top', 'top', { size: 5 }).color('primary');
+      blk.port('right', 'right', { size: 5 }).color('primary');
+      blk.port('bottom', 'bottom', { size: 5 }).color('primary');
+    },
+  },
+  {
+    label: '连接外部',
+    frame: s => {
+      const blk = s.layout.block('Sorter', 150, 100, 100, 80, { style: 'normal', rx: 8 }).label('Sorter');
+      blk.port('top', 'top', { size: 5 }).color('primary');
+      blk.port('right', 'right', { size: 5 }).color('primary');
+      blk.port('bottom', 'bottom', { size: 5 }).color('primary');
+      const inp = s.layout.node('input', 50, 100, { w: 50, h: 28, rx: 5 }).color('info').label('data');
+      inp.port('in-out', 'right', { size: 4 }).color('dim');
+      const out = s.layout.node('output', 330, 220, { w: 50, h: 28, rx: 5 }).color('success').label('result');
+      out.port('out-in', 'left', { size: 4 }).color('dim');
+      s.layout.edge('e1', 'in-out', 'top').color('dim').directed(true).strokeW(1.4);
+      s.layout.edge('e2', 'bottom', 'out-in').color('dim').directed(true).strokeW(1.4);
+    },
+  },
+];
 
 // ═══════════════════════════════════════════════════════════
 //  3. 阶段分区 — layer + port/edge
@@ -253,7 +259,7 @@ const sugiyamaSteps = [
 
 const demos = [
   { name: '链表',     desc: 'node() 节点, port() 端口, edge() 有向边。逐步构建。', steps: linkedListSteps },
-  { name: '调用栈',   desc: 'block() 栈帧 (muted/normal/active) + layer(swimlane) 包围。', steps: callstackSteps },
+  { name: '复合节点', desc: 'block() 容器 + port + edge — block 是带端口的复合节点。', steps: compoundSteps },
   { name: '阶段分区', desc: 'layer() band 色带 + swimlane 聚焦 + port/edge 连线。', steps: phaseSteps },
   { name: '二叉树',   desc: 'BFS 层序遍历, port + edge 父子连线。', steps: treeSteps },
   { name: 'Sugiyama', desc: 'layer() 分层 + edge() 直线 + polyline() 正交路由。', steps: sugiyamaSteps },
