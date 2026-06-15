@@ -109,9 +109,16 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     }
   }
 
+  /** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
+  function render(frameFn: (s: AgentStage) => void, opts?: { animate?: boolean }): void {
+    fm.begin();
+    frameFn(api as unknown as AgentStage);
+    fm.commit({ animate: opts?.animate ?? true });
+  }
+
   const api: Record<string, unknown> = {
     ctx, palette: p, stage: ctx.stage, root: ctx.root,
-    steps, frame, play,
+    steps, frame, play, render,
     frames: fm,
     theme: _theme,
     math: undefined,
@@ -136,7 +143,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
   api.math = createMathRenderer(fm, ctx, p as any);
   api.graph = createGraph(fm, ctx, p as any);
-  api.layout = createLayout(fm, p as any);
+  api.layout = createLayout(fm, p, { W: width, H: height });
   return api as unknown as AgentStage;
 }
 

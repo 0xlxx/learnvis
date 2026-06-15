@@ -41,9 +41,10 @@ s.frames.commit();
 
 ## 🎨 Theming & Color Guidelines (IMPORTANT)
 
-LearnVis 暴露了 8 个核心 Design Tokens 供样式映射：`primary`, `accent`, `danger`, `warning`, `success`, `info`, `muted`, `dim`。
+LearnVis 暴露了 8 组核心 Design Tokens 供样式映射：`primary`, `accent`, `danger`, `warning`, `success`, `info`, `muted`, `dim`。
 
+为了保持整个网页 UI 颜色的一致性，引擎除了前景色，同时提供了浅色的背景色 Token（如 `--lv-primary-bg`）。
 在设置颜色时，必须遵循以下优先级规范：
-1. 🥇 **系统默认主题（最高推荐）**：不传任何 `.color()` 参数，完全依赖引擎原生色，保持最大一致性。
-2. 🥈 **CSS 批量重写全部 Token（次推荐）**：在外部 CSS 的 `#stage svg` 块中，一次性覆盖全部 8 个 `--lv-<token>` 变量，彻底接入用户宿主主题。
+1. 🥇 **全局 CSS Token 映射（最高推荐）**：在宿主 HTML 的 `:root` 中完整声明全部的 `--lv-<token>` 及对应的 `--lv-<token>-bg` 变量（例如 `--lv-danger-bg`）。这使得无论是画布内 SVG 图元，还是画布外的 UI 控件（按钮、提示框），都能共享一套主题。
+2. 🥈 **系统默认主题（次推荐）**：不定义 CSS 变量且不传任何 `.color()` 参数，完全依赖引擎原生色。
 3. 🥉 **局部覆盖（不推荐/Hack手段）**：通过链式 API（如 `.color('danger')`）强行修改单个图元颜色。仅作为特殊状态（如选中、警告）标识之用，切忌硬编码 Hex 颜色。

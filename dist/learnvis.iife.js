@@ -5004,7 +5004,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			case "right": return [cx + hw, cy];
 		}
 	}
-	function createLayout(fm, p) {
+	function createLayout(fm, p, ctx) {
 		function port(id, ownerId, pos, opts = {}) {
 			const eid$1 = eid("port", id);
 			const r = resolveColor(p, opts.stroke);
@@ -5169,14 +5169,14 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 				const total = opts.totalRanks;
 				const gap = opts.layerGap ?? 4;
 				const startY = opts.startY ?? 48;
-				const available = (opts.endY ?? 412) - startY;
+				const available = (opts.endY ?? (ctx?.H ? ctx.H - 48 : 412)) - startY;
 				h = opts.h ?? (available - (total - 1) * gap) / total;
 				y = opts.y ?? startY + rank * (h + gap);
 			} else {
 				y = opts.y ?? 0;
 				h = opts.h ?? 60;
 			}
-			const x = opts.x ?? 0, w = opts.w ?? 780;
+			const x = opts.x ?? 0, w = opts.w ?? ctx?.W ?? 780;
 			const vertices = [
 				[x, y],
 				[x + w, y],
@@ -5289,12 +5289,26 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			});
 			return res;
 		}
+		/** 批量声明 N 层，自动推导 totalRanks、w、y、h */
+		function layers(count, opts = {}) {
+			const results = [];
+			for (let i = 0; i < count; i++) {
+				const label = opts.labels?.[i] ?? `L${i}`;
+				results.push(layer(`L${i}`, i, {
+					...opts,
+					totalRanks: count,
+					label
+				}));
+			}
+			return results;
+		}
 		return {
 			node,
 			block,
 			port,
 			edge,
 			layer,
+			layers,
 			array
 		};
 	}
@@ -6195,6 +6209,12 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		async function play(fns, opts) {
 			for (const fn of fns) await frame(fn, opts);
 		}
+		/** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
+		function render(frameFn, opts) {
+			fm.begin();
+			frameFn(api);
+			fm.commit({ animate: opts?.animate ?? true });
+		}
 		const api = {
 			ctx,
 			palette: p,
@@ -6203,6 +6223,7 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 			steps,
 			frame,
 			play,
+			render,
 			frames: fm,
 			theme: _theme,
 			math: void 0,
@@ -6228,7 +6249,10 @@ Object.defineProperty(exports, Symbol.toStringTag, { value: 'Module' });
 		_stages.set(selector, api);
 		api.math = createMathRenderer(fm, ctx, p);
 		api.graph = createGraph(fm, ctx, p);
-		api.layout = createLayout(fm, p);
+		api.layout = createLayout(fm, p, {
+			W: width,
+			H: height
+		});
 		return api;
 	}
 	/** 3D stage (placeholder — requires three.js renderer) */

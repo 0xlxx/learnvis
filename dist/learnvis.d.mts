@@ -593,6 +593,10 @@ interface LayerOpts {
   rx?: number;
   strokeW?: number;
 }
+/** Options for batch layer declaration via layers() */
+interface LayersOpts extends LayerOpts {
+  labels?: string[];
+}
 interface ArrayOpts {
   itemW?: number;
   itemH?: number;
@@ -611,9 +615,14 @@ interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
+  /** 批量声明 N 层，自动推导 totalRanks、w、y、h。返回 LayoutLayer[]。 */
+  layers(count: number, opts?: LayersOpts): LayoutLayer[];
   array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): LayoutNode[];
 }
-declare function createLayout(fm: FrameManager, p: Palette): LayoutAPI;
+declare function createLayout(fm: FrameManager, p: Palette, ctx?: {
+  W: number;
+  H: number;
+}): LayoutAPI;
 //#endregion
 //#region vis/types.d.ts
 type Vec2 = [number, number];
@@ -887,7 +896,11 @@ interface AgentStage extends Disposable {
   play(frames: ((s: AgentStage) => void)[], opts?: {
     ms?: number;
   }): Promise<void>;
-  frames: any;
+  /** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
+  render(frameFn: (s: AgentStage) => void, opts?: {
+    animate?: boolean;
+  }): void;
+  frames: Record<string, EntityState[]>;
   theme?: Record<string, unknown>;
 }
 //#endregion

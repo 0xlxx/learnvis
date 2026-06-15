@@ -179,6 +179,8 @@ export interface AgentStage extends Disposable {
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void>;
   play(frames: ((s: AgentStage) => void)[], opts?: { ms?: number }): Promise<void>;
-  frames: any;
+  /** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
+  render(frameFn: (s: AgentStage) => void, opts?: { animate?: boolean }): void;
+  frames: Record<string, EntityState[]>;
   theme?: Record<string, unknown>;
 }

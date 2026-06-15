@@ -3,7 +3,7 @@
 // Composable mixin factories: mixPorts, mixBend, mixChildren, mixAnchor
 
 import { eid as mkId } from './types';
-import type { Vec2, Palette, Place, NodeState, LineState, RegionState, EntityState } from './types';
+import type { Vec2, Palette, Place, NodeState, LineState, RegionState, EntityState, StageCtx } from './types';
 import type { FrameManager } from './frame';
 import { resolveColor, mixOpacity, mixDashed, mixStrokeW, mixSize, mixLabel, coreNodeMixin } from './mixins';
 import { offsetLine } from './geometry';
@@ -64,22 +64,27 @@ export type PortPosition = 'top' | 'bottom' | 'left' | 'right' | [number, number
 export interface PortOpts { size?: number; fill?: string; stroke?: string; label?: string }
 export interface EdgeOpts { color?: string; strokeW?: number; dash?: string; directed?: boolean; bend?: boolean; label?: string }
 export interface LayerOpts {
-  totalRanks?: number;  // total number of layers → auto-compute y & h
-  layerGap?: number;    // gap between layers, default 0
-  startY?: number;      // top of first rank, default 48
-  endY?: number;        // bottom of last rank, default H - 48
-  y?: number;           // manual y override (bypasses rank computation)
-  h?: number;           // manual h override
+  totalRanks?: number;
+  layerGap?: number;
+  startY?: number;
+  endY?: number;
+  y?: number;
+  h?: number;
   color?: string;
-  opacity?: number;     // overall opacity (band: 0.22, swimlane: 0.7)
+  opacity?: number;
   x?: number; w?: number;
   label?: string;
-  labelPlace?: Place;   // label position (default: 'left' for swimlane, undefined/centroid for band)
-  labelGap?: number;    // label gap from edge, default 6
-  style?: 'band' | 'swimlane';  // visual preset: band = pure fill (default), swimlane = bordered container
-  dash?: string;        // swimlane border dash, default '4 3'
-  rx?: number;          // corner radius, default 8
-  strokeW?: number;     // swimlane border width, default 1.2
+  labelPlace?: Place;
+  labelGap?: number;
+  style?: 'band' | 'swimlane';
+  dash?: string;
+  rx?: number;
+  strokeW?: number;
+}
+
+/** Options for batch layer declaration via layers() */
+export interface LayersOpts extends LayerOpts {
+  labels?: string[];  // override labels, default ['L0','L1',...]
 }
 export interface ArrayOpts {
   itemW?: number;
@@ -100,6 +105,8 @@ export interface LayoutAPI {
   port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
   edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
+  /** 批量声明 N 层，自动推导 totalRanks、w、y、h。返回 LayoutLayer[]。 */
+  layers(count: number, opts?: LayersOpts): LayoutLayer[];
   array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): LayoutNode[];
 }
 
@@ -137,7 +144,7 @@ const mixPorts = (eid: string, fm: FrameManager, p: Palette, parent: { createPor
 
 // ── createLayout ──
 
-export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
+export function createLayout(fm: FrameManager, p: Palette, ctx?: { W: number; H: number }): LayoutAPI {
   function port(id: string, ownerId: string, pos: PortPosition, opts: PortOpts = {}): LayoutPort {
     const eid = mkId('port', id);
     const r = resolveColor(p, opts.stroke);
@@ -254,7 +261,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       const total = opts.totalRanks;
       const gap = opts.layerGap ?? 4;
       const startY = opts.startY ?? 48;
-      const endY = opts.endY ?? 412;  // default: 460 - 48
+      const endY = opts.endY ?? (ctx?.H ? ctx.H - 48 : 412);
       const available = endY - startY;
       h = opts.h ?? (available - (total - 1) * gap) / total;
       y = opts.y ?? startY + rank * (h + gap);
@@ -262,7 +269,7 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
       y = opts.y ?? 0;
       h = opts.h ?? 60;
     }
-    const x = opts.x ?? 0, w = opts.w ?? 780;
+    const x = opts.x ?? 0, w = opts.w ?? ctx?.W ?? 780;
     const vertices: Vec2[] = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]];
     const rx = opts.rx ?? 8;
     const label = opts.label ?? '';
@@ -355,5 +362,19 @@ export function createLayout(fm: FrameManager, p: Palette): LayoutAPI {
     return res;
   }
 
-  return { node, block, port, edge, layer, array };
+  /** 批量声明 N 层，自动推导 totalRanks、w、y、h */
+  function layers(count: number, opts: LayersOpts = {}): LayoutLayer[] {
+    const results: LayoutLayer[] = [];
+    for (let i = 0; i < count; i++) {
+      const label = opts.labels?.[i] ?? `L${i}`;
+      results.push(layer(`L${i}`, i, {
+        ...opts,
+        totalRanks: count,
+        label,
+      }));
+    }
+    return results;
+  }
+
+  return { node, block, port, edge, layer, layers, array };
 }
