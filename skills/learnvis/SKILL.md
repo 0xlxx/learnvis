@@ -26,9 +26,9 @@ npx skills add 0xlxx/learnvis -s learnvis
 <script src="./learnvis.iife.js"></script>
 <script>
 const s = LearnVis.stage('#stage', { width: 780, height: 460 });
-s.frames.begin();
-s.math.point('O', [390, 230]).color('danger').label('O');
-s.frames.commit();
+s.render(s => {
+  s.math.point('O', [390, 230]).color('danger').label('O');
+});
 </script>
 ```
 

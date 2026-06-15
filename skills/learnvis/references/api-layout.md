@@ -59,16 +59,30 @@ s.layout.edge('e', 'A-out', 'B-in').directed(true)
 - 默认 dim 灰，1.5px
 - 链式：`.color()` `.strokeW(n)` `.dashed(d)` `.directed(v)` `.bend()` `.label(t)`
 
-## layer
+## layer / layers
+
+### layers(count, opts?) — 批量声明 ✅ 推荐
 
 ```js
-// 自动分层（最常用）：引擎会根据 rankIndex 和 totalRanks 自动计算出精确的 Y 像素坐标
-for (let rankIndex = 0; rankIndex < 3; rankIndex++) {
-  s.layout.layer(`L${rankIndex}`, rankIndex, { totalRanks: 3, w: 640 })
-}
+// 一行声明多层，w 自动从 stage width 推导
+s.layout.layers(4, { style: 'band', startY: 40, endY: 400 });
 
-// 手动定位（如果不想依靠 rank 自动计算）
-s.layout.layer('L', 0, { y: 50, h: 120, w: 640 })
+// 自定义 labels
+s.layout.layers(4, { style: 'band', labels: ['Layer 0', 'Layer 1', 'Layer 2', 'Layer 3'] });
+```
+
+- `count` — 层数（自动推导 `totalRanks`）
+- 返回 `LayoutLayer[]` 数组
+- `w` 默认从 stage 宽度推导，无需手动传
+
+### layer(id, rank, opts?) — 单层声明
+
+```js
+// 自动分层：引擎根据 rankIndex 和 totalRanks 自动计算 Y 像素
+s.layout.layer('L0', 0, { totalRanks: 3 });
+
+// 手动定位（不依赖 rank 自动计算）
+s.layout.layer('custom', 0, { y: 50, h: 120 });
 ```
 
 | 参数 | 默认 | 说明 |
@@ -92,28 +106,24 @@ s.layout.layer('L', 0, { y: 50, h: 120, w: 640 })
 
 ```js
 const s = LearnVis.stage('#stage', { width: 700, height: 440 });
-s.frames.begin();
+s.render(s => {
+  // 3 层 band，一行声明
+  s.layout.layers(3, { startY: 50, endY: 390 });
 
-// 3 层 band，引擎根据 rankIndex 自动定位像素 Y
-for (let rankIndex = 0; rankIndex < 3; rankIndex++) {
-  s.layout.layer(`L${rankIndex}`, rankIndex, { totalRanks: 3, w: 700, startY: 50, endY: 390, layerGap: 4 });
-}
+  // 节点 + 端口
+  const nodes = { A: [200,80], B: [340,80], C: [270,220], D: [200,360], E: [340,360] };
+  for (const [k,[x,y]] of Object.entries(nodes)) {
+    const n = s.layout.node(k, x, y, { w: 44, h: 28, rx: 5 }).label(k);
+    n.port(k+'-in','top',{size:3}).color('dim');
+    n.port(k+'-out','bottom',{size:3}).color('dim');
+  }
 
-// 节点 + 端口
-const nodes = { A: [200,80], B: [340,80], C: [270,220], D: [200,360], E: [340,360] };
-for (const [k,[x,y]] of Object.entries(nodes)) {
-  const n = s.layout.node(k, x, y, { w: 44, h: 28, rx: 5 }).label(k);
-  n.port(k+'-in','top',{size:3}).color('dim');
-  n.port(k+'-out','bottom',{size:3}).color('dim');
-}
-
-// 边（直线）
-const edges = [['A','C'],['B','C'],['C','D'],['C','E'],['A','E']];
-for (const [src,dst] of edges) {
-  s.layout.edge(src+'-'+dst, src+'-out', dst+'-in').color('dim').directed(true).strokeW(1.4);
-}
-
-s.frames.commit({ animate: false });
+  // 边（直线）
+  const edges = [['A','C'],['B','C'],['C','D'],['C','E'],['A','E']];
+  for (const [src,dst] of edges) {
+    s.layout.edge(src+'-'+dst, src+'-out', dst+'-in').color('dim').directed(true).strokeW(1.4);
+  }
+});
 ```
 
 ## Best Practices

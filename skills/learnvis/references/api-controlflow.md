@@ -45,7 +45,21 @@ ctrl.destroy()
 - FrameManager 自动计算 enter/update/exit，同名 entity 平滑过渡
 - `StepLike = { label?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void)`
 
-## frame — 单帧渲染
+## render — 零仪式感单帧渲染 ✅ 推荐
+
+```js
+// 静态单帧 → begin/commit 自动包裹
+s.render(s => {
+  s.math.point('P', [100, 200]).color('danger');
+  s.layout.layers(4, { style: 'band' });
+});
+```
+
+- 同步执行，返回 `void`
+- 自动 `begin() → frameFn(s) → commit({ animate: true })`
+- 适合静态单帧、初始状态渲染
+
+## frame — 异步单帧渲染
 
 ```js
 await s.frame(s => {
@@ -65,9 +79,10 @@ const frames = [
 await s.play(frames, { ms: 800 })
 ```
 
-## 直接 FrameManager 访问
+## 直接 FrameManager 访问（仅特殊场景）
 
 ```js
+// 仅在需要精确控制帧间时序时使用
 s.frames.begin()
 s.math.point('P', [100, 200])
 // ... more declares ...
