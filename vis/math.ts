@@ -579,6 +579,37 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const sx = (x: number) => ox + (x - 0) * scX;
     const sy = (y: number) => oy - (y - 0) * scY;
     const mapPt = (x: number, y: number): Vec2 => [sx(x), sy(y)];
+
+    // Wrap a returned fluent builder so transform methods accept math coords
+    function _wrap<T extends Record<string, any>>(b: T): T {
+      const w: any = {};
+      for (const key of Object.keys(b)) {
+        const fn = (b as any)[key];
+        if (typeof fn !== 'function') { w[key] = fn; continue; }
+        switch (key) {
+          case 'rotate':
+            w[key] = function(a: number, cx: number, cy: number) { fn.call(w, a, sx(cx), sy(cy)); return w; };
+            break;
+          case 'translate':
+            w[key] = function(dx: number, dy: number) { fn.call(w, dx * scX, dy * scY); return w; };
+            break;
+          case 'matrixTransform':
+            w[key] = function(a: number, b: number, c: number, d: number, tx?: number, ty?: number) { fn.call(w, a, b, c, d, (tx ?? 0) * scX, (ty ?? 0) * scY); return w; };
+            break;
+          case 'scale':
+            w[key] = function(sx2: number, sy2?: number) { fn.call(w, sx2, sy2 ?? sx2); return w; };
+            break;
+          case 'moveTo':
+            w[key] = function(x: number, y: number) { fn.call(w, sx(x), sy(y)); return w; };
+            break;
+          default:
+            w[key] = function(...args: any[]) { const r = fn.apply(w, args); return r === b ? w : r; };
+            break;
+        }
+      }
+      return w as T;
+    }
+
     return {
       mapX: sx, mapY: sy, mapPt,
       axes(aOpts = {}) {
@@ -599,7 +630,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         return point(pid, [sx(x), sy(y)], pOpts);
       },
       vector(vid: string, from: [number, number], to: [number, number], vOpts = {}) {
-        return vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts);
+        return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts));
       },
       segment(sid: string, a: [number, number], b: [number, number], sOpts = {}) {
         return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
@@ -608,13 +639,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)] as Vec2), plOpts);
       },
       circle(cid: string, center: [number, number], radius: number, cOpts = {}) {
-        // Radius in math coords: map to pixel length along x-axis
         const cx = sx(center[0]), cy = sy(center[1]);
-        const rx = sx(center[0] + radius) - cx;  // pixel radius
-        return circle(cid, [cx, cy], Math.abs(rx), cOpts);
+        const r = Math.abs(sx(center[0] + radius) - cx);
+        return circle(cid, [cx, cy], r, cOpts);
       },
       polygon(pgid: string, vertices: [number, number][], pgOpts = {}) {
-        return polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts);
+        return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts));
       },
       angle(aid: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], aOpts = {}) {
         const size = aOpts.size !== undefined ? sx(0) - sx(-aOpts.size) : undefined;
@@ -624,7 +654,8 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
       },
       basis(bid: string, borigin: [number, number], bOpts = {}) {
-        return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], bOpts);
+        const pixelScale = bOpts.scale !== undefined ? bOpts.scale * scX : undefined;
+        return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], { ...bOpts, scale: pixelScale });
       },
       matrix(mid: string, data: number[][], mOpts = {}) {
         return matrixPrimitive(mid, data, { ...mOpts, x: mOpts.x !== undefined ? sx(mOpts.x) : undefined, y: mOpts.y !== undefined ? sy(mOpts.y) : undefined });
@@ -634,10 +665,10 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         return polygon(rid, [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]].map(([x, y]) => [sx(x), sy(y)] as Vec2));
       },
       ngon(nid: string, cx: number, cy: number, r: number, sides: number): MathPolygon {
-        return ngon(nid, sx(cx), sy(cy), r, sides);
+        return _wrap(ngon(nid, sx(cx), sy(cy), r * scX, sides));
       },
-      ellipse(eid: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon {
-        return ellipse(eid, sx(cx), sy(cy), rx, ry, n);
+      ellipse(eid$1: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon {
+        return _wrap(ellipse(eid$1, sx(cx), sy(cy), rx * scX, ry * scY, n));
       },
     };
   }

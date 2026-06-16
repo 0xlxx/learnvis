@@ -4879,6 +4879,55 @@ function createMathRenderer(fm, ctx, palette) {
 		const sx = (x) => ox + (x - 0) * scX;
 		const sy = (y) => oy - (y - 0) * scY;
 		const mapPt = (x, y) => [sx(x), sy(y)];
+		function _wrap(b) {
+			const w = {};
+			for (const key of Object.keys(b)) {
+				const fn = b[key];
+				if (typeof fn !== "function") {
+					w[key] = fn;
+					continue;
+				}
+				switch (key) {
+					case "rotate":
+						w[key] = function(a, cx, cy) {
+							fn.call(w, a, sx(cx), sy(cy));
+							return w;
+						};
+						break;
+					case "translate":
+						w[key] = function(dx, dy) {
+							fn.call(w, dx * scX, dy * scY);
+							return w;
+						};
+						break;
+					case "matrixTransform":
+						w[key] = function(a, b, c, d, tx, ty) {
+							fn.call(w, a, b, c, d, (tx ?? 0) * scX, (ty ?? 0) * scY);
+							return w;
+						};
+						break;
+					case "scale":
+						w[key] = function(sx2, sy2) {
+							fn.call(w, sx2, sy2 ?? sx2);
+							return w;
+						};
+						break;
+					case "moveTo":
+						w[key] = function(x, y) {
+							fn.call(w, sx(x), sy(y));
+							return w;
+						};
+						break;
+					default:
+						w[key] = function(...args) {
+							const r = fn.apply(w, args);
+							return r === b ? w : r;
+						};
+						break;
+				}
+			}
+			return w;
+		}
 		return {
 			mapX: sx,
 			mapY: sy,
@@ -4933,7 +4982,7 @@ function createMathRenderer(fm, ctx, palette) {
 				return point(pid, [sx(x), sy(y)], pOpts);
 			},
 			vector(vid, from, to, vOpts = {}) {
-				return vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts);
+				return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts));
 			},
 			segment(sid, a, b, sOpts = {}) {
 				return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
@@ -4943,11 +4992,11 @@ function createMathRenderer(fm, ctx, palette) {
 			},
 			circle(cid, center, radius, cOpts = {}) {
 				const cx = sx(center[0]), cy = sy(center[1]);
-				const rx = sx(center[0] + radius) - cx;
-				return circle(cid, [cx, cy], Math.abs(rx), cOpts);
+				const r = Math.abs(sx(center[0] + radius) - cx);
+				return circle(cid, [cx, cy], r, cOpts);
 			},
 			polygon(pgid, vertices, pgOpts = {}) {
-				return polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)]), pgOpts);
+				return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)]), pgOpts));
 			},
 			angle(aid, vertex, ray1, ray2, aOpts = {}) {
 				const size = aOpts.size !== void 0 ? sx(0) - sx(-aOpts.size) : void 0;
@@ -4960,7 +5009,11 @@ function createMathRenderer(fm, ctx, palette) {
 				return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
 			},
 			basis(bid, borigin, bOpts = {}) {
-				return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], bOpts);
+				const pixelScale = bOpts.scale !== void 0 ? bOpts.scale * scX : void 0;
+				return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], {
+					...bOpts,
+					scale: pixelScale
+				});
 			},
 			matrix(mid, data, mOpts = {}) {
 				return matrixPrimitive(mid, data, {
@@ -4979,10 +5032,10 @@ function createMathRenderer(fm, ctx, palette) {
 				].map(([x, y]) => [sx(x), sy(y)]));
 			},
 			ngon(nid, cx, cy, r, sides) {
-				return ngon(nid, sx(cx), sy(cy), r, sides);
+				return _wrap(ngon(nid, sx(cx), sy(cy), r * scX, sides));
 			},
-			ellipse(eid, cx, cy, rx, ry, n) {
-				return ellipse(eid, sx(cx), sy(cy), rx, ry, n);
+			ellipse(eid$1, cx, cy, rx, ry, n) {
+				return _wrap(ellipse(eid$1, sx(cx), sy(cy), rx * scX, ry * scY, n));
 			}
 		};
 	}
