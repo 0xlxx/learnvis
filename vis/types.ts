@@ -35,7 +35,7 @@ export interface Rect { x: number; y: number; w: number; h: number; rx?: number 
 
 // ── Entity system (v4 - 5 base types) ──
 
-export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge' | 'port' | 'zone' | 'arrow';
+export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge' | 'zone' | 'arrow';
 
 declare const EntityIdBrand: unique symbol;
 /** Branded string type for entity identifiers (e.g. "point:O", "vertex:A").
@@ -56,10 +56,8 @@ export type NodeState = {
   fill: string; stroke: string; strokeW?: number; opacity?: number;
   label?: string; labelPlace?: Place; labelGap?: number;
   symType?: string;  // symbol type for shape='symbol'
-  _owner?: string;   // for ports: owner node id
   _shape?: string;   // internal shape tracker
-  _portPos?: 'top' | 'bottom' | 'left' | 'right' | [number, number];
-  _blockW?: number; _blockH?: number;  // for rect nodes: explicit dimensions
+  _blockW?: number; _blockH?: number;  // internal block dimensions
 };
 
 export type LineMarker = 'arrow' | 'none';
@@ -87,7 +85,7 @@ export type LineState = WithTransform<{
   marker?: LineMarker; directed?: boolean;
   bend?: boolean; _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
-  _fromPort?: string; _toPort?: string;
+  _fromPort?: string; _toPort?: string;  // internal port routing
 }>;
 
 export type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
