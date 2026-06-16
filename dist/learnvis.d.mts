@@ -636,11 +636,7 @@ type NodeState = {
   labelPlace?: Place;
   labelGap?: number;
   symType?: string;
-  _owner?: string;
   _shape?: string;
-  _portPos?: 'top' | 'bottom' | 'left' | 'right' | [number, number];
-  _blockW?: number;
-  _blockH?: number;
 };
 type LineMarker = 'arrow' | 'none';
 type TfRotate = {
@@ -693,8 +689,6 @@ type LineState = WithTransform<{
   bend?: boolean;
   _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
-  _fromPort?: string;
-  _toPort?: string;
 }>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
 type RegionState = WithTransform<{

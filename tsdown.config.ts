@@ -2,8 +2,7 @@ import { defineConfig } from 'tsdown';
 
 export default defineConfig({
   entry: { 'learnvis': 'vis/index.ts' },
-  format: ['iife', 'esm'],
-  globalName: 'LearnVis',
+  format: ['esm'],
   outDir: 'dist',
   target: 'es2020',
   clean: false,
