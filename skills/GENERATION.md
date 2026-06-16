@@ -18,8 +18,6 @@ skills/
 ├── GENERATION.md              # This file (project-level, not distributed)
 └── learnvis/
     ├── SKILL.md               # Main skill file: Compass (Quick start, Theming guidelines, Reference links)
-    ├── assets/                # Built artifacts bundled with skill
-    │   └── learnvis.iife.js   # IIFE build (auto-copied from dist/)
     └── references/            # Domain-specific reference docs
         ├── api-math.md        # Math primitives API
         ├── api-graph.md       # Graph theory primitives API
