@@ -1,101 +1,90 @@
-# atomic — 原子层 API
+# atomic — 底层原子级 API
 
-低层 API，用于自定义渲染和精细控制。通过 `FrameManager` + `SVGRenderer` 访问。
+使用 atomic API 直接访问底层的渲染管线、变换矩阵和实体（Entity）系统。**注意：仅在高级定制组件或需要对特定图元动画行为做极致精细控制时，才使用本文件中的 API。**
 
-## 入口
+## 1. 初始化与实体系统
 
+### 核心概念：ECS 管线
+引擎底层是一个轻量级的实体组件系统（ECS）。`FrameManager` 负责管理声明的实体状态，并驱动 `Renderer`（如 `SVGRenderer`）对画面进行高效的 D3 DOM 更新。
 ```js
-import { FrameManager } from 'learnvis'
-import { SVGRenderer } from 'learnvis'
+import { FrameManager, SVGRenderer, eid } from 'learnvis';
 
-const fm = new FrameManager(renderer)
+// 1. 创建 SVG 渲染器实例并挂载到 FrameManager 上
+const fm = new FrameManager(renderer);
 ```
 
-`FrameManager` 是 ECS 风格声明式管线，`SVGRenderer` 是默认渲染器。
+### EntityId 与 Branded Type
+实体 ID 是类型安全的 Branded Type。在直接调用底层 API 声明实体时，**必须**使用 `eid(prefix, id)` 辅助函数构建 `EntityId`。
+```js
+// 构建一个标识符为 point:O 的实体 ID
+const myPointId = eid('point', 'O');
+```
+支持的 5 种基础实体类型（在 `vis/types.ts` 中定义）：
 
-## Entity 系统
-
-五种 base entity 类型（`vis/types.ts`）：
-
-| type | 说明 | 示例 EntityId |
+| 实体类型 | 说明 | 示例前缀 |
 |------|------|-------------|
-| `node` | 节点（circle/rect/symbol） | `vertex:A`, `point:O`, `port:p` |
-| `line` | 线段（含箭头） | `segment:AB`, `edge:A:B` |
-| `region` | 区域（polygon/circle/arc/fill） | `polygon:tri`, `fill:L1` |
-| `curve` | 函数曲线 | `fn:sin` |
-| `group` | 组合（axes/grid/angle） | `axes:ax`, `grid:g` |
+| `node` | 节点类实体（circle, rect 等几何） | `vertex`, `point`, `port` |
+| `line` | 线段/箭头类实体 | `segment`, `edge` |
+| `region` | 闭合填充区域 | `polygon`, `fill`, `arc` |
+| `curve` | 离散采样函数曲线 | `fn` |
+| `group` | 复合关联实体组 | `axes`, `grid`, `angle` |
 
-**EntityId** — branded type `string & { [EntityIdBrand]: true }`，通过 `eid(prefix, id)` 构造。
+---
 
-## 生命周期
-
+## 2. 实体状态声明与生命周期
+通过 `FrameManager` 自定义声明实体的生命周期。必须严格遵循 `begin() -> declare()/patch() -> commit()` 的调用流程。
 ```js
-fm.begin()                          // 开始新帧
-fm.declare(eid('point', 'O'), {     // 创建/更新 entity
-  type: 'node', shape: 'circle',
-  x: 100, y: 200, r: 4,
-  fill: '#e44', stroke: '#c00',
-})
-fm.patch(eid('point', 'O'), {       // 局部更新
+// 1. 开始新的一帧
+fm.begin();
+
+// 2. 声明一个新的 node 类型的圆形实体
+fm.declare(eid('point', 'O'), {
+  type: 'node',
+  shape: 'circle',
+  x: 100,
+  y: 200,
+  r: 4,
+  fill: '#e44',
+  stroke: '#c00',
+});
+
+// 3. 增量更新实体属性
+fm.patch(eid('point', 'O'), {
   x: 150,
-})
-fm.commit({ ms: 500, animate: true }) // 提交帧：计算 enter/update/exit → D3 过渡
+});
+
+// 4. 提交当前帧计算，计算进入/更新/离开（enter/update/exit）的过渡补间动画
+fm.commit({ ms: 500, animate: true });
 ```
+- `fm.get(id, type)` — 获取特定实体的类型安全状态。
 
-## 泛型 getter
+---
 
+## 3. 颜色转换管线
+在底层定制样式时，所有的 SVG `fill`/`stroke` 属性都将自动通过 `svgColor` 方法进行转换。
+- 支持在输入时直接使用 OKLCH 颜色格式：`svgColor('oklch(0.52 0.18 68)')` 将自动转换为兼容的 Hex 颜色 `#e06b38`。
+
+---
+
+## 4. 坐标变换系统
+引擎在底层直接记录变换矩阵描述符（存放在实体的 `_tf` 与 `_base` 中），而**不在** SVG DOM 节点上做原生 CSS transform，以确保过渡动画流畅。
 ```js
-const e = fm.get('point:O', 'node')  // 类型安全的 entity 访问
-// e.desired.x, e.desired.r, ...  — 直接访问属性，无需 cast
-```
-
-## 颜色管线
-
-```
-theme palette (oklch) → resolveColor() → svgColor() → hex SVG attribute
-```
-
-- `svgColor('oklch(0.52 0.18 68)')` → `#e06b38`（自动转换）
-- 所有 SVG `fill`/`stroke` 属性都经过 `svgColor()`
-
-## 渲染器接口
-
-```typescript
-interface Renderer {
-  create(id, state): RenderHandle
-  update(id, oldState, newState, transition?): void
-  remove(id): void
-  beginFrame(): void
-  commitFrame(opts?: { animate?, ms? }): void
-  dispose(): void
-}
-```
-
-`SVGRenderer` 在 `vis/renderer/svg.ts` — 将 5 种 entity type 映射到 SVG 元素（line, circle, polygon, path, text）。
-
-## 变换系统
-
-纯描述符存储（`_tf` / `_base`），不在 SVG 层做 transform：
-
-```js
-const tf: Transform[] = [
+// 定义一组旋转和缩放变换
+const tf = [
   { type: 'rotate', angle: 45, cx: 0, cy: 0 },
   { type: 'scale', sx: 2, sy: 2 },
-]
-// applyLine(from, to, tf) / applyVertices(vertices, tf) 应用变换到坐标
-// interpolate(oldTf, newTf, t) 平滑插值
-// normalizeTransforms(a, b) 补齐到等长数组
+];
 ```
 
-## StageCtx
+---
 
-```js
-// 通过 s.ctx 访问
-s.ctx.W / s.ctx.H           // 画布尺寸
-s.ctx.palette               // Palette
-s.ctx.stage.bg              // 背景层 D3 selection
-s.ctx.stage.nodes           // 节点层
-s.ctx.stage.edges           // 边层
-s.ctx.stage.overlay         // 覆盖层
-s.ctx.markerFor(color)      // 获取/创建 SVG marker
-```
+## 5. Stage 上下文 (StageCtx)
+在自定义原语绘制时，可通过 `s.ctx` 获取当前 Stage 的底层运行时上下文属性：
+- `s.ctx.W` / `s.ctx.H` — 获取画布的物理宽与高。
+- `s.ctx.palette` — 调色板实例。
+- `s.ctx.stage` — 包含各个 SVG 图层的 D3 Selection 引用：
+  - `s.ctx.stage.bg` (背景层)
+  - `s.ctx.stage.nodes` (节点图层)
+  - `s.ctx.stage.edges` (连线图层)
+  - `s.ctx.stage.overlay` (浮层覆盖层)
+- `s.ctx.markerFor(color)` — 为有向箭头快速创建或获取特定颜色的 SVG `<marker>` 指针。

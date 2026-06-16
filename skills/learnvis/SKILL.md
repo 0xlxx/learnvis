@@ -1,50 +1,106 @@
 ---
 name: learnvis
-description: 高阶 SVG 可视化库 — 开箱即用的绘制原语。Use when building interactive tutorials, data structure visualizations, algorithms, graph theory networks, or when the user mentions D3/SVG canvas animations.
+description: 一个用于在 HTML/SVG 中创建高品质算法、数学和图论数据结构动画的高级可视化库。包含点、向量、线、多边形、图顶点/边、自动分层/层级布局、步骤控制等开箱即用的图元。只要用户提到“算法流程动画”、“数学几何演示”、“图结构/网络拓扑可视化”、“D3 绘图”、“SVG canvas 动画”、“二叉树/红黑树/Sugiyama 布局”或希望“以动画逐步演示算法/数学逻辑”，哪怕用户没有指明使用什么库，你都必须并且应当优先触发并使用本技能。
 ---
 
 # learnvis
 
-高阶 SVG 可视化库。点、线、节点、端口、边——开箱即用，80% 场景只传 id + 坐标。用于数学公式、数据结构、算法流程、图形学等交互式教学。
+使用 learnvis 进行高效的可视化开发。它提供了高阶的 SVG 可视化原语，包含点、线、顶点、边、图层等，让你可以通过少量的声明即可绘制出专业级别的数学公式、数据结构与算法动画。
 
-## Quick Start
+## 🚀 Quick Start & Workspace Setup
 
-首先，使用官方的 `skills` CLI 将该技能安装到你的智能体工作区：
+在开始在 HTML 文件中引入 `learnvis` 之前，必须先将本库的构建产物安装/软链接到用户的开发目录下。
 
+### 1. 软链接或复制 IIFE 库文件
+提取你当前正在读取的 `SKILL.md` 文件的绝对路径，并在同级目录下找到 `assets/learnvis.iife.js`。
+在用户项目的当前工作目录下，执行软链接（或复制）命令。请**绝不要**硬编码任何固定路径（如 `~/.claude`），因为不同环境下的安装路径可能不同：
 ```bash
-npx skills add 0xlxx/learnvis -s learnvis
+ln -sf [SKILL_DIR]/assets/learnvis.iife.js ./learnvis.iife.js
 ```
 
-> **🤖 给 AI 智能体的核心指令（Agent Directive）**：
-> 当你帮助用户创建可视化 HTML 文件时，需要引入本技能库的 `learnvis.iife.js`。
-> 请 **绝不要** 假设或硬编码该技能库的固定安装路径（如 `~/.claude` 或 `~/.agents` 等），因为不同的智能体会将其安装在不同位置。
-> **正确做法**：提取你当前正在读取的这个 `SKILL.md` 文件的真实绝对路径，找到同级的 `assets/learnvis.iife.js` 文件，然后使用 `ln -sf` 将其软连接到用户项目的工作目录下。
-
-然后在生成的 HTML 中直接相对引入：
-
+### 2. 标准的 HTML 页面模板
+创建新可视化页面时，必须套用以下标准 HTML 页面结构。这确保了包含正确的 CSS 重置与容器尺寸。
 ```html
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>LearnVis 演示</title>
+  <style>
+    /* CSS 重置，避免滚动条和默认边距干扰 */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      background: #fafaf8;
+      color: #333;
+      font-family: system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    #stage {
+      width: 780px;
+      height: 460px;
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+      border: 1px solid rgba(0,0,0,0.08);
+    }
+  </style>
+</head>
+<body>
+<div id="stage"></div>
+
+<!-- 相对路径引入 learnvis IIFE 文件 -->
 <script src="./learnvis.iife.js"></script>
 <script>
-const s = LearnVis.stage('#stage', { width: 780, height: 460 });
+// 1. 初始化 Stage 容器
+const s = LearnVis.stage('#stage', { width: 780, height: 460, theme: 'warm' });
+
+// 2. 使用 render 零仪式感单帧渲染，或使用 steps 定义动画
 s.render(s => {
-  s.math.point('O', [390, 230]).color('danger').label('O');
+  // 核心可视化逻辑：绘制一个红色的中心点
+  s.math.point('O', [390, 230]).color('danger').label('O').size(6);
 });
 </script>
+</body>
+</html>
 ```
 
-> 📖 **API 手册与架构指引** 详见独立文档：
-> - [Guide (Standalone)](references/guide-standalone.md)
-> - [Control Flow & Atomic (必读 / REQUIRED READING)](references/api-controlflow.md)
-> - [Math 数学](references/api-math.md)
-> - [Graph 图关系](references/api-graph.md)
-> - [Layout 层次嵌套关系](references/api-layout.md)
+## 🛑 Agent Common Pitfalls (重要避坑指南)
 
-## 🎨 Theming & Color Guidelines (IMPORTANT)
+为保证生成的代码能够一次性运行成功，在编写可视化逻辑时，**必须**规避以下常见陷阱：
 
-LearnVis 暴露了 8 组核心 Design Tokens 供样式映射：`primary`, `accent`, `danger`, `warning`, `success`, `info`, `muted`, `dim`。
+1. **规避 rank 的像素值污染**：
+   - 错误：`s.layout.layer('L0', 120)` （把像素高度 120 作为 rank 传给它）
+   - 正确：`s.layout.layer('L0', 0, { totalRanks: 3 })`
+   - *Why*：`rankIndex` 是逻辑层级索引（从 0 开始的整数）。引擎内部会通过公式 `(endY - startY) / totalRanks * rankIndex` 自动算出 Y 坐标像素。若传入像素值，图层会被渲染到上万像素以外。
+2. **规范变量名隔离**：
+   - 错误：`for (const [s, d] of edges)` （解构出的 `s` 会覆盖全局的 `s = LearnVis.stage` 实例）
+   - 正确：`for (const [src, dst] of edges)`
+   - *Why*：覆盖 `s` 会使后续对 `s.math` 等 API 的访问触发 `TypeError` 崩溃。
+3. **为 Edge 创建必要的 Port**：
+   - 错误：`s.layout.edge('e1', 'nodeA', 'nodeB')`
+   - 正确：先 `const nA = s.layout.node('A', x, y); nA.port('A-out', 'bottom');` 再 `s.layout.edge('e1', 'A-out', 'B-in')`
+   - *Why*：连线必须锚定到 Node 的具体 Port ID。直接连 Node ID 会导致连线由于找不到 Port 信息而堆叠在中心或引发运行时报错。
 
-为了保持整个网页 UI 颜色的一致性，引擎除了前景色，同时提供了浅色的背景色 Token（如 `--lv-primary-bg`）。
-在设置颜色时，必须遵循以下优先级规范：
-1. 🥇 **全局 CSS Token 映射（最高推荐）**：在宿主 HTML 的 `:root` 中完整声明全部的 `--lv-<token>` 及对应的 `--lv-<token>-bg` 变量（例如 `--lv-danger-bg`）。这使得无论是画布内 SVG 图元，还是画布外的 UI 控件（按钮、提示框），都能共享一套主题。
-2. 🥈 **系统默认主题（次推荐）**：不定义 CSS 变量且不传任何 `.color()` 参数，完全依赖引擎原生色。
-3. 🥉 **局部覆盖（不推荐/Hack手段）**：通过链式 API（如 `.color('danger')`）强行修改单个图元颜色。仅作为特殊状态（如选中、警告）标识之用，切忌硬编码 Hex 颜色。
+## 📖 API 导航指南
+
+请在设计不同可视化需求时，加载对应的详细 API 参考文档：
+- **[控制流与动画 (api-controlflow.md)](references/api-controlflow.md)**: 了解 `render` 单帧渲染、`steps` 步骤动画控制、`Card` 容器封装。
+- **[布局原语 (api-layout.md)](references/api-layout.md)**: 了解 `node` 节点、`port` 端口、`edge` 边、以及 `layers` 批量声明（用于分层布局如 Sugiyama）。
+- **[数学几何原语 (api-math.md)](references/api-math.md)**: 了解 `point` 点、`vector` 向量、`circle` 圆、投影、各种多边形、以及 `fn` 连续函数图像的绘制。
+- **[图论网络原语 (api-graph.md)](references/api-graph.md)**: 了解 `vertex` 顶点、`edge` 图边，以及内置的力导向布局 `force`、环形布局 `circular` 的使用。
+- **[底层原子 API (api-atomic.md)](references/api-atomic.md)**: 了解底层 `FrameManager` 状态机与 `EntityId` 的 Branded Type，仅在需要进行高度自定义渲染或精细动画控制时加载。
+- **[独立部署指南 (guide-standalone.md)](references/guide-standalone.md)**: 了解内置主题（`warm`/`cool`/`dark`/`paper` 等）的视觉配置。
+
+## 🎨 主题与色彩设计准则 (Theming Guidelines)
+
+LearnVis 暴露了 8 组设计 Tokens：`primary` (主色)、`accent` (强调)、`danger` (危险/红色)、`warning` (警告/黄色)、`success` (成功/绿色)、`info` (信息/蓝色)、`muted` (暗色)、`dim` (极淡灰)。
+
+在定制视觉呈现时，请遵循以下规范：
+1. **优先使用语义色 Token**：在需要标注状态时，使用类似 `.color('danger')` 这样的链式调用。**绝不要**硬编码 Hex 颜色值（如 `#FF0000`）。
+2. **通过 CSS 变量全局覆盖**：如需自定义调色板，应在 HTML 的 `:root` 声明 `--lv-<token>` 和 `--lv-<token>-bg` 变量。这保证了画布 SVG 原语和画布外的 DOM UI 控件共享统一的主题色。
