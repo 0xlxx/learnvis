@@ -10,6 +10,13 @@ type E = d3.Selection<any, unknown, null, undefined>;
 
 // ── helpers ──
 
+// 计算连线的背景色混合对比度：对连线主体（edge/segment）采用 oklab 色彩空间混合底色做 30% 弱化
+function svgLineColor(stroke: string): string {
+  if (!stroke || stroke === 'none') return 'none';
+  const resolved = svgColor(stroke);
+  return `color-mix(in oklab, ${resolved} 70%, var(--lv-mix-bg, white))`;
+}
+
 function getPathParams(pts: Vec2[]): { dists: number[]; total: number } {
   const dists = [0];
   let total = 0;
@@ -199,7 +206,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       const hasMarker = (ld.marker === 'arrow') || ld.directed;
       const el = edges.append('polyline').attr('data-id', id).attr('points', ptsStr)
         .attr('fill', 'none')
-        .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW)
+        .attr('stroke', svgLineColor(ld.stroke)).attr('stroke-width', ld.strokeW)
         .attr('stroke-dasharray', ld.dash ?? '').attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
         .attr('marker-end', hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, (ld._markerCfg as any) ?? null) ?? null : null);
       applyCommon(el, ld.opacity);
@@ -354,7 +361,7 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
              return `${op[0] + (np[0] - op[0]) * t},${op[1] + (np[1] - op[1]) * t}`;
            }).join(' ');
         })
-        .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW)
+        .attr('stroke', svgLineColor(ld.stroke)).attr('stroke-width', ld.strokeW)
         .attr('stroke-dasharray', ld.dash ?? '');
         
       if (ld.opacity != null) svg.transition(tr).attr('opacity', ld.opacity);
@@ -458,7 +465,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
       const pts = resolveLinePoints(ld);
       const ptsStr = pts.map(p => p.join(',')).join(' ');
       svg.attr('points', ptsStr)
-        .attr('stroke', svgColor(ld.stroke)).attr('stroke-width', ld.strokeW);
+        .attr('stroke', svgLineColor(ld.stroke)).attr('stroke-width', ld.strokeW);
       applyCommon(svg, ld.opacity);
       break;
     }

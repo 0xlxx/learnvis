@@ -693,6 +693,8 @@ type LineState = WithTransform<{
   bend?: boolean;
   _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
+  _fromPort?: string;
+  _toPort?: string;
 }>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
 type RegionState = WithTransform<{

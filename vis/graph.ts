@@ -347,15 +347,23 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     const labelGap = opts.labelGap ?? 6;
 
     if (style === 'band') {
-      const opacity = opts.opacity ?? 0.30;
+      const fill = `color-mix(in oklab, ${r.stroke} 6%, var(--lv-mix-bg, white))`;
+      
+      // 基于 color-mix 的背景淡化以提升对比度，且不污染 opacity 属性以防影响子文本
       fm.declare(eid, {
         type: 'region', shape: 'polygon', vertices,
-        stroke: 'none', fill: r.fill, strokeW: 0, opacity,
+        stroke: 'none', fill, strokeW: 0,
+        ...(opts.opacity !== undefined ? { opacity: opts.opacity } : {}),
         _rx: rx, label, labelPlace, labelGap,
       } as unknown as RegionState);
 
       return {
-        color(c: string) { patch(eid, fm, { fill: resolveColor(p, c).fill }); return this; },
+        // 修改 layer 实例 of color 方法，支持动态派生 color-mix 背景色
+        color(c: string) {
+          const rc = resolveColor(p, c);
+          patch(eid, fm, { fill: `color-mix(in oklab, ${rc.stroke} 6%, var(--lv-mix-bg, white))` });
+          return this;
+        },
         ...mixOpacity(eid, fm),
         ...mixLabel(eid, fm),
         ...mixDashed(eid, fm),

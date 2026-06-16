@@ -40,7 +40,7 @@ function resolveColor$1(val) {
 }
 /** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
 const alpha = (c, pct = 15) => {
-	return `color-mix(in oklch, ${resolveColor$1(c)} ${pct}%, transparent)`;
+	return `color-mix(in oklab, ${resolveColor$1(c)} ${pct}%, transparent)`;
 };
 /** 
 * 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
@@ -52,8 +52,8 @@ const palette = () => {
 		const varName = c === "dim" ? "--lv-muted" : `--lv-${c}`;
 		p[c] = {
 			fg: `var(${varName})`,
-			bg: `var(${varName}-bg)`,
-			a: (pct) => `color-mix(in oklch, var(${varName}) ${pct}%, transparent)`
+			bg: `var(${varName}-bg, color-mix(in oklab, var(${varName}) 12%, var(--lv-mix-bg, white)))`,
+			a: (pct) => `color-mix(in oklab, var(${varName}) ${pct}%, transparent)`
 		};
 	}
 	return p;
@@ -3679,7 +3679,8 @@ function stepper(container, ctrlOrLabels, onChangeOrOpts, legacyOpts) {
 		cleanup = ctrl.onChange((i, step) => {
 			prevBtn.disabled = i <= 0;
 			nextBtn.disabled = i >= ctrl.total - 1;
-			labelSpan.textContent = step.title ?? step.label ?? `步骤 ${i + 1}`;
+			const sObj = step;
+			labelSpan.textContent = sObj.title ?? sObj.label ?? `步骤 ${i + 1}`;
 		});
 		prevBtn.disabled = ctrl.current <= 0;
 		nextBtn.disabled = ctrl.current >= ctrl.total - 1;
@@ -4975,22 +4976,27 @@ function createGraph(fm, ctx, palette) {
 	};
 	function block(id, x, y, w, h, opts = {}) {
 		const eid$3 = eid("vertex", id);
-		if (x === void 0 && y === void 0 && fm.entities.has(eid$3)) return {
-			id,
-			x: fm.entities.get(eid$3).desired.x,
-			y: fm.entities.get(eid$3).desired.y,
-			pos() {
-				return [this.x, this.y];
-			},
-			...coreNodeMixin(eid$3, fm, p),
-			size(nw, nh) {
-				patch(eid$3, fm, {
-					_blockW: nw,
-					_blockH: nh ?? nw
-				});
-				return this;
-			}
-		};
+		if (x === void 0 && y === void 0 && fm.entities.has(eid$3)) {
+			const nd = fm.entities.get(eid$3).desired;
+			const curX = nd.x;
+			const curY = nd.y;
+			return {
+				id,
+				x: curX,
+				y: curY,
+				pos() {
+					return [curX, curY];
+				},
+				...coreNodeMixin(eid$3, fm, p),
+				size(nw, nh) {
+					patch(eid$3, fm, {
+						_blockW: nw,
+						_blockH: nh ?? nw
+					});
+					return this;
+				}
+			};
+		}
 		const safeW = w ?? 100, safeH = h ?? 100;
 		const safeX = (x ?? 0) + safeW / 2;
 		const safeY = (y ?? 0) + safeH / 2;
@@ -5017,7 +5023,7 @@ function createGraph(fm, ctx, palette) {
 			x: safeX,
 			y: safeY,
 			pos() {
-				return [this.x, this.y];
+				return [safeX, safeY];
 			},
 			...coreNodeMixin(eid$3, fm, p),
 			size(nw, nh) {
@@ -5095,15 +5101,15 @@ function createGraph(fm, ctx, palette) {
 		const labelPlace = opts.labelPlace ?? "left";
 		const labelGap = opts.labelGap ?? 6;
 		if (style === "band") {
-			const opacity = opts.opacity ?? .3;
+			const fill = `color-mix(in oklab, ${r.stroke} 6%, var(--lv-mix-bg, white))`;
 			fm.declare(eid$4, {
 				type: "region",
 				shape: "polygon",
 				vertices,
 				stroke: "none",
-				fill: r.fill,
+				fill,
 				strokeW: 0,
-				opacity,
+				...opts.opacity !== void 0 ? { opacity: opts.opacity } : {},
 				_rx: rx,
 				label,
 				labelPlace,
@@ -5111,7 +5117,7 @@ function createGraph(fm, ctx, palette) {
 			});
 			return {
 				color(c) {
-					patch(eid$4, fm, { fill: resolveColor(p, c).fill });
+					patch(eid$4, fm, { fill: `color-mix(in oklab, ${resolveColor(p, c).stroke} 6%, var(--lv-mix-bg, white))` });
 					return this;
 				},
 				...mixOpacity(eid$4, fm),
@@ -5178,6 +5184,10 @@ function createGraph(fm, ctx, palette) {
 
 //#endregion
 //#region vis/renderer/svg.ts
+function svgLineColor(stroke) {
+	if (!stroke || stroke === "none") return "none";
+	return `color-mix(in oklab, ${svgColor(stroke)} 70%, var(--lv-mix-bg, white))`;
+}
 function getPathParams(pts) {
 	const dists = [0];
 	let total = 0;
@@ -5364,7 +5374,7 @@ function drawEntity(ctx, id, d, markerCache) {
 			const ld = d;
 			const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
 			const hasMarker = ld.marker === "arrow" || ld.directed;
-			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
+			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
 			applyCommon(el, ld.opacity);
 			return {
 				group: el,
@@ -5536,7 +5546,7 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 					const np = newResampled[i];
 					return `${op[0] + (np[0] - op[0]) * t},${op[1] + (np[1] - op[1]) * t}`;
 				}).join(" ");
-			}).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
+			}).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
 			if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
 			break;
 		}
@@ -5605,7 +5615,7 @@ function updateEntityImmediate(svg, text, d) {
 		case "line": {
 			const ld = d;
 			const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
-			svg.attr("points", ptsStr).attr("stroke", svgColor(ld.stroke)).attr("stroke-width", ld.strokeW);
+			svg.attr("points", ptsStr).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 			applyCommon(svg, ld.opacity);
 			break;
 		}
@@ -5738,7 +5748,7 @@ var SVGRenderer = class {
 			const gap = 6;
 			const tx = nd.x + place.dx * (halfW + gap);
 			const ty = nd.y + place.dy * (halfH + gap);
-			h.setTextPosition(tx, ty, place.anchor, place.dyAttr, opts);
+			h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
 		}
 	}
 };
@@ -5955,6 +5965,8 @@ function stage(selector, opts = {}) {
 		if (fgColor) cssVars += `--lv-${varName}: ${fgColor}; `;
 		if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
 	}
+	const isDark = theme === "dark";
+	cssVars += `--lv-mix-bg: ${isDark ? "oklch(0.20 0.01 250)" : "oklch(0.97 0.005 80)"}; --lv-mix-fg: ${isDark ? "oklch(0.90 0.01 250)" : "oklch(0.25 0.02 60)"}; `;
 	if (cssVars) {
 		const themeClassName = `lv-theme-${theme || "custom"}`;
 		ctx.svg.classed(themeClassName, true);

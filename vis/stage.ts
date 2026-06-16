@@ -43,6 +43,12 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
   }
 
+  // 根据当前是否为 dark 主题，注入基准背景色和前景色变量，用于 color-mix 的派生基准
+  const isDark = theme === 'dark';
+  const mixBg = isDark ? 'oklch(0.20 0.01 250)' : 'oklch(0.97 0.005 80)';
+  const mixFg = isDark ? 'oklch(0.90 0.01 250)' : 'oklch(0.25 0.02 60)';
+  cssVars += `--lv-mix-bg: ${mixBg}; --lv-mix-fg: ${mixFg}; `;
+
   if (cssVars) {
     const themeClassName = `lv-theme-${theme || 'custom'}`;
     ctx.svg.classed(themeClassName, true);
