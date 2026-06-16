@@ -588,13 +588,26 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         if (typeof fn !== 'function') { w[key] = fn; continue; }
         switch (key) {
           case 'rotate':
-            w[key] = function(a: number, cx: number, cy: number) { fn.call(w, a, sx(cx), sy(cy)); return w; };
+            w[key] = function(a: number, cx: number, cy: number) { fn.call(w, -a, sx(cx), sy(cy)); return w; };
             break;
           case 'translate':
-            w[key] = function(dx: number, dy: number) { fn.call(w, dx * scX, dy * scY); return w; };
+            w[key] = function(dx: number, dy: number) { fn.call(w, dx * scX, -dy * scY); return w; };
             break;
           case 'matrixTransform':
-            w[key] = function(a: number, b: number, c: number, d: number, tx?: number, ty?: number) { fn.call(w, a, b, c, d, (tx ?? 0) * scX, (ty ?? 0) * scY); return w; };
+            w[key] = function(a: number, b: number, c: number, d: number, tx?: number, ty?: number) {
+              // Map math-coord matrix to screen-coord affine. Math y points up, SVG y points down.
+              // Math: mx' = a*mx + c*my + tx, my' = b*mx + d*my + ty
+              // Screen: sx = ox + mx*scX, sy = oy - my*scY
+              // → sx' = sa*sx + sc_m*sy + stx, sy' = sb*sx + sd*sy + sty
+              const sa = a;
+              const sc_m = -c * scX / scY;
+              const stx = ox - a * ox + c * oy * scX / scY + (tx ?? 0) * scX;
+              const sb = -b * scY / scX;
+              const sd = d;
+              const sty = oy - d * oy + b * ox * scY / scX - (ty ?? 0) * scY;
+              fn.call(w, sa, sb, sc_m, sd, stx, sty);
+              return w;
+            };
             break;
           case 'scale':
             w[key] = function(sx2: number, sy2?: number) { fn.call(w, sx2, sy2 ?? sx2); return w; };

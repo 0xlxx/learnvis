@@ -4890,19 +4890,25 @@ function createMathRenderer(fm, ctx, palette) {
 				switch (key) {
 					case "rotate":
 						w[key] = function(a, cx, cy) {
-							fn.call(w, a, sx(cx), sy(cy));
+							fn.call(w, -a, sx(cx), sy(cy));
 							return w;
 						};
 						break;
 					case "translate":
 						w[key] = function(dx, dy) {
-							fn.call(w, dx * scX, dy * scY);
+							fn.call(w, dx * scX, -dy * scY);
 							return w;
 						};
 						break;
 					case "matrixTransform":
 						w[key] = function(a, b, c, d, tx, ty) {
-							fn.call(w, a, b, c, d, (tx ?? 0) * scX, (ty ?? 0) * scY);
+							const sa = a;
+							const sc_m = -c * scX / scY;
+							const stx = ox - a * ox + c * oy * scX / scY + (tx ?? 0) * scX;
+							const sb = -b * scY / scX;
+							const sd = d;
+							const sty = oy - d * oy + b * ox * scY / scX - (ty ?? 0) * scY;
+							fn.call(w, sa, sb, sc_m, sd, stx, sty);
 							return w;
 						};
 						break;
