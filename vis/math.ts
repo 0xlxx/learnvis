@@ -613,9 +613,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     return {
       mapX: sx, mapY: sy, mapPt,
       axes(aOpts = {}) {
-        // Full-domain axes: origin at screen position of math (xd[0], 0),
-        // extending right to xd[1] (x-axis) and up to yd[1] (y-axis)
-        axes(id + '-ax', [sx(xd[0]), sy(0)], { xLen: xLen, yLen: sy(0) - sy(yd[1]), xLabel: opts.xLabel, yLabel: opts.yLabel, color: aOpts.color, strokeW: aOpts.strokeW });
+        // Bidirectional axes through math origin (0,0)
+        const x0 = sx(xd[0]), x1 = sx(xd[1]), y0 = sy(yd[0]), y1$ = sy(yd[1]);
+        const zx = sx(0), zy = sy(0);
+        const color = aOpts.color ?? 'dim';
+        segment(id + '-xax', [x0, zy], [x1, zy]).color(color).strokeW(1.4);
+        segment(id + '-yax', [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
       },
       grid(gOpts = {}) {
         grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });

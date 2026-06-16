@@ -1,0 +1,46 @@
+<!doctype html>
+<html><head><meta charset="UTF-8"><title>Debug Viewport</title>
+<style>
+  body{background:#fafaf8;font-family:system-ui;margin:2rem}
+  .stage{border:1px solid #ddd;display:block}
+</style></head><body>
+<h3>Viewport Debug</h3>
+<div id="s1" class="stage"></div>
+<hr>
+<div id="s2" class="stage"></div>
+<script type="module">
+import { stage } from '../dist/learnvis.mjs?v=5';
+
+// Test 1: Static viewport — basis + matrix
+const s1 = stage('#s1', { width: 400, height: 300, theme: 'warm' });
+s1.render(() => {
+  const vp = s1.math.viewport({ x: [-4, 4], y: [-3, 3] });
+  // Should show basis vectors ~65px long, from center
+  vp.basis('std', [0, 0], { scale: 2.5 });
+  // Matrices at well-separated positions
+  vp.matrix('A', [[1, 2], [3, 4]], { x: -2.5, y: 1.5 }).color('primary').label('A');
+  vp.matrix('I', [[1, 0], [0, 1]], { x: 2.5, y: 1.5 }).color('dim').label('I');
+  // A vector from origin
+  vp.vector('v', [0, 0], [2, 1]).color('danger').label('v').strokeW(2);
+});
+
+// Test 2: Vector rotation
+const s2 = stage('#s2', { width: 500, height: 300, theme: 'warm' });
+s2.steps([
+  { label: '原始', frame(sv) {
+    const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
+    vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2);
+    vp.point('P', [3, 0], { color: 'accent', label: 'P', size: 5 });
+  }},
+  { label: 'rot 90°', frame(sv) {
+    const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
+    vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2).rotate(90, 0, 0);
+    vp.point('P', [3, 0], { color: 'accent', label: 'P', size: 5 });
+  }},
+  { label: 'rot 180°', frame(sv) {
+    const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
+    vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2).rotate(180, 0, 0);
+    vp.point('P', [3, 0], { color: 'accent', label: 'P', size: 5 });
+  }},
+], { controls: true });
+</script></body></html>

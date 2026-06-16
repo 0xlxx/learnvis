@@ -462,13 +462,15 @@ describe('math viewport', () => {
     fm = env.fm;
   });
 
-  it('creates axes entity at center', () => {
+  it('creates axes as segments through origin', () => {
     fm.begin();
     math.viewport({ x: [-5, 5], y: [-4, 4] });
     fm.commit({ animate: false });
-    const ax = fm.entities.get('axes:vp-ax');
-    expect(ax).toBeTruthy();
-    expect((ax!.desired as any).subtype).toBe('axes');
+    const xax = fm.entities.get('segment:vp-xax');
+    const yax = fm.entities.get('segment:vp-yax');
+    expect(xax).toBeTruthy();
+    expect(yax).toBeTruthy();
+    expect((xax!.desired as any).type).toBe('line');
   });
 
   it('creates grid entity', () => {
@@ -496,7 +498,7 @@ describe('math viewport', () => {
     math.viewport({ x: [-3, 3], y: [-2, 2], grid: false, axes: false });
     fm.commit({ animate: false });
     expect(fm.entities.get('grid:vp-g')).toBeFalsy();
-    expect(fm.entities.get('axes:vp-ax')).toBeFalsy();
+    expect(fm.entities.get('segment:vp-xax')).toBeFalsy();
     // But origin point still created
     expect(fm.entities.get('point:O')).toBeTruthy();
   });
@@ -512,5 +514,64 @@ describe('math viewport', () => {
     // Vector endpoints should be in screen coords (not exactly 0,0)
     expect(typeof d.from[0]).toBe('number');
     expect(typeof d.to[0]).toBe('number');
+  });
+});
+
+describe('viewport rendering', () => {
+  let math: MathAPI;
+  let fm: FrameManager;
+
+  beforeEach(() => {
+    const env = setupMath();
+    math = env.math;
+    fm = env.fm;
+  });
+
+  it('maps origin (0,0) to canvas center (≈250,≈200)', () => {
+    fm.begin();
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    vp.point('test', 0, 0, { color: 'danger' });
+    fm.commit({ animate: false });
+    const e = fm.entities.get('point:test');
+    expect(e).toBeTruthy();
+    expect((e!.desired as any).x).toBeCloseTo(250, -1);
+    expect((e!.desired as any).y).toBeCloseTo(200, -1);
+  });
+
+  it('maps (2,0) to the right of origin', () => {
+    fm.begin();
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    vp.point('P', 2, 0, { color: 'danger' });
+    fm.commit({ animate: false });
+    const o = fm.entities.get('point:O');
+    const p = fm.entities.get('point:P');
+    expect((p!.desired as any).x).toBeGreaterThan((o!.desired as any).x);
+  });
+
+  it('vector rotate(90, 0, 0) rotates around origin', () => {
+    fm.begin();
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    const v = vp.vector('v', [0, 0], [2, 0], { color: 'danger' });
+    v.rotate(90, 0, 0);
+    fm.commit({ animate: false });
+    const e = fm.entities.get('vector:v');
+    const tf = (e!.desired as any)._tf;
+    expect(tf).toBeTruthy();
+    expect(tf[0].type).toBe('rotate');
+    // Rotation center should be at screen center, not (0,0)
+    expect(tf[0].cx).toBeGreaterThan(200);
+    expect(tf[0].cy).toBeGreaterThan(150);
+  });
+
+  it('basis scale maps from math units to pixels', () => {
+    fm.begin();
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    vp.basis('B', [0, 0], { scale: 2 });
+    fm.commit({ animate: false });
+    const i = fm.entities.get('vector:B-i');
+    const to = (i!.desired as any).to;
+    // vector length should be > 40 pixels (2 math units × ~20 px/unit)
+    const dx = to[0] - (i!.desired as any).from[0];
+    expect(Math.abs(dx)).toBeGreaterThan(40);
   });
 });
