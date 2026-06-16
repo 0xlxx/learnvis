@@ -13,36 +13,41 @@
     .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:8px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
     .card .stage{width:300px;height:220px;display:block}
-    .stepper{display:flex;gap:4px;margin-top:6px;justify-content:center}
-    .stepper button{font-size:0.65rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
-    .stepper button.active{background:var(--blue-05);border-color:var(--blue)}
+    .step-controls{display:flex;gap:4px;margin-top:6px;justify-content:center;align-items:center}
+    .step-controls button{font-size:0.7rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
+    .step-controls button:disabled{opacity:0.35;cursor:default}
+    .step-controls .step-label{font-size:0.68rem;color:var(--text-dim);min-width:80px}
   </style>
 </head>
 <body>
 
 <h1>Graph Animation</h1>
-<p class="sub">Insert / delete vertices with smooth <code>flow()</code> transitions</p>
+<p class="sub">Insert / delete vertices with smooth transitions</p>
 
 <div id="sections"></div>
 
-<script src="../../dist/learnvis.js"></script>
-<script>
+<script type="module">
+import { stage, stepper } from '../../dist/learnvis.mjs';
+
 const sections = [
   {
     name: 'Insert vertex (grow)',
     desc: '3→4→5 vertices. Edges persist, new ones fade in.',
     steps: [
       { label: '3 vertices', frame(s) {
-        const a=s.graph.vertex('A',[60,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[240,120]);
-        s.graph.edge(a,b); s.graph.edge(b,c);
+        const { vertex, edge } = s.graph;
+        vertex('A',[60,120]); vertex('B',[150,120]); vertex('C',[240,120]);
+        edge('A','B'); edge('B','C');
       }},
       { label: '+ D', frame(s) {
-        const a=s.graph.vertex('A',[60,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[240,120]), d=s.graph.vertex('D',[120,40]);
-        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c);
+        const { vertex, edge } = s.graph;
+        vertex('A',[60,120]); vertex('B',[150,120]); vertex('C',[240,120]); vertex('D',[120,40]);
+        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C');
       }},
       { label: '+ E', frame(s) {
-        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), d=s.graph.vertex('D',[110,30]), e=s.graph.vertex('E',[150,190]);
-        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c); s.graph.edge(b,e);
+        const { vertex, edge } = s.graph;
+        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('D',[110,30]); vertex('E',[150,190]);
+        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C'); edge('B','E');
       }},
     ]
   },
@@ -51,16 +56,19 @@ const sections = [
     desc: '5→4→3 vertices. Removed vertices fade out.',
     steps: [
       { label: '5 vertices', frame(s) {
-        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), d=s.graph.vertex('D',[100,40]), e=s.graph.vertex('E',[200,190]);
-        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,d); s.graph.edge(d,c); s.graph.edge(b,e);
+        const { vertex, edge } = s.graph;
+        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('D',[100,40]); vertex('E',[200,190]);
+        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C'); edge('B','E');
       }},
       { label: '− D', frame(s) {
-        const a=s.graph.vertex('A',[40,120]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), e=s.graph.vertex('E',[200,190]);
-        s.graph.edge(a,b); s.graph.edge(b,c); s.graph.edge(b,e);
+        const { vertex, edge } = s.graph;
+        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('E',[200,190]);
+        edge('A','B'); edge('B','C'); edge('B','E');
       }},
       { label: '− A', frame(s) {
-        const b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[260,120]), e=s.graph.vertex('E',[200,190]);
-        s.graph.edge(b,c); s.graph.edge(b,e);
+        const { vertex, edge } = s.graph;
+        vertex('B',[150,120]); vertex('C',[260,120]); vertex('E',[200,190]);
+        edge('B','C'); edge('B','E');
       }},
     ]
   },
@@ -69,16 +77,19 @@ const sections = [
     desc: 'Same graph, different positions → smooth interpolation.',
     steps: [
       { label: 'Start', frame(s) {
-        const a=s.graph.vertex('A',[60,60]), b=s.graph.vertex('B',[240,60]), c=s.graph.vertex('C',[60,180]), d=s.graph.vertex('D',[240,180]);
-        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+        const { vertex, edge } = s.graph;
+        vertex('A',[60,60]); vertex('B',[240,60]); vertex('C',[60,180]); vertex('D',[240,180]);
+        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
       }},
       { label: 'Shift', frame(s) {
-        const a=s.graph.vertex('A',[150,60]), b=s.graph.vertex('B',[60,120]), c=s.graph.vertex('C',[240,120]), d=s.graph.vertex('D',[150,180]);
-        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+        const { vertex, edge } = s.graph;
+        vertex('A',[150,60]); vertex('B',[60,120]); vertex('C',[240,120]); vertex('D',[150,180]);
+        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
       }},
       { label: 'Shift more', frame(s) {
-        const a=s.graph.vertex('A',[240,60]), b=s.graph.vertex('B',[150,120]), c=s.graph.vertex('C',[60,120]), d=s.graph.vertex('D',[240,180]);
-        s.graph.edge(a,b); s.graph.edge(c,d); s.graph.edge(a,c,{directed:false}); s.graph.edge(b,d,{directed:false});
+        const { vertex, edge } = s.graph;
+        vertex('A',[240,60]); vertex('B',[150,120]); vertex('C',[60,120]); vertex('D',[240,180]);
+        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
       }},
     ]
   }
@@ -87,23 +98,12 @@ const sections = [
 const container = document.getElementById('sections');
 sections.forEach((sec, si) => {
   const el = document.createElement('section');
-  const id = 'st' + si;
-  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="${id}"></div><div class="stepper" id="sp${si}"></div></div>`;
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div><div class="stepper" id="sp${si}"></div></div>`;
   container.appendChild(el);
 
-  const s = LearnVis.stage('#' + id, { width: 300, height: 220, theme: 'warm' });
+  const s = stage(`#st${si}`, { width: 300, height: 220, theme: 'warm' });
   const ctrl = s.steps(sec.steps);
-
-  const sp = document.getElementById('sp' + si);
-  for (let i = 0; i < sec.steps.length; i++) {
-    const btn = document.createElement('button');
-    btn.textContent = sec.steps[i].label;
-    btn.addEventListener('click', () => ctrl.go(i));
-    sp.appendChild(btn);
-  }
-  ctrl.onChange(i => {
-    sp.querySelectorAll('button').forEach((b, j) => b.classList.toggle('active', j === i));
-  });
+  stepper(`#sp${si}`, ctrl);
 });
 </script>
 </body>

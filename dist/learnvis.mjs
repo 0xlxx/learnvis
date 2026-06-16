@@ -3668,14 +3668,20 @@ function stepper(container, ctrlOrLabels, onChangeOrOpts, legacyOpts) {
 	if (layout === "prev-next") {
 		ct.classList.add("step-controls");
 		const prevBtn = document.createElement("button");
-		prevBtn.innerHTML = "◀ 上一步";
+		prevBtn.innerHTML = "◀";
+		prevBtn.title = "上一步";
 		prevBtn.onclick = () => ctrl.prev();
+		const resetBtn = document.createElement("button");
+		resetBtn.innerHTML = "↺";
+		resetBtn.title = "重置";
+		resetBtn.onclick = () => ctrl.reset();
 		const labelSpan = document.createElement("span");
 		labelSpan.className = "step-label";
 		const nextBtn = document.createElement("button");
-		nextBtn.innerHTML = "下一步 ▶";
+		nextBtn.innerHTML = "▶";
+		nextBtn.title = "下一步";
 		nextBtn.onclick = () => ctrl.next();
-		ct.append(prevBtn, labelSpan, nextBtn);
+		ct.append(prevBtn, resetBtn, labelSpan, nextBtn);
 		cleanup = ctrl.onChange((i, step) => {
 			prevBtn.disabled = i <= 0;
 			nextBtn.disabled = i >= ctrl.total - 1;
@@ -4875,17 +4881,24 @@ function createGraph(fm, ctx, palette) {
 		return v;
 	}
 	function edge(a, b, opts) {
-		const eid$2 = eid("edge", a.id + ":" + b.id);
+		const va = typeof a === "string" ? _vertices.get(a) : a;
+		const vb = typeof b === "string" ? _vertices.get(b) : b;
+		if (!va || !vb) {
+			const missing = !va ? typeof a === "string" ? a : a?.id : typeof b === "string" ? b : b?.id;
+			throw new Error(`edge(): vertex "${missing}" not found. Ensure vertex() is called before edge() in the same frame.`);
+		}
+		if (isNaN(va.x) || isNaN(va.y) || isNaN(vb.x) || isNaN(vb.y)) throw new Error(`edge(${va.id}, ${vb.id}): vertex position is NaN. Check that vertex coordinates are valid numbers.`);
+		const eid$2 = eid("edge", va.id + ":" + vb.id);
 		const stroke = p.dim.fg;
 		const strokeW = 1.8;
 		const directed = opts?.directed !== false;
 		const gap = opts?.gap ?? 4;
 		const marker = opts?.marker;
-		const { x1, y1, x2, y2 } = offsetLine([a.x, a.y], [b.x, b.y], a._r + gap, b._r + markerHalf(marker), directed);
+		const { x1, y1, x2, y2 } = offsetLine([va.x, va.y], [vb.x, vb.y], va._r + gap, vb._r + markerHalf(marker), directed);
 		fm.declare(eid$2, {
 			type: "line",
-			from: a.id,
-			to: b.id,
+			from: va.id,
+			to: vb.id,
 			x1,
 			y1,
 			x2,
@@ -5184,6 +5197,11 @@ function createGraph(fm, ctx, palette) {
 
 //#endregion
 //#region vis/renderer/svg.ts
+/** Dev-mode NaN guard: warns with entity context before the browser swallows the error.
+*  Called from rendering hot paths — cheap isNaN check, no allocations. */
+function _checkNaN(id, coords) {
+	for (const key of Object.keys(coords)) if (isNaN(coords[key])) console.warn(`[learnvis] NaN in entity "${id}" — ${key}=${coords[key]}. Check upstream math or missing vertex declarations.`);
+}
 function svgLineColor(stroke) {
 	if (!stroke || stroke === "none") return "none";
 	return `color-mix(in oklab, ${svgColor(stroke)} 70%, var(--lv-mix-bg, white))`;
@@ -5237,7 +5255,7 @@ function alignPolylines(ptsA, ptsB) {
 	const tVals = Array.from(tSet).sort((a, b) => a - b);
 	return [tVals.map((t) => samplePolyline(ptsA, pA, t)), tVals.map((t) => samplePolyline(ptsB, pB, t))];
 }
-function resolveLinePoints(ld) {
+function resolveLinePoints(ld, id) {
 	if (ld.points && ld.points.length >= 2) return ld.points;
 	let x1, y1, x2, y2;
 	if (ld._tf && ld._base) {
@@ -5253,6 +5271,12 @@ function resolveLinePoints(ld) {
 		x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
 		y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
 	}
+	if (id) _checkNaN(id, {
+		x1,
+		y1,
+		x2,
+		y2
+	});
 	return [[x1, y1], [x2, y2]];
 }
 /** Construct identity-equivalent transforms matching the structure of the given list.
@@ -5337,6 +5361,10 @@ function drawEntity(ctx, id, d, markerCache) {
 	switch (d.type) {
 		case "node": {
 			const nd = d;
+			_checkNaN(id, {
+				x: nd.x,
+				y: nd.y
+			});
 			const g = nodes.append("g").attr("data-id", id);
 			if (nd.shape === "rect") {
 				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
@@ -5372,7 +5400,7 @@ function drawEntity(ctx, id, d, markerCache) {
 		}
 		case "line": {
 			const ld = d;
-			const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
+			const ptsStr = resolveLinePoints(ld, id).map((p) => p.join(",")).join(" ");
 			const hasMarker = ld.marker === "arrow" || ld.directed;
 			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
 			applyCommon(el, ld.opacity);
@@ -5540,7 +5568,9 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 		}
 		case "line": {
 			const ld = newState;
-			const [oldResampled, newResampled] = alignPolylines(resolveLinePoints(oldState), resolveLinePoints(ld));
+			const oldLd = oldState;
+			const lineId = svg.attr("data-id") || "unknown";
+			const [oldResampled, newResampled] = alignPolylines(resolveLinePoints(oldLd, lineId), resolveLinePoints(ld, lineId));
 			svg.interrupt().transition(tr).attrTween("points", () => (t) => {
 				return oldResampled.map((op, i) => {
 					const np = newResampled[i];
@@ -5614,7 +5644,7 @@ function updateEntityImmediate(svg, text, d) {
 		}
 		case "line": {
 			const ld = d;
-			const ptsStr = resolveLinePoints(ld).map((p) => p.join(",")).join(" ");
+			const ptsStr = resolveLinePoints(ld, svg.attr("data-id") || "unknown").map((p) => p.join(",")).join(" ");
 			svg.attr("points", ptsStr).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW);
 			applyCommon(svg, ld.opacity);
 			break;
@@ -5981,19 +6011,28 @@ function stage(selector, opts = {}) {
 		}
 	}
 	function steps(defs, opts) {
-		const { start = 0 } = opts ?? {};
+		const { start = 0, mode = "full" } = opts ?? {};
 		const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
 		let current = -1;
 		let busy = false;
 		const listeners = [];
+		let previousSnapshot = null;
 		function go(i) {
 			if (i === current || busy || i < 0 || i >= normalized.length) return;
 			busy = true;
 			try {
 				fm.begin();
+				if (mode === "update" && previousSnapshot) for (const [id, state] of previousSnapshot) fm.declare(id, { ...state });
 				normalized[i].frame(api);
 				fm.commit();
 				current = i;
+				if (mode === "update") {
+					previousSnapshot = /* @__PURE__ */ new Map();
+					for (const id of fm.frameIds) {
+						const entity = fm.entities.get(id);
+						if (entity) previousSnapshot.set(id, { ...entity.desired });
+					}
+				}
 			} finally {
 				busy = false;
 			}
@@ -6007,6 +6046,9 @@ function stage(selector, opts = {}) {
 			},
 			prev() {
 				go(current - 1);
+			},
+			reset() {
+				go(0);
 			},
 			get current() {
 				return current;

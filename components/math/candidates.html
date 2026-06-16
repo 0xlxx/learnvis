@@ -24,26 +24,27 @@
 
 <div id="sections"></div>
 
-<script src="../../dist/learnvis.js"></script>
-<script>
+<script type="module">
+import { stage } from '../../dist/learnvis.mjs';
+
 const sections = [
   {
     name: 'Vector — stroke width',
-    desc: 'Line weight varianst: 1.0 / 1.5 / 2.0 / 3.0',
+    desc: 'Line weight variants: 1.0 / 1.5 / 2.0 / 3.0',
     candidates: [
-      { label:'1.0', draw(s){ s.math.vector([30,100],[180,40]).stroke('#555',1.0); }},
-      { label:'1.5', draw(s){ s.math.vector([30,100],[180,40]).stroke('#555',1.5); }},
-      { label:'2.0', draw(s){ s.math.vector([30,100],[180,40]).stroke('#555',2.0); }},
-      { label:'3.0', draw(s){ s.math.vector([30,100],[180,40]).stroke('#555',3.0); }},
+      { label:'1.0', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#555',1.0); }},
+      { label:'1.5', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#555',1.5); }},
+      { label:'2.0', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#555',2.0); }},
+      { label:'3.0', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#555',3.0); }},
     ]
   },
   {
     name: 'Vector — arrow tip style',
     desc: 'Sharp classical / blunt modern / filled triangle',
     candidates: [
-      { label:'classic', draw(s){ s.math.vector([30,100],[180,40]).stroke('#555',1.5); }},
-      { label:'thin', draw(s){ s.math.vector([30,100],[180,40]).stroke('#777',1.0); s.math.point([180,40]); }},
-      { label:'bold', draw(s){ s.math.vector([30,100],[180,40]).stroke('#444',2.5); }},
+      { label:'classic', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#555',1.5); }},
+      { label:'thin', draw(s){ const { vector, point } = s.math; vector([30,100],[180,40]).stroke('#777',1.0); point([180,40]); }},
+      { label:'bold', draw(s){ const { vector } = s.math; vector([30,100],[180,40]).stroke('#444',2.5); }},
       { label:'open', draw(s){
         const g = s.ctx.stage.edges;
         const fx=30, fy=100, tx=180, ty=40;
@@ -60,8 +61,8 @@ const sections = [
     name: 'Point — marker style',
     desc: 'Filled circle / open circle / cross / diamond',
     candidates: [
-      { label:'filled', draw(s){ s.math.point([110,70]).color('primary'); }},
-      { label:'open', draw(s){ s.math.point([110,70]).fill('#fff').stroke('primary',2); }},
+      { label:'filled', draw(s){ const { point } = s.math; point([110,70]).color('primary'); }},
+      { label:'open', draw(s){ const { point } = s.math; point([110,70]).fill('#fff').stroke('primary',2); }},
       { label:'cross', draw(s){
         const g = s.ctx.stage.bg;
         g.append('line').attr('x1',102).attr('y1',70).attr('x2',118).attr('y2',70).attr('stroke','#555').attr('stroke-width',1.5);
@@ -76,55 +77,57 @@ const sections = [
     name: 'Segment — dash style',
     desc: 'Solid / short dash / long dash / dotted',
     candidates: [
-      { label:'solid',  draw(s){ s.math.segment([30,70],[190,70]).stroke('#555',1.5); }},
-      { label:'dashed', draw(s){ s.math.segment([30,70],[190,70]).stroke('#555',1.5).dashed('5 4'); }},
-      { label:'long',   draw(s){ s.math.segment([30,70],[190,70]).stroke('#555',1.5).dashed('12 6'); }},
-      { label:'dotted', draw(s){ s.math.segment([30,70],[190,70]).stroke('#555',1.2).dashed('1 5'); }},
+      { label:'solid',  draw(s){ const { segment } = s.math; segment([30,70],[190,70]).stroke('#555',1.5); }},
+      { label:'dashed', draw(s){ const { segment } = s.math; segment([30,70],[190,70]).stroke('#555',1.5).dashed('5 4'); }},
+      { label:'long',   draw(s){ const { segment } = s.math; segment([30,70],[190,70]).stroke('#555',1.5).dashed('12 6'); }},
+      { label:'dotted', draw(s){ const { segment } = s.math; segment([30,70],[190,70]).stroke('#555',1.2).dashed('1 5'); }},
     ]
   },
   {
     name: 'Polyline — multi-segment line',
     desc: 'Orthogonal / dashed / curved / thick',
     candidates: [
-      { label:'orthogonal', draw(s){ s.math.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('primary').strokeW(1.8); }},
-      { label:'dashed', draw(s){ s.math.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('dim').dashed('5 3').strokeW(1.5); }},
-      { label:'thick', draw(s){ s.math.polyline('p',[[30,90],[60,90],[60,50],[100,50],[160,50]]).color('accent').strokeW(2.5); }},
-      { label:'long', draw(s){ s.math.polyline('p',[[30,100],[80,100],[80,30],[190,30]]).color('warning').strokeW(1.5); }},
+      { label:'orthogonal', draw(s){ const { polyline } = s.math; polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('primary').strokeW(1.8); }},
+      { label:'dashed', draw(s){ const { polyline } = s.math; polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('dim').dashed('5 3').strokeW(1.5); }},
+      { label:'thick', draw(s){ const { polyline } = s.math; polyline('p',[[30,90],[60,90],[60,50],[100,50],[160,50]]).color('accent').strokeW(2.5); }},
+      { label:'long', draw(s){ const { polyline } = s.math; polyline('p',[[30,100],[80,100],[80,30],[190,30]]).color('warning').strokeW(1.5); }},
     ]
   },
   {
     name: 'Circle — fill opacity',
     desc: 'None / light / medium / full fill',
     candidates: [
-      { label:'none',   draw(s){ s.math.circle([110,70],45).stroke('accent',1.5); }},
-      { label:'light',  draw(s){ s.math.circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.a(8)); }},
-      { label:'medium', draw(s){ s.math.circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.a(20)); }},
-      { label:'full',   draw(s){ s.math.circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.bg); }},
+      { label:'none',   draw(s){ const { circle } = s.math; circle([110,70],45).stroke('accent',1.5); }},
+      { label:'light',  draw(s){ const { circle } = s.math; circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.a(8)); }},
+      { label:'medium', draw(s){ const { circle } = s.math; circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.a(20)); }},
+      { label:'full',   draw(s){ const { circle } = s.math; circle([110,70],45).stroke('accent',1.5).fill(s.palette.accent.bg); }},
     ]
   },
   {
     name: 'Polygon — fill vs stroke emphasis',
     desc: 'Stroke-only / light fill / bold fill / filled no stroke',
     candidates: [
-      { label:'stroke', draw(s){ s.math.polygon([[50,100],[110,30],[170,100]]).fill('none').stroke('primary',2); }},
-      { label:'light',  draw(s){ s.math.polygon([[50,100],[110,30],[170,100]]).color('primary'); }},
-      { label:'heavy',  draw(s){ s.math.polygon([[50,100],[110,30],[170,100]]).fill(s.palette.primary.bg).stroke('primary',2.5); }},
-      { label:'no strk',draw(s){ s.math.polygon([[50,100],[110,30],[170,100]]).fill(s.palette.primary.a(25)).stroke('none',0); }},
+      { label:'stroke', draw(s){ const { polygon } = s.math; polygon([[50,100],[110,30],[170,100]]).fill('none').stroke('primary',2); }},
+      { label:'light',  draw(s){ const { polygon } = s.math; polygon([[50,100],[110,30],[170,100]]).color('primary'); }},
+      { label:'heavy',  draw(s){ const { polygon } = s.math; polygon([[50,100],[110,30],[170,100]]).fill(s.palette.primary.bg).stroke('primary',2.5); }},
+      { label:'no strk',draw(s){ const { polygon } = s.math; polygon([[50,100],[110,30],[170,100]]).fill(s.palette.primary.a(25)).stroke('none',0); }},
     ]
   },
   {
     name: 'Angle — arc weight & label',
     desc: 'Thin / medium / thick arc; label vs no label',
     candidates: [
-      { label:'thin',   draw(s){ s.math.angle([110,90],[30,40],[190,60]).color('warning'); }},
-      { label:'medium', draw(s){ s.math.angle([110,90],[30,40],[190,60]).stroke('#c80',2).label('θ'); }},
+      { label:'thin',   draw(s){ const { angle } = s.math; angle([110,90],[30,40],[190,60]).color('warning'); }},
+      { label:'medium', draw(s){ const { angle } = s.math; angle([110,90],[30,40],[190,60]).stroke('#c80',2).label('θ'); }},
       { label:'thick',  draw(s){
-        s.math.angle([110,90],[30,40],[190,60]).stroke('#c80',2.5).fill(s.palette.warning.a(25)).label('θ');
-        s.math.segment([110,90],[30,40]).stroke('#999',0.8);
-        s.math.segment([110,90],[190,60]).stroke('#999',0.8);
+        const { angle, segment } = s.math;
+        angle([110,90],[30,40],[190,60]).stroke('#c80',2.5).fill(s.palette.warning.a(25)).label('θ');
+        segment([110,90],[30,40]).stroke('#999',0.8);
+        segment([110,90],[190,60]).stroke('#999',0.8);
       }},
       { label:'minimal',draw(s){
-        s.math.angle([110,90],[30,40],[190,60]).stroke('#666',1.0);
+        const { angle } = s.math;
+        angle([110,90],[30,40],[190,60]).stroke('#666',1.0);
       }},
     ]
   },
@@ -132,34 +135,34 @@ const sections = [
     name: 'Grid — density',
     desc: 'Sparse / normal / dense / no grid (axes only)',
     candidates: [
-      { label:'sparse', draw(s){ s.math.grid([30,130],{width:160,height:100,spacing:80,stroke:'#ddd'}); }},
-      { label:'normal', draw(s){ s.math.grid([20,120],{width:180,height:100,spacing:40,stroke:'#ddd'}); }},
-      { label:'dense',  draw(s){ s.math.grid([20,120],{width:180,height:100,spacing:20,stroke:'#eee'}); }},
-      { label:'none',   draw(s){ s.math.axes([20,120],{xLen:180,yLen:100}); }},
+      { label:'sparse', draw(s){ const { grid } = s.math; grid([30,130],{width:160,height:100,spacing:80,stroke:'#ddd'}); }},
+      { label:'normal', draw(s){ const { grid } = s.math; grid([20,120],{width:180,height:100,spacing:40,stroke:'#ddd'}); }},
+      { label:'dense',  draw(s){ const { grid } = s.math; grid([20,120],{width:180,height:100,spacing:20,stroke:'#eee'}); }},
+      { label:'none',   draw(s){ const { axes } = s.math; axes([20,120],{xLen:180,yLen:100}); }},
     ]
   },
 ];
 
 const container = document.getElementById('sections');
 let stageId = 0;
-sections.forEach(sec => {
+for (const sec of sections) {
   const el = document.createElement('section');
   el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="row" id="r${stageId}"></div>`;
   container.appendChild(el);
 
-  const row = document.getElementById('r' + stageId);
+  const row = document.getElementById(`r${stageId}`);
   sec.candidates.forEach((c, j) => {
-    const id = 'st' + stageId + '_' + j;
+    const id = `st${stageId}_${j}`;
     const card = document.createElement('div');
     card.className = 'card';
     card.innerHTML = `<div class="name">${c.label}</div><div class="stage" id="${id}"></div>`;
     row.appendChild(card);
 
-    const s = LearnVis.stage('#' + id, { width: 220, height: 140, theme: 'warm' });
+    const s = stage(`#${id}`, { width: 220, height: 140, theme: 'warm' });
     c.draw(s);
   });
   stageId++;
-});
+}
 </script>
 </body>
 </html>

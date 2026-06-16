@@ -559,7 +559,7 @@ interface ArrayOpts {
 }
 interface GraphAPI {
   vertex(id: string, pos: Vec2): Vertex;
-  edge(a: Vertex, b: Vertex, opts?: {
+  edge(a: Vertex | string, b: Vertex | string, opts?: {
     directed?: boolean;
     gap?: number;
   }): Edge;
@@ -637,6 +637,8 @@ type NodeState = {
   labelGap?: number;
   symType?: string;
   _shape?: string;
+  _blockW?: number;
+  _blockH?: number;
 };
 type LineMarker = 'arrow' | 'none';
 type TfRotate = {
@@ -689,6 +691,8 @@ type LineState = WithTransform<{
   bend?: boolean;
   _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
+  _fromPort?: string;
+  _toPort?: string;
 }>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
 type RegionState = WithTransform<{
@@ -811,11 +815,13 @@ type StepLike = {
 } | ((s: StageAPI) => void);
 interface StepsOptions {
   start?: number;
+  mode?: 'full' | 'update';
 }
 interface StepsController {
   go(i: number): void;
   next(): void;
   prev(): void;
+  reset(): void;
   get current(): number;
   get total(): number;
   get currentStepDef(): StepLike | null;

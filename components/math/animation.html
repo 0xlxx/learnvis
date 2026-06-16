@@ -14,166 +14,174 @@
     .row{display:flex;gap:16px;flex-wrap:wrap}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
     .card .stage{width:340px;height:260px;display:block}
-    .stepper{display:flex;gap:4px;margin-top:6px;justify-content:center}
-    .stepper button{font-size:0.65rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
-    .stepper button.active{background:var(--blue-05);border-color:var(--blue)}
+    .step-controls{display:flex;gap:4px;margin-top:6px;justify-content:center;align-items:center}
+    .step-controls button{font-size:0.7rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
+    .step-controls button:disabled{opacity:0.35;cursor:default}
+    .step-controls .step-label{font-size:0.68rem;color:var(--text-dim);min-width:80px}
   </style>
 </head>
 <body>
 <h1>Math Animation</h1>
 <p class="sub">Vector addition, rotation, function sampling — smooth frame transitions</p>
 <div class="row" id="sections"></div>
-<script src="../../dist/learnvis.js"></script>
-<script>
+<script type="module">
+import { stage, stepper } from '../../dist/learnvis.mjs';
+
 const sections = [
   {
     name: '向量加法',
-    desc: 'v\u0303 + w\u0303，平行四边形法则。',
+    desc: 'ṽ + w̃，平行四边形法则。',
     steps: [
-      { label: '向量 v\u0303', frame: function(s) {
-        s.math.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        s.math.point('O', [60, 220]).color('primary').label('O');
-        s.math.vector('v', [60, 220], [220, 100]).color('danger').label('v\u0303');
+      { label: '向量 ṽ', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+        point('O', [60, 220]).color('primary').label('O');
+        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
       }},
-      { label: '向量 w\u0303', frame: function(s) {
-        s.math.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        s.math.point('O', [60, 220]).color('primary').label('O');
-        s.math.vector('v', [60, 220], [220, 100]).color('danger').label('v\u0303');
-        s.math.vector('w', [60, 220], [140, 200]).color('info').label('w\u0303');
+      { label: '向量 w̃', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+        point('O', [60, 220]).color('primary').label('O');
+        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
       }},
-      { label: '平行四边形', frame: function(s) {
-        s.math.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        s.math.point('O', [60, 220]).color('primary').label('O');
-        s.math.vector('v', [60, 220], [220, 100]).color('danger').label('v\u0303');
-        s.math.vector('w', [60, 220], [140, 200]).color('info').label('w\u0303');
-        var vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
-        var wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
-        var sum = [300, 80];
-        s.math.segment('w-shift', vt, sum).color('dim').dashed('4 3');
-        s.math.segment('v-shift', wt, sum).color('dim').dashed('4 3');
+      { label: '平行四边形', frame(s) {
+        const { axes, point, vector, segment } = s.math;
+        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+        point('O', [60, 220]).color('primary').label('O');
+        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
+        const vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
+        const wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
+        const sum = [300, 80];
+        segment('w-shift', vt, sum).color('dim').dashed('4 3');
+        segment('v-shift', wt, sum).color('dim').dashed('4 3');
       }},
-      { label: 'v\u0303 + w\u0303', frame: function(s) {
-        s.math.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        s.math.point('O', [60, 220]).color('primary').label('O');
-        s.math.vector('v', [60, 220], [220, 100]).color('danger').label('v\u0303');
-        s.math.vector('w', [60, 220], [140, 200]).color('info').label('w\u0303');
-        var vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
-        var wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
-        var sum = [300, 80];
-        s.math.segment('w-shift', vt, sum).color('dim').dashed('4 3');
-        s.math.segment('v-shift', wt, sum).color('dim').dashed('4 3');
-        s.math.vector('sum', [60, 220], sum).color('success').label('v\u0303 + w\u0303').strokeW(2.5);
+      { label: 'ṽ + w̃', frame(s) {
+        const { axes, point, vector, segment } = s.math;
+        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+        point('O', [60, 220]).color('primary').label('O');
+        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
+        const vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
+        const wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
+        const sum = [300, 80];
+        segment('w-shift', vt, sum).color('dim').dashed('4 3');
+        segment('v-shift', wt, sum).color('dim').dashed('4 3');
+        vector('sum', [60, 220], sum).color('success').label('ṽ + w̃').strokeW(2.5);
       }},
     ]
   },
   {
     name: '函数采样',
     desc: 'f(x) = 2sin(x)，从 4→8→16 个采样点逼近曲线。',
-    steps: (function() {
-      var samples = [4, 8, 16];
-      return samples.map(function(n) {
-        return {
-          label: n + ' 采样点',
-          frame: function(s) {
-            s.math.axes('ax', [50, 140], { xLen: 280, yLen: 120, xLabel: 'x', yLabel: 'y', color: 'dim' });
-            s.math.fn('curve', function(x) { return Math.sin(x) * 2; }, {
-              domain: [0, 2 * Math.PI], x: 50, y: 140, width: 280, height: 120,
-            }).color('primary');
-            var step = (2 * Math.PI) / (n - 1);
-            for (var i = 0; i < n; i++) {
-              var xv = 50 + (i / (n - 1)) * 280;
-              var yv = 140 - ((Math.sin(i * step) * 2 + 2) / 4) * 120;
-              s.math.point('p' + i, [xv, yv]).color('danger').size(5);
-            }
+    steps: (() => {
+      const samples = [4, 8, 16];
+      return samples.map(n => ({
+        label: `${n} 采样点`,
+        frame(s) {
+          const { axes, fn, point } = s.math;
+          axes('ax', [50, 140], { xLen: 280, yLen: 120, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          fn('curve', x => Math.sin(x) * 2, {
+            domain: [0, 2 * Math.PI], x: 50, y: 140, width: 280, height: 120,
+          }).color('primary');
+          const step = (2 * Math.PI) / (n - 1);
+          for (let i = 0; i < n; i++) {
+            const xv = 50 + (i / (n - 1)) * 280;
+            const yv = 140 - ((Math.sin(i * step) * 2 + 2) / 4) * 120;
+            point(`p${i}`, [xv, yv]).color('danger').size(5);
           }
-        };
-      });
+        }
+      }));
     })(),
   },
   {
     name: '圆与切线',
     desc: '单位圆上一点，随角度旋转的切线。',
-    steps: (function() {
-      var angles = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI];
-      return angles.map(function(a) {
-        return {
-          label: Math.round(a * 180 / Math.PI) + '\u00b0',
-          frame: function(s) {
-            var cx = 170, cy = 140, r = 80;
-            s.math.circle('c', [cx, cy], r).color('dim').strokeW(1);
-            var px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
-            s.math.point('P', [px, py]).color('danger').label('P').size(6);
-            s.math.segment('r', [cx, cy], [px, py]).color('accent').strokeW(1.5).label('r');
-            var tx = px - r * Math.sin(a), ty = py + r * Math.cos(a);
-            s.math.segment('tangent', [px, py], [tx, ty]).color('warning').strokeW(2).dashed('5 3');
-          }
-        };
-      });
+    steps: (() => {
+      const angles = [0, Math.PI / 4, Math.PI / 2, 3 * Math.PI / 4, Math.PI];
+      return angles.map(a => ({
+        label: `${Math.round(a * 180 / Math.PI)}°`,
+        frame(s) {
+          const { circle, point, segment } = s.math;
+          const cx = 170, cy = 140, r = 80;
+          circle('c', [cx, cy], r).color('dim').strokeW(1);
+          const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
+          point('P', [px, py]).color('danger').label('P').size(6);
+          segment('r', [cx, cy], [px, py]).color('accent').strokeW(1.5).label('r');
+          const tx = px - r * Math.sin(a), ty = py + r * Math.cos(a);
+          segment('tangent', [px, py], [tx, ty]).color('warning').strokeW(2).dashed('5 3');
+        }
+      }));
     })(),
   },
   {
     name: '矩形旋转',
     desc: '.rotate() 声明态分离，参数插值。',
-    steps: (function() {
-      var angles = [0, 45, 90, 135, 180, 225, 270, 315, 360];
-      var hw = 50, hh = 30, cx = 170, cy = 150;
-      return angles.map(function(a) {
-        return {
-          label: a + '\u00b0',
-          frame: function(s) {
-            s.math.axes('ax', [cx,cy], { xLen:140, yLen:120, color:'dim' });
-            s.math.point('O', [cx,cy]).color('primary').label('O');
-            var baseVerts = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(function(v){ return [cx+v[0],cy+v[1]]; });
-            s.math.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(a, cx, cy);
-            s.math.vector('diag', [cx,cy], [cx+hw,cy+hh]).color('danger').strokeW(1.6).rotate(a, cx, cy);
-          }
-        };
-      });
+    steps: (() => {
+      const angles = [0, 45, 90, 135, 180, 225, 270, 315, 360];
+      const hw = 50, hh = 30, cx = 170, cy = 150;
+      return angles.map(a => ({
+        label: `${a}°`,
+        frame(s) {
+          const { axes, point, polygon, vector } = s.math;
+          axes('ax', [cx,cy], { xLen:140, yLen:120, color:'dim' });
+          point('O', [cx,cy]).color('primary').label('O');
+          const baseVerts = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(v => [cx+v[0],cy+v[1]]);
+          polygon('rect', baseVerts).color('info').opacity(0.6).rotate(a, cx, cy);
+          vector('diag', [cx,cy], [cx+hw,cy+hh]).color('danger').strokeW(1.6).rotate(a, cx, cy);
+        }
+      }));
     })(),
   },
   {
     name: '向量变换',
     desc: '.rotate().scale(), D3 过渡。',
     steps: [
-      { label: '原始', frame: function(s) {
-        s.math.axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        s.math.point('O', [170,150]).color('primary').label('O');
-        s.math.vector('v', [170,150], [250,150]).color('danger').label('v');
+      { label: '原始', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
+        point('O', [170,150]).color('primary').label('O');
+        vector('v', [170,150], [250,150]).color('danger').label('v');
       }},
-      { label: 'rotate 45°', frame: function(s) {
-        s.math.axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        s.math.point('O', [170,150]).color('primary').label('O');
-        s.math.vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150);
+      { label: 'rotate 45°', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
+        point('O', [170,150]).color('primary').label('O');
+        vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150);
       }},
-      { label: '+ scale 2×', frame: function(s) {
-        s.math.axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        s.math.point('O', [170,150]).color('primary').label('O');
-        s.math.vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150).scale(2);
+      { label: '+ scale 2×', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
+        point('O', [170,150]).color('primary').label('O');
+        vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150).scale(2);
       }},
-      { label: '→ 原始', frame: function(s) {
-        s.math.axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        s.math.point('O', [170,150]).color('primary').label('O');
-        s.math.vector('v', [170,150], [250,150]).color('danger').label('v');
+      { label: '→ 原始', frame(s) {
+        const { axes, point, vector } = s.math;
+        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
+        point('O', [170,150]).color('primary').label('O');
+        vector('v', [170,150], [250,150]).color('danger').label('v');
       }},
     ]
   },
   {
     name: '矩形旋转 + 角度',
     desc: 'Base 顶点 + .rotate(), angle 弧随顶点动。',
-    steps: (function() {
-      var degs = [0, 30, 60, 90, 120];
-      return degs.map(function(d) {
-        var r = d * Math.PI / 180;
+    steps: (() => {
+      const degs = [0, 30, 60, 90, 120];
+      return degs.map(d => {
+        const r = d * Math.PI / 180;
         return {
-          label: d + '\u00b0',
-          frame: function(s) {
-            var w = 80, h = 50, ox = 170, oy = 150;
-            s.math.axes('ax', [ox, oy], { xLen: 130, yLen: 110, color: 'dim' });
-            s.math.point('O', [ox, oy]).color('primary').label('O');
-            var baseVerts = [[0,0],[w,0],[w,h],[0,h]].map(function(v){ return [ox+v[0],oy+v[1]]; });
-            s.math.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(d, ox, oy);
-            var rotEnd = [ox + w*Math.cos(r), oy + w*Math.sin(r)];
-            s.math.angle('a', [ox,oy], [ox+40,oy], rotEnd, { size: 18 }).color('danger').label(d + '°');
+          label: `${d}°`,
+          frame(s) {
+            const w = 80, h = 50, ox = 170, oy = 150;
+            const { axes, point, polygon, angle } = s.math;
+            axes('ax', [ox, oy], { xLen: 130, yLen: 110, color: 'dim' });
+            point('O', [ox, oy]).color('primary').label('O');
+            const baseVerts = [[0,0],[w,0],[w,h],[0,h]].map(v => [ox+v[0],oy+v[1]]);
+            polygon('rect', baseVerts).color('info').opacity(0.6).rotate(d, ox, oy);
+            const rotEnd = [ox + w*Math.cos(r), oy + w*Math.sin(r)];
+            angle('a', [ox,oy], [ox+40,oy], rotEnd, { size: 18 }).color('danger').label(`${d}°`);
           }
         };
       });
@@ -181,25 +189,15 @@ const sections = [
   },
 ];
 
-var container = document.getElementById('sections');
-sections.forEach(function(sec, si) {
-  var el = document.createElement('section');
-  el.innerHTML = '<h2>' + sec.name + '</h2><div class="desc">' + sec.desc + '</div><div class="card"><div class="stage" id="st' + si + '"></div><div class="stepper" id="sp' + si + '"></div></div>';
+const container = document.getElementById('sections');
+sections.forEach((sec, si) => {
+  const el = document.createElement('section');
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div><div class="stepper" id="sp${si}"></div></div>`;
   container.appendChild(el);
 
-  var s = LearnVis.stage('#st' + si, { width: 340, height: 260, theme: 'paper' });
-  var ctrl = s.steps(sec.steps);
-
-  var sp = document.getElementById('sp' + si);
-  for (var i = 0; i < sec.steps.length; i++) {
-    var btn = document.createElement('button');
-    btn.textContent = sec.steps[i].label;
-    (function(idx) { btn.addEventListener('click', function() { ctrl.go(idx); }); })(i);
-    sp.appendChild(btn);
-  }
-  ctrl.onChange(function(i) {
-    sp.querySelectorAll('button').forEach(function(b, j) { b.classList.toggle('active', j === i); });
-  });
+  const s = stage(`#st${si}`, { width: 340, height: 260, theme: 'paper' });
+  const ctrl = s.steps(sec.steps);
+  stepper(`#sp${si}`, ctrl);
 });
 </script>
 </body>

@@ -11,19 +11,21 @@
 
 <div id="stage"></div>
 
-<script src="../dist/learnvis.js"></script>
-<script>
-const s = LearnVis.stage('#stage', { width: 520, height: 200, theme: 'warm' });
+<script type="module">
+import { stage } from '../dist/learnvis.mjs';
 
-// All 5 layout primitives in one frame, no CSS needed
-s.frames.begin();
-s.layout.layer('bg', 0, { y: 20, h: 160, w: 520, color: 'info', style: 'band', opacity: 0.15, label: 'Layer' });
-s.math.point('P', [260, 100]).color('danger').label('point').size(6);
-s.math.polyline('route', [[80,140],[160,140],[160,40],[300,40]]).color('accent').strokeW(1.8);
-s.math.segment('sep', [400,40],[480,140]).color('dim').dashed('4 3');
-s.layout.node('N', 260, 100, { w: 60, h: 30, rx: 5 }).color('primary').label('node');
-s.layout.block('B', 380, 60, 100, 80, { style: 'active', rx: 6 }).label('block');
-s.frames.commit({ animate: false });
+const s = stage('#stage', { width: 520, height: 200, theme: 'warm' });
+const { point, polyline, segment } = s.math;
+const { layer, block } = s.graph;
+
+s.render(() => {
+  layer('bg', 0, { y: 20, h: 160, w: 520, color: 'info', style: 'band', opacity: 0.15, label: 'Layer' });
+  point('P', [260, 100]).color('danger').label('point').size(6);
+  polyline('route', [[80,140],[160,140],[160,40],[300,40]]).color('accent').strokeW(1.8);
+  segment('sep', [400,40],[480,140]).color('dim').dashed('4 3');
+  block('N', 230, 85, 60, 30, { rx: 5 }).color('primary').label('node');
+  block('B', 330, 40, 100, 80, { style: 'active', rx: 6 }).label('block');
+});
 </script>
 
 </body>
