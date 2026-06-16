@@ -110,7 +110,7 @@ export function coreNodeMixin(eid: string, fm: FrameManager, p: Palette) {
 // ── Transform mixin (stores pure descriptors) ──
 
 import type { Transform } from './transform';
-import { rotate as _rotate, scale as _scale, translate as _translate } from './transform';
+import { rotate as _rotate, scale as _scale, translate as _translate, matrix as _matrix } from './transform';
 
 export const mixTransform = (eid: string, fm: FrameManager, getKey: string) => ({
   rotate(a: number, cx: number, cy: number) {
@@ -133,6 +133,13 @@ export const mixTransform = (eid: string, fm: FrameManager, getKey: string) => (
     if (!d._base) _stashBase(d, getKey);
     d._tf = [...(d._tf || []), _translate(dx, dy)];
     fm.patch(eid, { _tf: d._tf, _base: d._base }); return this;
+  },
+  matrixTransform(a: number, b: number, c: number, d: number, tx: number = 0, ty: number = 0) {
+    const e = fm.entities.get(eid); if (!e) return this;
+    const sd = e.desired as LineState | RegionState;
+    if (!sd._base) _stashBase(sd, getKey);
+    sd._tf = [...(sd._tf || []), _matrix(a, b, c, d, tx, ty)];
+    fm.patch(eid, { _tf: sd._tf, _base: sd._base }); return this;
   },
 });
 

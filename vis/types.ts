@@ -35,7 +35,7 @@ export interface Rect { x: number; y: number; w: number; h: number; rx?: number 
 
 // ── Entity system (v4 - 5 base types) ──
 
-export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge' | 'zone' | 'arrow';
+export type EntityPrefix = 'node' | 'line' | 'region' | 'curve' | 'group' | 'point' | 'vector' | 'segment' | 'circle' | 'polygon' | 'angle' | 'fn' | 'grid' | 'axes' | 'dot' | 'path' | 'fill' | 'vertex' | 'edge' | 'zone' | 'arrow' | 'mat';
 
 declare const EntityIdBrand: unique symbol;
 /** Branded string type for entity identifiers (e.g. "point:O", "vertex:A").
@@ -65,7 +65,8 @@ export type LineMarker = 'arrow' | 'none';
 export type TfRotate = { type: 'rotate'; angle: number; cx: number; cy: number };
 export type TfScale = { type: 'scale'; sx: number; sy: number };
 export type TfTranslate = { type: 'translate'; dx: number; dy: number };
-export type Transform = TfRotate | TfScale | TfTranslate;
+export type TfMatrix = { type: 'matrix'; a: number; b: number; c: number; d: number; tx: number; ty: number };
+export type Transform = TfRotate | TfScale | TfTranslate | TfMatrix;
 
 // ── Stored geometry base (immutable, used by transform pipeline) ──
 export type TfBase = { from: Vec2; to: Vec2 } | { vertices: Vec2[] };
@@ -111,13 +112,15 @@ export type CurveState = {
 };
 
 export type GroupState = {
-  type: 'group'; subtype: 'axes' | 'grid' | 'angle';
+  type: 'group'; subtype: 'axes' | 'grid' | 'angle' | 'matrix';
   // axes
   ox?: number; oy?: number; xl?: number; yl?: number; xLabel?: string; yLabel?: string;
   // grid
   w?: number; h?: number; sp?: number;
   // angle
   vertex?: Vec2; ray1?: Vec2; ray2?: Vec2; arcR?: number;
+  // matrix display
+  data?: number[][]; x?: number; y?: number; cellW?: number; cellH?: number;
   // common
   fill?: string; stroke?: string; strokeW?: number; opacity?: number; dash?: string; label?: string;
 };

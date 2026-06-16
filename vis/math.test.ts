@@ -349,3 +349,105 @@ describe('math frame integration', () => {
     expect((e!.desired as any).type).toBe('line');
   });
 });
+
+describe('math matrix', () => {
+  let math: MathAPI;
+  let fm: FrameManager;
+
+  beforeEach(() => {
+    const env = setupMath();
+    math = env.math;
+    fm = env.fm;
+  });
+
+  it('declares a group entity with subtype matrix', () => {
+    fm.begin();
+    math.matrix('A', [[1, 2], [3, 4]]);
+    fm.commit({ animate: false });
+    const e = fm.entities.get('mat:A');
+    expect(e).toBeTruthy();
+    expect((e!.desired as any).type).toBe('group');
+    expect((e!.desired as any).subtype).toBe('matrix');
+  });
+
+  it('stores data array', () => {
+    fm.begin();
+    math.matrix('A', [[1, 2], [3, 4]]);
+    fm.commit({ animate: false });
+    const e = fm.entities.get('mat:A');
+    expect((e!.desired as any).data).toEqual([[1, 2], [3, 4]]);
+  });
+
+  it('set() updates data', () => {
+    fm.begin();
+    const m = math.matrix('A', [[1, 2], [3, 4]]);
+    fm.commit({ animate: false });
+    fm.begin();
+    math.matrix('A', [[1, 2], [3, 4]]);  // re-declare before patching
+    m.set([[5, 6], [7, 8]]);
+    fm.commit({ animate: false });
+    const e = fm.entities.get('mat:A');
+    expect((e!.desired as any).data).toEqual([[5, 6], [7, 8]]);
+  });
+
+  it('color() updates stroke', () => {
+    fm.begin();
+    const m = math.matrix('A', [[1, 0], [0, 1]], { color: 'danger' });
+    fm.commit({ animate: false });
+    const e = fm.entities.get('mat:A');
+    expect((e!.desired as any).stroke).toBeTruthy();
+  });
+});
+
+describe('math basis', () => {
+  let math: MathAPI;
+  let fm: FrameManager;
+
+  beforeEach(() => {
+    const env = setupMath();
+    math = env.math;
+    fm = env.fm;
+  });
+
+  it('declares two vector entities', () => {
+    fm.begin();
+    math.basis('B', [100, 100]);
+    fm.commit({ animate: false });
+    const i = fm.entities.get('vector:B-i');
+    const j = fm.entities.get('vector:B-j');
+    expect(i).toBeTruthy();
+    expect(j).toBeTruthy();
+  });
+
+  it('i-vector points right from origin', () => {
+    fm.begin();
+    math.basis('B', [100, 100], { scale: 60 });
+    fm.commit({ animate: false });
+    const i = fm.entities.get('vector:B-i');
+    const to = (i!.desired as any).to;
+    expect(to[0]).toBeCloseTo(160);
+    expect(to[1]).toBeCloseTo(100);
+  });
+
+  it('j-vector points up from origin (SVG y-axis inverted)', () => {
+    fm.begin();
+    math.basis('B', [100, 100], { scale: 60 });
+    fm.commit({ animate: false });
+    const j = fm.entities.get('vector:B-j');
+    const to = (j!.desired as any).to;
+    expect(to[0]).toBeCloseTo(100);
+    expect(to[1]).toBeCloseTo(40);
+  });
+
+  it('iColor patches i-vector stroke', () => {
+    fm.begin();
+    const b = math.basis('B', [100, 100], { iColor: 'danger' });
+    fm.commit({ animate: false });
+    fm.begin();
+    math.basis('B', [100, 100]);  // re-declare before patching
+    b.iColor('success');
+    fm.commit({ animate: false });
+    const i = fm.entities.get('vector:B-i');
+    expect((i!.desired as any).stroke).toBeTruthy();
+  });
+});

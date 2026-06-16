@@ -48,6 +48,8 @@ export interface MathAPI {
   ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
   symbol(id: string, pos: Vec2, opts?: { type?: 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye'; size?: number; color?: string; fill?: string }): MathShape;
   arc(id: string, center: Vec2, opts: { innerR?: number; outerR: number; startAngle: number; endAngle: number; color?: string; fill?: string; strokeW?: number }): MathShape;
+  matrix(id: string, data: number[][], opts?: { x?: number; y?: number; color?: string; label?: string; cellW?: number; cellH?: number }): MathMatrix;
+  basis(id: string, origin: Vec2, opts?: { iColor?: string; jColor?: string; scale?: number; iLabel?: string; jLabel?: string; color?: string; strokeW?: number }): MathBasis;
 }
 
 // ── Element interfaces (declared for typed usage, no need to change when using mixins) ──
@@ -153,6 +155,23 @@ export interface MathShape {
   translate(dx: number, dy: number): MathShape;
 }
 
+export interface MathMatrix {
+  set(data: number[][]): MathMatrix;
+  color(c: string): MathMatrix;
+  label(t: string): MathMatrix;
+  moveTo(x: number, y: number): MathMatrix;
+  opacity(v: number): MathMatrix;
+}
+
+export interface MathBasis {
+  color(c: string): MathBasis;
+  iColor(c: string): MathBasis;
+  jColor(c: string): MathBasis;
+  scale(s: number): MathBasis;
+  strokeW(n: number): MathBasis;
+  opacity(v: number): MathBasis;
+}
+
 interface FnOpts {
   domain?: [number, number]; range?: [number, number];
   x?: number; y?: number; width?: number; height?: number;
@@ -179,6 +198,8 @@ export interface MathCoords {
 
 export function createMathRenderer(fm: FrameManager, ctx: import('./types').StageCtx, palette: Palette): MathAPI {
   const p = palette;
+
+  function patch(eid: string, props: Record<string, unknown>) { fm.patch(eid, props as any); }
 
   function point(id: string, pos: Vec2, opts: { color?: string; label?: string; size?: number; fill?: string; labelPlace?: Place; labelGap?: number } = {}): MathPoint {
     const eid = mkId('point', id);
@@ -532,7 +553,63 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     };
   }
 
-  return { point, vector, segment, polyline, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc };
+  function matrixPrimitive(id: string, data: number[][], opts: { x?: number; y?: number; color?: string; label?: string; cellW?: number; cellH?: number } = {}): MathMatrix {
+    const eid = mkId('mat', id);
+    const r = resolveColor(p, opts.color);
+    fm.declare(eid, {
+      type: 'group', subtype: 'matrix',
+      data, x: opts.x ?? 0, y: opts.y ?? 0,
+      cellW: opts.cellW, cellH: opts.cellH,
+      stroke: r.stroke, label: opts.label ?? '',
+    } as unknown as import('./types').GroupState);
+    return {
+      set(newData: number[][]) { patch(eid, { data: newData }); return this; },
+      color(c: string) { const rc = resolveColor(p, c); patch(eid, { stroke: rc.stroke }); return this; },
+      label(t: string) { patch(eid, { label: t }); return this; },
+      moveTo(x: number, y: number) { patch(eid, { x, y }); return this; },
+      ...mixOpacity(eid, fm),
+    } as unknown as MathMatrix;
+  }
+
+  function basisPrimitive(id: string, origin: Vec2, opts: { iColor?: string; jColor?: string; scale?: number; iLabel?: string; jLabel?: string; color?: string; strokeW?: number } = {}): MathBasis {
+    const s = opts.scale ?? 50;
+    const sw = opts.strokeW ?? 2;
+    const ox = origin[0], oy = origin[1];
+    const iId = mkId('vector', id + '-i');
+    const jId = mkId('vector', id + '-j');
+    const defaultStroke = resolveColor(p, opts.color).stroke;
+    const iStroke = opts.iColor ? resolveColor(p, opts.iColor).stroke : (defaultStroke || p.accent.fg);
+    const jStroke = opts.jColor ? resolveColor(p, opts.jColor).stroke : (defaultStroke || p.danger.fg);
+    const iLabel = opts.iLabel ?? 'î';
+    const jLabel = opts.jLabel ?? 'ĵ';
+
+    fm.declare(iId, {
+      type: 'line', marker: 'arrow' as import('./types').LineMarker,
+      from: [ox, oy], to: [ox + s, oy],
+      stroke: iStroke, strokeW: sw, label: iLabel, labelPlace: 'below' as import('./types').Place, labelGap: 10,
+    } as any);
+    fm.declare(jId, {
+      type: 'line', marker: 'arrow' as import('./types').LineMarker,
+      from: [ox, oy], to: [ox, oy - s],
+      stroke: jStroke, strokeW: sw, label: jLabel, labelPlace: 'left' as import('./types').Place, labelGap: 10,
+    } as any);
+
+    return {
+      color(c: string) {
+        const r = resolveColor(p, c);
+        fm.patch(iId, { stroke: r.stroke }); fm.patch(jId, { stroke: r.stroke }); return this;
+      },
+      iColor(c: string) { const r = resolveColor(p, c); fm.patch(iId, { stroke: r.stroke }); return this; },
+      jColor(c: string) { const r = resolveColor(p, c); fm.patch(jId, { stroke: r.stroke }); return this; },
+      scale(v: number) {
+        fm.patch(iId, { to: [ox + v, oy] }); fm.patch(jId, { to: [ox, oy - v] }); return this;
+      },
+      strokeW(n: number) { fm.patch(iId, { strokeW: n }); fm.patch(jId, { strokeW: n }); return this; },
+      ...mixOpacity(iId, fm),
+    } as unknown as MathBasis;
+  }
+
+  return { point, vector, segment, polyline, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc, matrix: matrixPrimitive, basis: basisPrimitive };
 }
 
 // Legacy renderer (kept for backward compat — delegates to FrameManager internally)

@@ -103,6 +103,7 @@ function identityTransforms(tf: Transform[]): Transform[] {
       case 'rotate':    return { type: 'rotate' as const, angle: 0, cx: t.cx, cy: t.cy };
       case 'scale':     return { type: 'scale' as const, sx: 1, sy: 1 };
       case 'translate': return { type: 'translate' as const, dx: 0, dy: 0 };
+      case 'matrix':    return { type: 'matrix' as const, a: 1, b: 0, c: 0, d: 1, tx: 0, ty: 0 };
     }
   });
 }
@@ -329,6 +330,42 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
         for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
         for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
+      } else if (gd.subtype === 'matrix') {
+        const data = gd.data ?? [[0]];
+        const rows = data.length, cols = data[0]?.length ?? 1;
+        const x = gd.x ?? 0, y = gd.y ?? 0;
+        const cw = gd.cellW ?? 40, ch = gd.cellH ?? 22;
+        const st = svgColor(gd.stroke ?? '#222');
+        const font = 'JetBrains Mono,monospace';
+        const fmt = (v: number) => Number.isInteger(v) ? `${v}` : v.toFixed(2).replace(/\.?0+$/, '') || '0';
+
+        // Left bracket
+        const bh = rows * ch;
+        g.append('text').attr('x', x).attr('y', y + bh / 2)
+          .attr('font-size', `${bh + 4}px`).attr('fill', st).attr('font-family', font)
+          .attr('text-anchor', 'middle').attr('dominant-baseline', 'central').text('[');
+
+        // Cells
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            g.append('text').attr('x', x + 12 + c * cw + cw / 2).attr('y', y + r * ch + ch / 2)
+              .attr('font-size', '13px').attr('fill', st).attr('font-family', font)
+              .attr('text-anchor', 'middle').attr('dominant-baseline', 'central')
+              .text(fmt(data[r]?.[c] ?? 0));
+          }
+        }
+
+        // Right bracket
+        g.append('text').attr('x', x + 12 + cols * cw + 4).attr('y', y + bh / 2)
+          .attr('font-size', `${bh + 4}px`).attr('fill', st).attr('font-family', font)
+          .attr('text-anchor', 'middle').attr('dominant-baseline', 'central').text(']');
+
+        // Label below
+        if (gd.label) {
+          g.append('text').attr('x', x + 12 + (cols * cw) / 2).attr('y', y + bh + 18)
+            .attr('font-size', '10px').attr('fill', st).attr('font-family', font)
+            .attr('text-anchor', 'middle').text(gd.label);
+        }
       }
       applyCommon(g, gd.opacity);
       return { group: g, text: null };

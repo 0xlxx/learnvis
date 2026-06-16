@@ -4027,6 +4027,17 @@ function translate(dx, dy) {
 		dy
 	};
 }
+function matrix(a, b, c, d, tx = 0, ty = 0) {
+	return {
+		type: "matrix",
+		a,
+		b,
+		c,
+		d,
+		tx,
+		ty
+	};
+}
 function lerp(a, b, t) {
 	return a + (b - a) * t;
 }
@@ -4049,6 +4060,15 @@ function interpolate(a, b, t) {
 				dx: lerp(tf.dx, bt.dx, t),
 				dy: lerp(tf.dy, bt.dy, t)
 			};
+			case "matrix": return {
+				...tf,
+				a: lerp(tf.a, bt.a, t),
+				b: lerp(tf.b, bt.b, t),
+				c: lerp(tf.c, bt.c, t),
+				d: lerp(tf.d, bt.d, t),
+				tx: lerp(tf.tx, bt.tx, t),
+				ty: lerp(tf.ty, bt.ty, t)
+			};
 		}
 	});
 }
@@ -4070,6 +4090,12 @@ function applyLine(from, to, tf) {
 			nf = [nf[0] + t.dx, nf[1] + t.dy];
 			nt = [nt[0] + t.dx, nt[1] + t.dy];
 			break;
+		case "matrix": {
+			const { a, b, c, d, tx, ty } = t;
+			nf = [a * nf[0] + c * nf[1] + tx, b * nf[0] + d * nf[1] + ty];
+			nt = [a * nt[0] + c * nt[1] + tx, b * nt[0] + d * nt[1] + ty];
+			break;
+		}
 	}
 	return {
 		from: nf,
@@ -4093,6 +4119,11 @@ function applyVertices(vertices, tf) {
 		case "translate":
 			nv = nv.map(([px, py]) => [px + t.dx, py + t.dy]);
 			break;
+		case "matrix": {
+			const { a, b, c, d, tx, ty } = t;
+			nv = nv.map(([px, py]) => [a * px + c * py + tx, b * px + d * py + ty]);
+			break;
+		}
 	}
 	return nv;
 }
@@ -4225,6 +4256,18 @@ const mixTransform = (eid, fm, getKey) => ({
 			_base: d._base
 		});
 		return this;
+	},
+	matrixTransform(a, b, c, d, tx = 0, ty = 0) {
+		const e = fm.entities.get(eid);
+		if (!e) return this;
+		const sd = e.desired;
+		if (!sd._base) _stashBase(sd, getKey);
+		sd._tf = [...sd._tf || [], matrix(a, b, c, d, tx, ty)];
+		fm.patch(eid, {
+			_tf: sd._tf,
+			_base: sd._base
+		});
+		return this;
 	}
 });
 function _stashBase(d, getKey) {
@@ -4254,6 +4297,9 @@ const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
 const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
 function createMathRenderer(fm, ctx, palette) {
 	const p = palette;
+	function patch(eid, props) {
+		fm.patch(eid, props);
+	}
 	function point(id, pos, opts = {}) {
 		const eid$5 = eid("point", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
@@ -4785,6 +4831,106 @@ function createMathRenderer(fm, ctx, palette) {
 			}
 		};
 	}
+	function matrixPrimitive(id, data, opts = {}) {
+		const eid$20 = eid("mat", id);
+		const r = resolveColor(p, opts.color);
+		fm.declare(eid$20, {
+			type: "group",
+			subtype: "matrix",
+			data,
+			x: opts.x ?? 0,
+			y: opts.y ?? 0,
+			cellW: opts.cellW,
+			cellH: opts.cellH,
+			stroke: r.stroke,
+			label: opts.label ?? ""
+		});
+		return {
+			set(newData) {
+				patch(eid$20, { data: newData });
+				return this;
+			},
+			color(c) {
+				patch(eid$20, { stroke: resolveColor(p, c).stroke });
+				return this;
+			},
+			label(t) {
+				patch(eid$20, { label: t });
+				return this;
+			},
+			moveTo(x, y) {
+				patch(eid$20, {
+					x,
+					y
+				});
+				return this;
+			},
+			...mixOpacity(eid$20, fm)
+		};
+	}
+	function basisPrimitive(id, origin, opts = {}) {
+		const s = opts.scale ?? 50;
+		const sw = opts.strokeW ?? 2;
+		const ox = origin[0], oy = origin[1];
+		const iId = eid("vector", id + "-i");
+		const jId = eid("vector", id + "-j");
+		const defaultStroke = resolveColor(p, opts.color).stroke;
+		const iStroke = opts.iColor ? resolveColor(p, opts.iColor).stroke : defaultStroke || p.accent.fg;
+		const jStroke = opts.jColor ? resolveColor(p, opts.jColor).stroke : defaultStroke || p.danger.fg;
+		const iLabel = opts.iLabel ?? "î";
+		const jLabel = opts.jLabel ?? "ĵ";
+		fm.declare(iId, {
+			type: "line",
+			marker: "arrow",
+			from: [ox, oy],
+			to: [ox + s, oy],
+			stroke: iStroke,
+			strokeW: sw,
+			label: iLabel,
+			labelPlace: "below",
+			labelGap: 10
+		});
+		fm.declare(jId, {
+			type: "line",
+			marker: "arrow",
+			from: [ox, oy],
+			to: [ox, oy - s],
+			stroke: jStroke,
+			strokeW: sw,
+			label: jLabel,
+			labelPlace: "left",
+			labelGap: 10
+		});
+		return {
+			color(c) {
+				const r = resolveColor(p, c);
+				fm.patch(iId, { stroke: r.stroke });
+				fm.patch(jId, { stroke: r.stroke });
+				return this;
+			},
+			iColor(c) {
+				const r = resolveColor(p, c);
+				fm.patch(iId, { stroke: r.stroke });
+				return this;
+			},
+			jColor(c) {
+				const r = resolveColor(p, c);
+				fm.patch(jId, { stroke: r.stroke });
+				return this;
+			},
+			scale(v) {
+				fm.patch(iId, { to: [ox + v, oy] });
+				fm.patch(jId, { to: [ox, oy - v] });
+				return this;
+			},
+			strokeW(n) {
+				fm.patch(iId, { strokeW: n });
+				fm.patch(jId, { strokeW: n });
+				return this;
+			},
+			...mixOpacity(iId, fm)
+		};
+	}
 	return {
 		point,
 		vector,
@@ -4805,7 +4951,9 @@ function createMathRenderer(fm, ctx, palette) {
 		ngon,
 		ellipse,
 		symbol,
-		arc
+		arc,
+		matrix: matrixPrimitive,
+		basis: basisPrimitive
 	};
 }
 
@@ -5300,6 +5448,15 @@ function identityTransforms(tf) {
 				dx: 0,
 				dy: 0
 			};
+			case "matrix": return {
+				type: "matrix",
+				a: 1,
+				b: 0,
+				c: 0,
+				d: 1,
+				tx: 0,
+				ty: 0
+			};
 		}
 	});
 }
@@ -5546,6 +5703,19 @@ function drawEntity(ctx, id, d, markerCache) {
 				const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
 				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
 				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
+			} else if (gd.subtype === "matrix") {
+				const data = gd.data ?? [[0]];
+				const rows = data.length, cols = data[0]?.length ?? 1;
+				const x = gd.x ?? 0, y = gd.y ?? 0;
+				const cw = gd.cellW ?? 40, ch = gd.cellH ?? 22;
+				const st = svgColor(gd.stroke ?? "#222");
+				const font = "JetBrains Mono,monospace";
+				const fmt = (v) => Number.isInteger(v) ? `${v}` : v.toFixed(2).replace(/\.?0+$/, "") || "0";
+				const bh = rows * ch;
+				g.append("text").attr("x", x).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("[");
+				for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) g.append("text").attr("x", x + 12 + c * cw + cw / 2).attr("y", y + r * ch + ch / 2).attr("font-size", "13px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text(fmt(data[r]?.[c] ?? 0));
+				g.append("text").attr("x", x + 12 + cols * cw + 4).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("]");
+				if (gd.label) g.append("text").attr("x", x + 12 + cols * cw / 2).attr("y", y + bh + 18).attr("font-size", "10px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").text(gd.label);
 			}
 			applyCommon(g, gd.opacity);
 			return {
@@ -6146,9 +6316,156 @@ function stage3D(selector, opts) {
 }
 
 //#endregion
+//#region vis/linalg.ts
+/** Apply 2×2 matrix to a point. Returns [x', y']. */
+function applyMat2(m, x, y) {
+	const [a, b, c, d] = m;
+	return [a * x + c * y, b * x + d * y];
+}
+/** Apply affine transform to a point. Returns [x', y']. */
+function applyAffine(a, b, c, d, tx, ty, x, y) {
+	return [a * x + c * y + tx, b * x + d * y + ty];
+}
+/** Identity 2×2 matrix: [[1,0],[0,1]] */
+function mat2Identity() {
+	return [
+		1,
+		0,
+		0,
+		1
+	];
+}
+/** Identity affine: [1,0,0,1,0,0] */
+function affineIdentity() {
+	return [
+		1,
+		0,
+		0,
+		1,
+		0,
+		0
+	];
+}
+/** Multiply two 2×2 matrices: m1 × m2 */
+function mat2Multiply(m1, m2) {
+	const [a1, b1, c1, d1] = m1;
+	const [a2, b2, c2, d2] = m2;
+	return [
+		a1 * a2 + c1 * b2,
+		b1 * a2 + d1 * b2,
+		a1 * c2 + c1 * d2,
+		b1 * c2 + d1 * d2
+	];
+}
+/** Multiply 2×2 matrix by a vector. Returns [x', y']. */
+function mat2VecMul(m, x, y) {
+	const [a, b, c, d] = m;
+	return [a * x + c * y, b * x + d * y];
+}
+/** Determinant of 2×2 matrix. */
+function mat2Det(a, b, c, d) {
+	return a * d - b * c;
+}
+/** Inverse of 2×2 matrix. Returns null if singular (det = 0). */
+function mat2Inverse(a, b, c, d) {
+	const det = a * d - b * c;
+	if (Math.abs(det) < 1e-12) return null;
+	const inv = 1 / det;
+	return [
+		d * inv,
+		-b * inv,
+		-c * inv,
+		a * inv
+	];
+}
+/** Rotation matrix (degrees). Positive = counter-clockwise in standard math coords. */
+function mat2FromAngle(deg) {
+	const r = deg * Math.PI / 180;
+	const cos = Math.cos(r), sin = Math.sin(r);
+	return [
+		cos,
+		sin,
+		-sin,
+		cos
+	];
+}
+/** Scale matrix. */
+function mat2Scale(sx, sy) {
+	return [
+		sx,
+		0,
+		0,
+		sy
+	];
+}
+/** Shear matrix: x' = x + kx*y, y' = y + ky*x */
+function mat2Shear(kx, ky) {
+	return [
+		1,
+		ky,
+		kx,
+		1
+	];
+}
+/** Reflection matrix across a line at angle `deg` (degrees from positive x-axis). */
+function mat2FromReflection(deg) {
+	const r = 2 * deg * Math.PI / 180;
+	const cos = Math.cos(r), sin = Math.sin(r);
+	return [
+		cos,
+		sin,
+		sin,
+		-cos
+	];
+}
+/** Diagonal matrix diag(d1, d2). */
+function mat2Diag(d1, d2) {
+	return [
+		d1,
+		0,
+		0,
+		d2
+	];
+}
+/** Decompose 2×2 matrix into rotation * scale (SVD — simple 2×2 case). */
+function mat2Eigen(a, b, c, d) {
+	const tr = a + d;
+	const det = a * d - b * c;
+	const disc = tr * tr - 4 * det;
+	if (disc < 0) return null;
+	const sqrtD = Math.sqrt(disc);
+	const l1 = (tr + sqrtD) / 2;
+	const l2 = (tr - sqrtD) / 2;
+	const v1x = c, v1y = l1 - a;
+	const v2x = c, v2y = l2 - a;
+	if (Math.abs(c) < 1e-12) {
+		const u1x = l1 - d, u1y = b;
+		const u2x = l2 - d, u2y = b;
+		const n1 = Math.hypot(u1x, u1y) || 1;
+		const n2 = Math.hypot(u2x, u2y) || 1;
+		return {
+			evals: [l1, l2],
+			evecs: [[u1x / n1, u1y / n1], [u2x / n2, u2y / n2]]
+		};
+	}
+	const n1 = Math.hypot(v1x, v1y) || 1;
+	const n2 = Math.hypot(v2x, v2y) || 1;
+	return {
+		evals: [l1, l2],
+		evecs: [[v1x / n1, v1y / n1], [v2x / n2, v2y / n2]]
+	};
+}
+/** Format a number for matrix cell display. */
+function fmtCell(v) {
+	if (Number.isInteger(v)) return `${v}`;
+	const s = v.toFixed(2);
+	return s.includes(".") ? s.replace(/\.?0+$/, "") || "0" : s;
+}
+
+//#endregion
 //#region vis/index.ts
 if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispose");
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

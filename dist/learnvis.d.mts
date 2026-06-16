@@ -322,6 +322,23 @@ interface MathAPI {
     fill?: string;
     strokeW?: number;
   }): MathShape;
+  matrix(id: string, data: number[][], opts?: {
+    x?: number;
+    y?: number;
+    color?: string;
+    label?: string;
+    cellW?: number;
+    cellH?: number;
+  }): MathMatrix;
+  basis(id: string, origin: Vec2, opts?: {
+    iColor?: string;
+    jColor?: string;
+    scale?: number;
+    iLabel?: string;
+    jLabel?: string;
+    color?: string;
+    strokeW?: number;
+  }): MathBasis;
 }
 interface MathPoint {
   pos(): Vec2;
@@ -411,6 +428,21 @@ interface MathShape {
   dashed(d?: string): MathShape;
   opacity(v: number): MathShape;
   translate(dx: number, dy: number): MathShape;
+}
+interface MathMatrix {
+  set(data: number[][]): MathMatrix;
+  color(c: string): MathMatrix;
+  label(t: string): MathMatrix;
+  moveTo(x: number, y: number): MathMatrix;
+  opacity(v: number): MathMatrix;
+}
+interface MathBasis {
+  color(c: string): MathBasis;
+  iColor(c: string): MathBasis;
+  jColor(c: string): MathBasis;
+  scale(s: number): MathBasis;
+  strokeW(n: number): MathBasis;
+  opacity(v: number): MathBasis;
 }
 interface FnOpts {
   domain?: [number, number];
@@ -657,7 +689,16 @@ type TfTranslate = {
   dx: number;
   dy: number;
 };
-type Transform = TfRotate | TfScale | TfTranslate;
+type TfMatrix = {
+  type: 'matrix';
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  tx: number;
+  ty: number;
+};
+type Transform = TfRotate | TfScale | TfTranslate | TfMatrix;
 type TfBase = {
   from: Vec2;
   to: Vec2;
@@ -740,7 +781,7 @@ type CurveState = {
 };
 type GroupState = {
   type: 'group';
-  subtype: 'axes' | 'grid' | 'angle';
+  subtype: 'axes' | 'grid' | 'angle' | 'matrix';
   ox?: number;
   oy?: number;
   xl?: number;
@@ -754,6 +795,11 @@ type GroupState = {
   ray1?: Vec2;
   ray2?: Vec2;
   arcR?: number;
+  data?: number[][];
+  x?: number;
+  y?: number;
+  cellW?: number;
+  cellH?: number;
   fill?: string;
   stroke?: string;
   strokeW?: number;
@@ -1200,4 +1246,43 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+//#region vis/linalg.d.ts
+/** 2×2 matrix [a, b, c, d] in SVG convention: x' = a*x + c*y, y' = b*x + d*y */
+type Mat2 = readonly [number, number, number, number];
+/** Affine transform [a, b, c, d, tx, ty]: x' = a*x + c*y + tx, y' = b*x + d*y + ty */
+type Affine2 = readonly [number, number, number, number, number, number];
+/** Apply 2×2 matrix to a point. Returns [x', y']. */
+declare function applyMat2(m: Mat2, x: number, y: number): [number, number];
+/** Apply affine transform to a point. Returns [x', y']. */
+declare function applyAffine(a: number, b: number, c: number, d: number, tx: number, ty: number, x: number, y: number): [number, number];
+/** Identity 2×2 matrix: [[1,0],[0,1]] */
+declare function mat2Identity(): Mat2;
+/** Identity affine: [1,0,0,1,0,0] */
+declare function affineIdentity(): Affine2;
+/** Multiply two 2×2 matrices: m1 × m2 */
+declare function mat2Multiply(m1: Mat2, m2: Mat2): Mat2;
+/** Multiply 2×2 matrix by a vector. Returns [x', y']. */
+declare function mat2VecMul(m: Mat2, x: number, y: number): [number, number];
+/** Determinant of 2×2 matrix. */
+declare function mat2Det(a: number, b: number, c: number, d: number): number;
+/** Inverse of 2×2 matrix. Returns null if singular (det = 0). */
+declare function mat2Inverse(a: number, b: number, c: number, d: number): Mat2 | null;
+/** Rotation matrix (degrees). Positive = counter-clockwise in standard math coords. */
+declare function mat2FromAngle(deg: number): Mat2;
+/** Scale matrix. */
+declare function mat2Scale(sx: number, sy: number): Mat2;
+/** Shear matrix: x' = x + kx*y, y' = y + ky*x */
+declare function mat2Shear(kx: number, ky: number): Mat2;
+/** Reflection matrix across a line at angle `deg` (degrees from positive x-axis). */
+declare function mat2FromReflection(deg: number): Mat2;
+/** Diagonal matrix diag(d1, d2). */
+declare function mat2Diag(d1: number, d2: number): Mat2;
+/** Decompose 2×2 matrix into rotation * scale (SVD — simple 2×2 case). */
+declare function mat2Eigen(a: number, b: number, c: number, d: number): {
+  evals: [number, number];
+  evecs: [[number, number], [number, number]];
+} | null;
+/** Format a number for matrix cell display. */
+declare function fmtCell(v: number): string;
+//#endregion
+export { type Affine2, FrameManager, MARKER, type Mat2, type RenderHandle, type Renderer, SVGRenderer, TOKENS, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

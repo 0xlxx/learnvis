@@ -12,3 +12,5 @@ export { FrameManager } from './frame';
 export { SVGRenderer } from './renderer/svg';
 export type { Renderer, RenderHandle } from './renderer';
 export { themes, resolveTheme } from './themes';
+export { applyMat2, applyAffine, mat2Identity, affineIdentity, mat2Multiply, mat2VecMul, mat2Det, mat2Inverse, mat2FromAngle, mat2Scale, mat2Shear, mat2FromReflection, mat2Diag, mat2Eigen, fmtCell } from './linalg';
+export type { Mat2, Affine2 } from './linalg';
