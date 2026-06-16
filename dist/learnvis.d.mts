@@ -300,7 +300,8 @@ interface MathAPI {
     opacity?: number;
     baseline?: number;
   }): MathFill;
-  coords(id: string, origin: Vec2, opts?: CoordsOpts): MathCoords;
+  coords(id: string, origin: Vec2 | 'center', opts?: CoordsOpts): MathCoords;
+  viewport(opts?: ViewportOpts): MathCoords;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   grid(id: string, origin: Vec2, opts?: GridOpts): void;
   axes(id: string, origin: Vec2, opts?: AxesOpts): void;
@@ -483,6 +484,15 @@ interface CoordsOpts {
   yDomain?: [number, number];
   xLabel?: string;
   yLabel?: string;
+  margin?: number;
+}
+interface ViewportOpts {
+  x?: [number, number];
+  y?: [number, number];
+  margin?: number;
+  grid?: boolean;
+  axes?: boolean;
+  theme?: string;
 }
 interface MathCoords {
   axes(opts?: {
@@ -505,6 +515,75 @@ interface MathCoords {
     size?: number;
     fill?: string;
   }): MathPoint;
+  vector(id: string, from: [number, number], to: [number, number], opts?: {
+    color?: string;
+    label?: string;
+    strokeW?: number;
+    dash?: string;
+    labelPlace?: Place;
+    labelGap?: number;
+    marker?: MarkerConfig;
+  }): MathVector;
+  segment(id: string, a: [number, number], b: [number, number], opts?: {
+    color?: string;
+    strokeW?: number;
+    dash?: string;
+    label?: string;
+    labelGap?: number;
+  }): MathSegment;
+  polyline(id: string, pts: [number, number][], opts?: {
+    color?: string;
+    strokeW?: number;
+    dash?: string;
+    opacity?: number;
+  }): MathPolyline;
+  circle(id: string, center: [number, number], radius: number, opts?: {
+    color?: string;
+    fill?: string;
+    strokeW?: number;
+    dash?: string;
+    opacity?: number;
+  }): MathCircle;
+  polygon(id: string, vertices: [number, number][], opts?: {
+    color?: string;
+    fill?: string;
+    strokeW?: number;
+    opacity?: number;
+  }): MathPolygon;
+  angle(id: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], opts?: {
+    color?: string;
+    fill?: string;
+    label?: string;
+    size?: number;
+  }): MathAngle;
+  projection(id: string, pt: [number, number], lf: [number, number], lt: [number, number], opts?: {
+    color?: string;
+    dash?: string;
+    pointColor?: string;
+  }): MathProjection;
+  basis(id: string, origin: [number, number], opts?: {
+    iColor?: string;
+    jColor?: string;
+    scale?: number;
+    iLabel?: string;
+    jLabel?: string;
+    color?: string;
+    strokeW?: number;
+  }): MathBasis;
+  matrix(id: string, data: number[][], opts?: {
+    x?: number;
+    y?: number;
+    color?: string;
+    label?: string;
+    cellW?: number;
+    cellH?: number;
+  }): MathMatrix;
+  rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
+  ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
+  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
+  mapX(x: number): number;
+  mapY(y: number): number;
+  mapPt(x: number, y: number): Vec2;
 }
 //#endregion
 //#region vis/graph.d.ts

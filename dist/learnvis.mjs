@@ -4862,16 +4862,31 @@ function createMathRenderer(fm, ctx, palette) {
 		};
 	}
 	function coords(id, origin, opts = {}) {
-		const ox = origin[0], oy = origin[1];
-		const xLen = opts.xLen ?? 300, yLen = opts.yLen ?? 200;
-		const xd = opts.xDomain ?? [0, 10], yd = opts.yDomain ?? [-5, 5];
-		const sx = (x) => ox + (x - xd[0]) / (xd[1] - xd[0]) * xLen;
-		const sy = (y) => oy - (y - yd[0]) / (yd[1] - yd[0]) * yLen;
+		const w = ctx.W, h = ctx.H;
+		const ox = origin === "center" ? w / 2 : origin[0] ?? w / 2;
+		const oy = origin === "center" ? h / 2 : origin[1] ?? h / 2;
+		const xLen = opts.xLen ?? w - 100, yLen = opts.yLen ?? h - 100;
+		const margin = opts.margin ?? 0;
+		let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
+		if (margin > 0) {
+			const xpad = (xd[1] - xd[0]) * margin / 2;
+			const ypad = (yd[1] - yd[0]) * margin / 2;
+			xd = [xd[0] - xpad, xd[1] + xpad];
+			yd = [yd[0] - ypad, yd[1] + ypad];
+		}
+		const scX = xLen / (xd[1] - xd[0]);
+		const scY = yLen / (yd[1] - yd[0]);
+		const sx = (x) => ox + (x - 0) * scX;
+		const sy = (y) => oy - (y - 0) * scY;
+		const mapPt = (x, y) => [sx(x), sy(y)];
 		return {
+			mapX: sx,
+			mapY: sy,
+			mapPt,
 			axes(aOpts = {}) {
-				axes(id + "-ax", origin, {
+				axes(id + "-ax", [sx(xd[0]), sy(0)], {
 					xLen,
-					yLen,
+					yLen: sy(0) - sy(yd[1]),
 					xLabel: opts.xLabel,
 					yLabel: opts.yLabel,
 					color: aOpts.color,
@@ -4879,7 +4894,7 @@ function createMathRenderer(fm, ctx, palette) {
 				});
 			},
 			grid(gOpts = {}) {
-				grid(id + "-g", [ox, oy - yLen], {
+				grid(id + "-g", [sx(xd[0]), sy(yd[1])], {
 					width: xLen,
 					height: yLen,
 					spacing: gOpts.spacing ?? 40,
@@ -4890,8 +4905,8 @@ function createMathRenderer(fm, ctx, palette) {
 				return fn(fid, f, {
 					domain: fOpts.domain ?? xd,
 					range: fOpts.range,
-					x: ox,
-					y: oy,
+					x: sx(xd[0]),
+					y: sy(yd[1]),
 					width: xLen,
 					height: yLen,
 					color: fOpts.color,
@@ -4905,8 +4920,8 @@ function createMathRenderer(fm, ctx, palette) {
 			fillFn(fid, f, fOpts = {}) {
 				return fillFn(fid, f, {
 					domain: xd,
-					x: ox,
-					y: oy,
+					x: sx(xd[0]),
+					y: sy(yd[1]),
 					width: xLen,
 					height: yLen,
 					color: fOpts.color,
@@ -4916,8 +4931,85 @@ function createMathRenderer(fm, ctx, palette) {
 			},
 			point(pid, x, y, pOpts = {}) {
 				return point(pid, [sx(x), sy(y)], pOpts);
+			},
+			vector(vid, from, to, vOpts = {}) {
+				return vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts);
+			},
+			segment(sid, a, b, sOpts = {}) {
+				return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
+			},
+			polyline(plid, pts, plOpts = {}) {
+				return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)]), plOpts);
+			},
+			circle(cid, center, radius, cOpts = {}) {
+				const cx = sx(center[0]), cy = sy(center[1]);
+				const rx = sx(center[0] + radius) - cx;
+				return circle(cid, [cx, cy], Math.abs(rx), cOpts);
+			},
+			polygon(pgid, vertices, pgOpts = {}) {
+				return polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)]), pgOpts);
+			},
+			angle(aid, vertex, ray1, ray2, aOpts = {}) {
+				const size = aOpts.size !== void 0 ? sx(0) - sx(-aOpts.size) : void 0;
+				return angle(aid, [sx(vertex[0]), sy(vertex[1])], [sx(ray1[0]), sy(ray1[1])], [sx(ray2[0]), sy(ray2[1])], {
+					...aOpts,
+					size
+				});
+			},
+			projection(prid, pt, lf, lt, prOpts = {}) {
+				return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
+			},
+			basis(bid, borigin, bOpts = {}) {
+				return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], bOpts);
+			},
+			matrix(mid, data, mOpts = {}) {
+				return matrixPrimitive(mid, data, {
+					...mOpts,
+					x: mOpts.x !== void 0 ? sx(mOpts.x) : void 0,
+					y: mOpts.y !== void 0 ? sy(mOpts.y) : void 0
+				});
+			},
+			rect(rid, cx, cy, w, h) {
+				const hw = w / 2, hh = h / 2;
+				return polygon(rid, [
+					[cx - hw, cy - hh],
+					[cx + hw, cy - hh],
+					[cx + hw, cy + hh],
+					[cx - hw, cy + hh]
+				].map(([x, y]) => [sx(x), sy(y)]));
+			},
+			ngon(nid, cx, cy, r, sides) {
+				return ngon(nid, sx(cx), sy(cy), r, sides);
+			},
+			ellipse(eid, cx, cy, rx, ry, n) {
+				return ellipse(eid, sx(cx), sy(cy), rx, ry, n);
 			}
 		};
+	}
+	function viewport(opts = {}) {
+		const xDom = opts.x ?? [-6, 6];
+		const yDom = opts.y ?? [-4, 4];
+		const margin = opts.margin ?? .15;
+		const showGrid = opts.grid !== false;
+		const showAxes = opts.axes !== false;
+		const c = coords("vp", "center", {
+			xDomain: xDom,
+			yDomain: yDom,
+			margin,
+			xLabel: "x",
+			yLabel: "y"
+		});
+		if (showAxes) c.axes();
+		if (showGrid) c.grid({
+			spacing: 40,
+			color: "dim"
+		});
+		c.point("O", 0, 0, {
+			color: "primary",
+			label: "O",
+			size: 5
+		});
+		return c;
 	}
 	function matrixPrimitive(id, data, opts = {}) {
 		const eid$20 = eid("mat", id);
@@ -5032,6 +5124,7 @@ function createMathRenderer(fm, ctx, palette) {
 		fill,
 		fillFn,
 		coords,
+		viewport,
 		fn,
 		grid,
 		axes,

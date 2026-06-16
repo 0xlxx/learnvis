@@ -39,7 +39,8 @@ export interface MathAPI {
   projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: { color?: string; dash?: string; pointColor?: string }): MathProjection;
   fill(id: string, pts: Vec2[], opts?: { color?: string; opacity?: number }): MathFill;
   fillFn(id: string, f: (x: number) => number, opts?: { domain?: [number, number]; range?: [number, number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number }): MathFill;
-  coords(id: string, origin: Vec2, opts?: CoordsOpts): MathCoords;
+  coords(id: string, origin: Vec2 | 'center', opts?: CoordsOpts): MathCoords;
+  viewport(opts?: ViewportOpts): MathCoords;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   grid(id: string, origin: Vec2, opts?: GridOpts): void;
   axes(id: string, origin: Vec2, opts?: AxesOpts): void;
@@ -189,6 +190,15 @@ interface CoordsOpts {
   xLen?: number; yLen?: number;
   xDomain?: [number, number]; yDomain?: [number, number];
   xLabel?: string; yLabel?: string;
+  margin?: number;
+}
+
+interface ViewportOpts {
+  x?: [number, number]; y?: [number, number];
+  margin?: number;
+  grid?: boolean;
+  axes?: boolean;
+  theme?: string;
 }
 
 export interface MathCoords {
@@ -197,6 +207,22 @@ export interface MathCoords {
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   fillFn(id: string, f: (x: number) => number, opts?: { color?: string; opacity?: number; baseline?: number }): MathFill;
   point(id: string, x: number, y: number, opts?: { color?: string; label?: string; size?: number; fill?: string }): MathPoint;
+  vector(id: string, from: [number, number], to: [number, number], opts?: { color?: string; label?: string; strokeW?: number; dash?: string; labelPlace?: Place; labelGap?: number; marker?: import('./types').MarkerConfig }): MathVector;
+  segment(id: string, a: [number, number], b: [number, number], opts?: { color?: string; strokeW?: number; dash?: string; label?: string; labelGap?: number }): MathSegment;
+  polyline(id: string, pts: [number, number][], opts?: { color?: string; strokeW?: number; dash?: string; opacity?: number }): MathPolyline;
+  circle(id: string, center: [number, number], radius: number, opts?: { color?: string; fill?: string; strokeW?: number; dash?: string; opacity?: number }): MathCircle;
+  polygon(id: string, vertices: [number, number][], opts?: { color?: string; fill?: string; strokeW?: number; opacity?: number }): MathPolygon;
+  angle(id: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], opts?: { color?: string; fill?: string; label?: string; size?: number }): MathAngle;
+  projection(id: string, pt: [number, number], lf: [number, number], lt: [number, number], opts?: { color?: string; dash?: string; pointColor?: string }): MathProjection;
+  basis(id: string, origin: [number, number], opts?: { iColor?: string; jColor?: string; scale?: number; iLabel?: string; jLabel?: string; color?: string; strokeW?: number }): MathBasis;
+  matrix(id: string, data: number[][], opts?: { x?: number; y?: number; color?: string; label?: string; cellW?: number; cellH?: number }): MathMatrix;
+  rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
+  ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
+  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
+  // Exposed screen mappers for direct use
+  mapX(x: number): number;
+  mapY(y: number): number;
+  mapPt(x: number, y: number): Vec2;
 }
 
 export function createMathRenderer(fm: FrameManager, ctx: import('./types').StageCtx, palette: Palette): MathAPI {
@@ -532,29 +558,106 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) } as unknown as MathFill;
   }
 
-  function coords(id: string, origin: Vec2, opts: CoordsOpts = {}): MathCoords {
-    const ox = origin[0], oy = origin[1];
-    const xLen = opts.xLen ?? 300, yLen = opts.yLen ?? 200;
-    const xd = opts.xDomain ?? [0, 10], yd = opts.yDomain ?? [-5, 5];
-    const sx = (x: number) => ox + ((x - xd[0]) / (xd[1] - xd[0])) * xLen;
-    const sy = (y: number) => oy - ((y - yd[0]) / (yd[1] - yd[0])) * yLen;
+  function coords(id: string, origin: Vec2 | 'center', opts: CoordsOpts = {}): MathCoords {
+    // Resolve origin: 'center' → canvas center
+    const w = ctx.W, h = ctx.H;
+    const ox = origin === 'center' ? w / 2 : (origin[0] ?? w / 2);
+    const oy = origin === 'center' ? h / 2 : (origin[1] ?? h / 2);
+    const xLen = opts.xLen ?? (w - 100), yLen = opts.yLen ?? (h - 100);
+    // Apply margin — extends domain so transforms have breathing room
+    const margin = opts.margin ?? 0;
+    let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
+    if (margin > 0) {
+      const xpad = (xd[1] - xd[0]) * margin / 2;
+      const ypad = (yd[1] - yd[0]) * margin / 2;
+      xd = [xd[0] - xpad, xd[1] + xpad];
+      yd = [yd[0] - ypad, yd[1] + ypad];
+    }
+    // Map math coords → screen: origin (0,0) → (ox, oy)
+    const scX = xLen / (xd[1] - xd[0]);
+    const scY = yLen / (yd[1] - yd[0]);
+    const sx = (x: number) => ox + (x - 0) * scX;
+    const sy = (y: number) => oy - (y - 0) * scY;
+    const mapPt = (x: number, y: number): Vec2 => [sx(x), sy(y)];
     return {
+      mapX: sx, mapY: sy, mapPt,
       axes(aOpts = {}) {
-        axes(id + '-ax', origin, { xLen, yLen, xLabel: opts.xLabel, yLabel: opts.yLabel, color: aOpts.color, strokeW: aOpts.strokeW });
+        // Full-domain axes: origin at screen position of math (xd[0], 0),
+        // extending right to xd[1] (x-axis) and up to yd[1] (y-axis)
+        axes(id + '-ax', [sx(xd[0]), sy(0)], { xLen: xLen, yLen: sy(0) - sy(yd[1]), xLabel: opts.xLabel, yLabel: opts.yLabel, color: aOpts.color, strokeW: aOpts.strokeW });
       },
       grid(gOpts = {}) {
-        grid(id + '-g', [ox, oy - yLen], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
-        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: ox, y: oy, width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
+        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
       },
       fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number } = {}) {
-        return fillFn(fid, f, { domain: xd, x: ox, y: oy, width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
+        return fillFn(fid, f, { domain: xd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
       },
       point(pid: string, x: number, y: number, pOpts: { color?: string; label?: string; size?: number; fill?: string } = {}) {
         return point(pid, [sx(x), sy(y)], pOpts);
       },
+      vector(vid: string, from: [number, number], to: [number, number], vOpts = {}) {
+        return vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts);
+      },
+      segment(sid: string, a: [number, number], b: [number, number], sOpts = {}) {
+        return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
+      },
+      polyline(plid: string, pts: [number, number][], plOpts = {}) {
+        return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)] as Vec2), plOpts);
+      },
+      circle(cid: string, center: [number, number], radius: number, cOpts = {}) {
+        // Radius in math coords: map to pixel length along x-axis
+        const cx = sx(center[0]), cy = sy(center[1]);
+        const rx = sx(center[0] + radius) - cx;  // pixel radius
+        return circle(cid, [cx, cy], Math.abs(rx), cOpts);
+      },
+      polygon(pgid: string, vertices: [number, number][], pgOpts = {}) {
+        return polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts);
+      },
+      angle(aid: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], aOpts = {}) {
+        const size = aOpts.size !== undefined ? sx(0) - sx(-aOpts.size) : undefined;
+        return angle(aid, [sx(vertex[0]), sy(vertex[1])], [sx(ray1[0]), sy(ray1[1])], [sx(ray2[0]), sy(ray2[1])], { ...aOpts, size });
+      },
+      projection(prid: string, pt: [number, number], lf: [number, number], lt: [number, number], prOpts = {}) {
+        return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
+      },
+      basis(bid: string, borigin: [number, number], bOpts = {}) {
+        return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], bOpts);
+      },
+      matrix(mid: string, data: number[][], mOpts = {}) {
+        return matrixPrimitive(mid, data, { ...mOpts, x: mOpts.x !== undefined ? sx(mOpts.x) : undefined, y: mOpts.y !== undefined ? sy(mOpts.y) : undefined });
+      },
+      rect(rid: string, cx: number, cy: number, w: number, h: number): MathPolygon {
+        const hw = w / 2, hh = h / 2;
+        return polygon(rid, [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]].map(([x, y]) => [sx(x), sy(y)] as Vec2));
+      },
+      ngon(nid: string, cx: number, cy: number, r: number, sides: number): MathPolygon {
+        return ngon(nid, sx(cx), sy(cy), r, sides);
+      },
+      ellipse(eid: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon {
+        return ellipse(eid, sx(cx), sy(cy), rx, ry, n);
+      },
     };
+  }
+
+  // ── viewport: sugar over coords() with auto-axes, grid, origin ──
+  // Declares axes/grid/origin into the current frame (caller must be inside begin/commit).
+  function viewport(opts: ViewportOpts = {}): MathCoords {
+    const xDom = opts.x ?? [-6, 6];
+    const yDom = opts.y ?? [-4, 4];
+    const margin = opts.margin ?? 0.15;
+    const showGrid = opts.grid !== false;
+    const showAxes = opts.axes !== false;
+
+    const c = coords('vp', 'center', { xDomain: xDom, yDomain: yDom, margin, xLabel: 'x', yLabel: 'y' });
+
+    if (showAxes) c.axes();
+    if (showGrid) c.grid({ spacing: 40, color: 'dim' });
+    c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
+
+    return c;
   }
 
   function matrixPrimitive(id: string, data: number[][], opts: { x?: number; y?: number; color?: string; label?: string; cellW?: number; cellH?: number } = {}): MathMatrix {
@@ -613,7 +716,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     } as unknown as MathBasis;
   }
 
-  return { point, vector, segment, polyline, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, fn, grid, axes, rect, ngon, ellipse, symbol, arc, matrix: matrixPrimitive, basis: basisPrimitive };
+  return { point, vector, segment, polyline, circle, polygon, angle, rightAngle, projection, fill, fillFn, coords, viewport, fn, grid, axes, rect, ngon, ellipse, symbol, arc, matrix: matrixPrimitive, basis: basisPrimitive };
 }
 
 // Legacy renderer (kept for backward compat — delegates to FrameManager internally)

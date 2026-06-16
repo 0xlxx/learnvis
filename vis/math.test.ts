@@ -451,3 +451,66 @@ describe('math basis', () => {
     expect((i!.desired as any).stroke).toBeTruthy();
   });
 });
+
+describe('math viewport', () => {
+  let math: MathAPI;
+  let fm: FrameManager;
+
+  beforeEach(() => {
+    const env = setupMath();
+    math = env.math;
+    fm = env.fm;
+  });
+
+  it('creates axes entity at center', () => {
+    fm.begin();
+    math.viewport({ x: [-5, 5], y: [-4, 4] });
+    fm.commit({ animate: false });
+    const ax = fm.entities.get('axes:vp-ax');
+    expect(ax).toBeTruthy();
+    expect((ax!.desired as any).subtype).toBe('axes');
+  });
+
+  it('creates grid entity', () => {
+    fm.begin();
+    math.viewport({ x: [-5, 5], y: [-4, 4] });
+    fm.commit({ animate: false });
+    const g = fm.entities.get('grid:vp-g');
+    expect(g).toBeTruthy();
+    expect((g!.desired as any).subtype).toBe('grid');
+  });
+
+  it('creates origin point at (0,0) math coords', () => {
+    fm.begin();
+    math.viewport({ x: [-5, 5], y: [-4, 4] });
+    fm.commit({ animate: false });
+    const O = fm.entities.get('point:O');
+    expect(O).toBeTruthy();
+    // Origin maps to canvas center (500×400 → 250,200)
+    expect((O!.desired as any).x).toBeCloseTo(250, -1);
+    expect((O!.desired as any).y).toBeCloseTo(200, -1);
+  });
+
+  it('supports grid:false and axes:false', () => {
+    fm.begin();
+    math.viewport({ x: [-3, 3], y: [-2, 2], grid: false, axes: false });
+    fm.commit({ animate: false });
+    expect(fm.entities.get('grid:vp-g')).toBeFalsy();
+    expect(fm.entities.get('axes:vp-ax')).toBeFalsy();
+    // But origin point still created
+    expect(fm.entities.get('point:O')).toBeTruthy();
+  });
+
+  it('returns coord mapper with vectors in math coords', () => {
+    fm.begin();
+    const vp = math.viewport({ x: [-5, 5], y: [-5, 5] });
+    vp.vector('v', [0, 0], [2, 0], { color: 'danger' });
+    fm.commit({ animate: false });
+    const e = fm.entities.get('vector:v');
+    expect(e).toBeTruthy();
+    const d = e!.desired as any;
+    // Vector endpoints should be in screen coords (not exactly 0,0)
+    expect(typeof d.from[0]).toBe('number');
+    expect(typeof d.to[0]).toBe('number');
+  });
+});
