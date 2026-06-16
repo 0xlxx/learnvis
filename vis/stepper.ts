@@ -54,19 +54,26 @@ export function stepper(
 
   if (layout === 'prev-next') {
     ct.classList.add('step-controls');
-    
+
     const prevBtn = document.createElement('button');
-    prevBtn.innerHTML = '◀ 上一步';
+    prevBtn.innerHTML = '◀';
+    prevBtn.title = '上一步';
     prevBtn.onclick = () => ctrl.prev();
-    
+
+    const resetBtn = document.createElement('button');
+    resetBtn.innerHTML = '↺';
+    resetBtn.title = '重置';
+    resetBtn.onclick = () => ctrl.reset();
+
     const labelSpan = document.createElement('span');
     labelSpan.className = 'step-label';
-    
+
     const nextBtn = document.createElement('button');
-    nextBtn.innerHTML = '下一步 ▶';
+    nextBtn.innerHTML = '▶';
+    nextBtn.title = '下一步';
     nextBtn.onclick = () => ctrl.next();
 
-    ct.append(prevBtn, labelSpan, nextBtn);
+    ct.append(prevBtn, resetBtn, labelSpan, nextBtn);
 
     cleanup = ctrl.onChange((i, step) => {
       prevBtn.disabled = i <= 0;
@@ -74,7 +81,7 @@ export function stepper(
       const sObj = step as any;
       labelSpan.textContent = sObj.title ?? sObj.label ?? `步骤 ${i + 1}`;
     });
-    
+
     // Initialize state
     prevBtn.disabled = ctrl.current <= 0;
     nextBtn.disabled = ctrl.current >= ctrl.total - 1;

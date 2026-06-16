@@ -65,20 +65,33 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   }
 
   function steps(defs: StepLike[], opts?: StepsOptions): StepsController {
-    const { start = 0 } = opts ?? {};
+    const { start = 0, mode = 'full' } = opts ?? {};
     const normalized = defs.map(d => typeof d === 'function' ? { frame: d } : d);
     let current = -1;
     let busy = false;
     const listeners: ((i: number, step: StepLike) => void)[] = [];
+    let previousSnapshot: Map<string, import('./types').EntityState> | null = null;
 
     function go(i: number) {
       if (i === current || busy || i < 0 || i >= normalized.length) return;
       busy = true;
       try {
         fm.begin();
+        if (mode === 'update' && previousSnapshot) {
+          for (const [id, state] of previousSnapshot) {
+            fm.declare(id, { ...state } as import('./types').EntityState);
+          }
+        }
         normalized[i].frame(api as unknown as AgentStage);
         fm.commit();
         current = i;
+        if (mode === 'update') {
+          previousSnapshot = new Map();
+          for (const id of fm.frameIds) {
+            const entity = fm.entities.get(id);
+            if (entity) previousSnapshot.set(id, { ...entity.desired });
+          }
+        }
       } finally {
         busy = false;
       }
@@ -91,6 +104,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
       go,
       next() { go(current + 1); },
       prev() { go(current - 1); },
+      reset() { go(0); },
       get current() { return current; },
       get total() { return normalized.length; },
       get currentStepDef() { return current >= 0 && current < normalized.length ? normalized[current] : null; },

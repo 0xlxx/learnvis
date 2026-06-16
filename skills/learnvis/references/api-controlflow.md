@@ -91,9 +91,45 @@ const ctrl = s.steps([
 // 动画控制：跳转到步骤 2 (基于 0 的索引)
 ctrl.go(1);
 ```
+
+**增量模式 (`mode: 'update'`)**：适合复杂场景，每个 frame 只需声明**变更**的实体，其余自动从上一步 carry-over。
+```js
+const ctrl = s.steps([
+  {
+    label: '初始',
+    frame: s => {
+      const { vertex, edge } = s.graph;
+      vertex('A', [100, 200]);  // 声明全部初始实体
+      vertex('B', [300, 200]);
+      edge('A', 'B');
+    }
+  },
+  {
+    label: '移动 B',
+    frame: s => {
+      const { vertex } = s.graph;
+      vertex('B', [400, 300]).color('accent');  // 仅声明变更：移动 B 并改色
+      // A 和 edge 自动从上一步继承
+    }
+  }
+], { mode: 'update' });
+```
 - *Why*：`steps` 内部的 `frame(s)` 回调被执行时，底层会自动完成两帧之间图元增量（enter/update/exit）的 Diff 计算。只要前后步骤中的图元拥有相同的 `id`，引擎便会通过 D3 过渡将它们的位置、颜色等平滑地转过去。
 - `ctrl.current` — 获取当前步骤索引。
+- `ctrl.total` — 获取总步骤数。
 - `ctrl.onChange(index => { ... })` — 注册步骤切换回调。
+- `ctrl.reset()` — 回到第 0 步。
+
+### stepper (独立导航 UI)
+为 steps 控制器绑定 prev/next/reset 按钮 UI。
+```js
+import { stepper } from 'learnvis';
+
+const ctrl = s.steps([...]);
+stepper('#controls', ctrl);  // 在 #controls 元素中注入导航 UI
+```
+- 自动绑定 prev/next/reset 按钮和步骤标签显示。
+- 与 `steps()` 完全解耦，不使用时无开销。
 
 ### s.frame (异步单帧控制)
 需要在逻辑代码中使用 `await` 进行延迟等待，或者编排特定的时序时，使用 `s.frame()`。

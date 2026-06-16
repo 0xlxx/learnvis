@@ -156,11 +156,12 @@ export interface AxesOptions {
 // ── Steps ──
 export type StageAPI = AgentStage;
 export type StepLike = { label?: string; title?: string; desc?: string; frame(s: StageAPI): void } | ((s: StageAPI) => void);
-export interface StepsOptions { start?: number }
+export interface StepsOptions { start?: number; mode?: 'full' | 'update' }
 export interface StepsController {
   go(i: number): void;
   next(): void;
   prev(): void;
+  reset(): void;
   get current(): number;
   get total(): number;
   get currentStepDef(): StepLike | null;

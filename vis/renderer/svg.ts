@@ -10,6 +10,16 @@ type E = d3.Selection<any, unknown, null, undefined>;
 
 // ── helpers ──
 
+/** Dev-mode NaN guard: warns with entity context before the browser swallows the error.
+ *  Called from rendering hot paths — cheap isNaN check, no allocations. */
+function _checkNaN(id: string, coords: Record<string, number>) {
+  for (const key of Object.keys(coords)) {
+    if (isNaN(coords[key])) {
+      console.warn(`[learnvis] NaN in entity "${id}" — ${key}=${coords[key]}. Check upstream math or missing vertex declarations.`);
+    }
+  }
+}
+
 // 计算连线的背景色混合对比度：对连线主体（edge/segment）采用 oklab 色彩空间混合底色做 30% 弱化
 function svgLineColor(stroke: string): string {
   if (!stroke || stroke === 'none') return 'none';
@@ -68,7 +78,7 @@ function alignPolylines(ptsA: Vec2[], ptsB: Vec2[]): [Vec2[], Vec2[]] {
   return [outA, outB];
 }
 
-function resolveLinePoints(ld: LineState): Vec2[] {
+function resolveLinePoints(ld: LineState, id?: string): Vec2[] {
   if (ld.points && ld.points.length >= 2) return ld.points;
   let x1: number, y1: number, x2: number, y2: number;
   if (ld._tf && ld._base) {
@@ -81,6 +91,7 @@ function resolveLinePoints(ld: LineState): Vec2[] {
     x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
     y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
   }
+  if (id) _checkNaN(id, { x1, y1, x2, y2 });
   return [[x1, y1], [x2, y2]];
 }
 
@@ -161,6 +172,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 
     case 'node': {
       const nd = d as NodeState;
+      _checkNaN(id, { x: nd.x, y: nd.y });
       const g = nodes.append('g').attr('data-id', id);
       if (nd.shape === 'rect') {
         const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
@@ -201,7 +213,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 
     case 'line': {
       const ld = d as LineState;
-      const pts = resolveLinePoints(ld);
+      const pts = resolveLinePoints(ld, id);
       const ptsStr = pts.map(p => p.join(',')).join(' ');
       const hasMarker = (ld.marker === 'arrow') || ld.directed;
       const el = edges.append('polyline').attr('data-id', id).attr('points', ptsStr)
@@ -349,8 +361,9 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
     case 'line': {
       const ld = newState as LineState;
       const oldLd = oldState as LineState;
-      const oldPts = resolveLinePoints(oldLd);
-      const newPts = resolveLinePoints(ld);
+      const lineId = svg.attr('data-id') || 'unknown';
+      const oldPts = resolveLinePoints(oldLd, lineId);
+      const newPts = resolveLinePoints(ld, lineId);
 
       const [oldResampled, newResampled] = alignPolylines(oldPts, newPts);
 
@@ -462,7 +475,7 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
     }
     case 'line': {
       const ld = d as LineState;
-      const pts = resolveLinePoints(ld);
+      const pts = resolveLinePoints(ld, svg.attr('data-id') || 'unknown');
       const ptsStr = pts.map(p => p.join(',')).join(' ');
       svg.attr('points', ptsStr)
         .attr('stroke', svgLineColor(ld.stroke)).attr('stroke-width', ld.strokeW);

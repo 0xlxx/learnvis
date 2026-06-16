@@ -22,13 +22,18 @@ vertex('B', [300, 200])
 - 链式方法：`.color(c)`、`.label(text)`、`.size(r)`、`.fill(color)`、`.pos([x, y])`。
 
 ## 2. edge (图边)
-连接图的两个顶点或容器块。
+连接图的两个顶点或容器块。接受 Vertex 对象或字符串 ID。
 ```js
-// 声明一条从顶点 'A' 指向顶点 'B' 的有向边 (默认是有向的)
+// 声明一条从顶点 'A' 指向顶点 'B' 的有向边（字符串 ID，推荐）
+edge('A', 'B');
+
+// 也可传 Vertex 对象
+const a = vertex('A', [100, 200]);
+const b = vertex('B', [300, 200]);
 edge(a, b);
 
 // 声明一条无向边，并指定线条粗细与标签
-edge(a, b, { directed: false })
+edge('A', 'B', { directed: false })
   .color('dim')
   .strokeW(2)
   .label('权重: 5');

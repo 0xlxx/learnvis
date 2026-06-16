@@ -92,7 +92,7 @@ export interface ArrayOpts {
 
 export interface GraphAPI {
   vertex(id: string, pos: Vec2): Vertex;
-  edge(a: Vertex, b: Vertex, opts?: { directed?: boolean; gap?: number }): Edge;
+  edge(a: Vertex | string, b: Vertex | string, opts?: { directed?: boolean; gap?: number }): Edge;
   layout(type: 'force' | 'circular', vertices: Vertex[], edges?: { from: Vertex; to: Vertex }[], opts?: { center?: Vec2; radius?: number }): void;
   block(id: string, x?: number, y?: number, w?: number, h?: number, opts?: NodeOpts & { style?: 'muted' | 'normal' | 'active' }): Block;
   array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): Block[];
@@ -144,8 +144,17 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     return v;
   }
 
-  function edge(a: Vertex, b: Vertex, opts?: { directed?: boolean; gap?: number; marker?: import('./types').MarkerConfig }): Edge {
-    const eid = mkId('edge', a.id + ':' + b.id);
+  function edge(a: Vertex | string, b: Vertex | string, opts?: { directed?: boolean; gap?: number; marker?: import('./types').MarkerConfig }): Edge {
+    const va = typeof a === 'string' ? _vertices.get(a) : a;
+    const vb = typeof b === 'string' ? _vertices.get(b) : b;
+    if (!va || !vb) {
+      const missing = !va ? (typeof a === 'string' ? a : a?.id) : (typeof b === 'string' ? b : b?.id);
+      throw new Error(`edge(): vertex "${missing}" not found. Ensure vertex() is called before edge() in the same frame.`);
+    }
+    if (isNaN(va.x) || isNaN(va.y) || isNaN(vb.x) || isNaN(vb.y)) {
+      throw new Error(`edge(${va.id}, ${vb.id}): vertex position is NaN. Check that vertex coordinates are valid numbers.`);
+    }
+    const eid = mkId('edge', va.id + ':' + vb.id);
     const stroke = p.dim.fg;
     const strokeW = 1.8;
     const directed = opts?.directed !== false;
@@ -153,14 +162,14 @@ export function createGraph(fm: FrameManager, ctx: import('./types').StageCtx, p
     const marker = opts?.marker;
 
     const { x1, y1, x2, y2 } = offsetLine(
-      [a.x, a.y], [b.x, b.y],
-      a._r + gap,
-      b._r + markerHalf(marker),
+      [va.x, va.y], [vb.x, vb.y],
+      va._r + gap,
+      vb._r + markerHalf(marker),
       directed,
     );
 
     fm.declare(eid, {
-      type: 'line', from: a.id as any, to: b.id as any,
+      type: 'line', from: va.id as any, to: vb.id as any,
       x1, y1, x2, y2,
       stroke, strokeW, dash: '', directed,
       marker: marker ?? null as any,
