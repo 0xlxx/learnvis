@@ -816,6 +816,7 @@ type StepLike = {
 interface StepsOptions {
   start?: number;
   mode?: 'full' | 'update';
+  controls?: boolean;
 }
 interface StepsController {
   go(i: number): void;

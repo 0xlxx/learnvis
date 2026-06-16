@@ -7,6 +7,7 @@ import { createMathRenderer } from './math';
 import { createGraph } from './graph';
 import { FrameManager } from './frame';
 import { SVGRenderer } from './renderer/svg';
+import { stepper } from './stepper';
 import type { Renderer } from './renderer';
 import type { Point, Palette, SemColor, AgentStage, StageOptions, AxesOptions, StepsController, StepLike, StepsOptions } from './types';
 
@@ -65,12 +66,13 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   }
 
   function steps(defs: StepLike[], opts?: StepsOptions): StepsController {
-    const { start = 0, mode = 'full' } = opts ?? {};
+    const { start = 0, mode = 'full', controls } = opts ?? {};
     const normalized = defs.map(d => typeof d === 'function' ? { frame: d } : d);
     let current = -1;
     let busy = false;
     const listeners: ((i: number, step: StepLike) => void)[] = [];
     let previousSnapshot: Map<string, import('./types').EntityState> | null = null;
+    let stepperHandle: { destroy(): void } | null = null;
 
     function go(i: number) {
       if (i === current || busy || i < 0 || i >= normalized.length) return;
@@ -100,7 +102,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
 
     go(start);
 
-    return {
+    const ctrl: StepsController = {
       go,
       next() { go(current + 1); },
       prev() { go(current - 1); },
@@ -109,8 +111,25 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
       get total() { return normalized.length; },
       get currentStepDef() { return current >= 0 && current < normalized.length ? normalized[current] : null; },
       onChange(fn) { listeners.push(fn); return () => { const idx = listeners.indexOf(fn); if (idx >= 0) listeners.splice(idx, 1); }; },
-      destroy() { listeners.length = 0; },
+      destroy() {
+        listeners.length = 0;
+        stepperHandle?.destroy();
+        stepperHandle = null;
+      },
     };
+
+    if (controls) {
+      const svgNode = ctx.svg.node() as Element | null;
+      const parent = svgNode?.parentNode as HTMLElement | null;
+      if (parent && svgNode) {
+        const el = document.createElement('div');
+        el.className = 'lv-stepper-host';
+        parent.insertBefore(el, svgNode.nextSibling);
+        stepperHandle = stepper(el, ctrl);
+      }
+    }
+
+    return ctrl;
   }
 
   function frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void> {

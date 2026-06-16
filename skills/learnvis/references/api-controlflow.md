@@ -120,6 +120,11 @@ const ctrl = s.steps([
 - `ctrl.onChange(index => { ... })` — 注册步骤切换回调。
 - `ctrl.reset()` — 回到第 0 步。
 
+**内置导航 (`controls: true`)**：自动在 SVG 下方注入 prev/next/reset UI。
+```js
+const ctrl = s.steps([...], { controls: true });  // 一行搞定
+```
+
 ### stepper (独立导航 UI)
 为 steps 控制器绑定 prev/next/reset 按钮 UI。
 ```js

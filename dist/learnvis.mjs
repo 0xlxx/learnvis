@@ -6011,12 +6011,13 @@ function stage(selector, opts = {}) {
 		}
 	}
 	function steps(defs, opts) {
-		const { start = 0, mode = "full" } = opts ?? {};
+		const { start = 0, mode = "full", controls } = opts ?? {};
 		const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
 		let current = -1;
 		let busy = false;
 		const listeners = [];
 		let previousSnapshot = null;
+		let stepperHandle = null;
 		function go(i) {
 			if (i === current || busy || i < 0 || i >= normalized.length) return;
 			busy = true;
@@ -6039,7 +6040,7 @@ function stage(selector, opts = {}) {
 			listeners.forEach((fn) => fn(i, normalized[i]));
 		}
 		go(start);
-		return {
+		const ctrl = {
 			go,
 			next() {
 				go(current + 1);
@@ -6068,8 +6069,21 @@ function stage(selector, opts = {}) {
 			},
 			destroy() {
 				listeners.length = 0;
+				stepperHandle?.destroy();
+				stepperHandle = null;
 			}
 		};
+		if (controls) {
+			const svgNode = ctx.svg.node();
+			const parent = svgNode?.parentNode;
+			if (parent && svgNode) {
+				const el = document.createElement("div");
+				el.className = "lv-stepper-host";
+				parent.insertBefore(el, svgNode.nextSibling);
+				stepperHandle = stepper(el, ctrl);
+			}
+		}
+		return ctrl;
 	}
 	function frame(frameFn, opts) {
 		return new Promise((resolve) => {
