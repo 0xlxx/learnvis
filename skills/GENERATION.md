@@ -8,7 +8,7 @@ This document tracks how learnvis skills are generated and kept in sync with the
 
 - **Commit SHA**: `latest`
 - **Date**: 2026-06-15
-- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, layout.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts)
+- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts)
 - **Tooling**: `scripts/postinstall.mjs` — multi-platform skill symlink (Claude Code, Codex, Pi, OpenCode)
 
 ## Structure
@@ -20,13 +20,12 @@ skills/
     ├── SKILL.md               # Main skill file: Compass (Quick start, Theming guidelines, Reference links)
     ├── assets/                # Built artifacts bundled with skill
     │   └── learnvis.iife.js   # IIFE build (auto-copied from dist/)
-    └── references/            # Domain-specific reference docs (6 files)
+    └── references/            # Domain-specific reference docs
         ├── api-math.md        # Math primitives API
         ├── api-graph.md       # Graph theory primitives API
-        ├── api-layout.md      # Layout primitives API (node/block/port/edge/layer/enclosure)
         ├── api-controlflow.md # Lifecycle & control flow API
-        ├── api-atomic.md      # Low-level atomic API
-    └── guide-standalone.md    # Standalone HTML usage (CDN, minimal template)
+        ├── theme.md           # Theme & color configuration
+        └── api-atomic.md      # Low-level atomic API (internal)
 ```
 
 ## File Naming Convention
@@ -101,7 +100,8 @@ git diff HEAD -- vis/
 | 2026-06-14 | Full skill refresh: all 6 reference files updated, SKILL.md layout section, README.md rewritten, segment a/b render fix, layer dual-style, postinstall multi-platform |
 | 2026-06-14 | Major: elements.ts deleted, layout API (node/block/port/edge/layer/enclosure), CoreNode mixin unified labels, layer style: band/swimlane, EntityId branded type, oklch→hex color pipeline, labelPlace on regions |
 | 2026-06-13 | Added `using` syntax support, `AgentStage extends Disposable`, polyfill |
+| 2026-06-17 | Removed layout subsystem references; api-atomic.md made internal; code style switched to destructuring; Quick Start uses pnpm+TS+Vite |
 
 ---
 
-Last updated: 2026-06-14
+Last updated: 2026-06-17

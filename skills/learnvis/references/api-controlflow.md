@@ -5,10 +5,12 @@
 ## 1. 容器初始化
 
 ### Stage (标准 SVG 容器)
-使用 `LearnVis.stage` 初始化一个标准的 SVG 绘图舞台。
+使用 `stage()` 初始化一个标准的 SVG 绘图舞台。
 ```js
+import { stage } from 'learnvis';
+
 // 初始化舞台容器，绑定到 id 为 svg-container 的 DOM 上
-const s = LearnVis.stage('#svg-container', {
+const s = stage('#svg-container', {
   width: 780,
   height: 460,
   ms: 500,            // 默认动画过渡时长
@@ -16,21 +18,24 @@ const s = LearnVis.stage('#svg-container', {
 });
 ```
 - `s.palette` — 获取当前调色板：`{ primary, accent, danger, warning, info, success, dim }`，每个成员支持 `.fg`, `.bg` 属性和 `.a(pct)` 调整透明度方法。
-- `s.math`, `s.graph`, `s.layout` — 分别访问数学、图论与布局原语。
+- `s.math`, `s.graph` — 分别访问数学与图论原语。
 - `s.ctx` — 访问底层上下文信息，包括 `s.ctx.W` (画布宽) 与 `s.ctx.H` (画布高)。
 
 ### Card (DOM 卡片封装)
-对于紧凑布局或多模块展示，使用 `LearnVis.card` 自动封装带有标题和副标题的卡片 Stage。
+对于紧凑布局或多模块展示，使用 `card` 自动封装带有标题和副标题的卡片 Stage。
 ```js
+import { card, stage } from 'learnvis';
+
 // 创建带有标题和副标题的卡片 stage
-const c = LearnVis.card('#grid', '正弦函数', '绘制标准 sin(x) 函数图像', {
+const c = card('#grid', '正弦函数', '绘制标准 sin(x) 函数图像', {
   width: 300,
   height: 200,
   theme: 'warm'
 });
 
 // 在卡片的内容区 cell 范围内绘制正弦曲线
-c.math.fn(Math.sin, {
+const { fn } = c.math;
+fn(Math.sin, {
   domain: [0, 6.28],
   x: 0,
   y: c.cell.h,
@@ -51,9 +56,11 @@ c.math.fn(Math.sin, {
 ```js
 // s.render 同步执行，接收一个回调函数，自动包裹在帧提交管道中
 s.render(s => {
+  const { point } = s.math;
+  const { layers } = s.graph;
   // 核心绘制：画一个点，并声明 4 个图层
-  s.math.point('P', [100, 200]).color('danger');
-  s.layout.layers(4, { style: 'band' });
+  point('P', [100, 200]).color('danger');
+  layers(4, { style: 'band' });
 });
 ```
 - *Why*：底层的状态渲染是基于 ECS（实体组件系统）的。单独声明图元不会自动呈现到页面上，必须包含在一个 `begin()` 与 `commit()` 对中。`s.render()` 隐藏了这些底层的状态提交仪式，消除了忘记提交或在错误的时机提交的错误。
@@ -66,15 +73,17 @@ const ctrl = s.steps([
   {
     label: '步骤 1：初始化位置',
     frame: s => {
+      const { point } = s.math;
       // 步骤 1 时 P 点在左边，红色
-      s.math.point('P', [100, 200]).color('danger');
+      point('P', [100, 200]).color('danger');
     }
   },
   {
     label: '步骤 2：向右移动',
     frame: s => {
+      const { point } = s.math;
       // 步骤 2 时 P 点移动到右边，变成主色
-      s.math.point('P', [200, 150]).color('primary');
+      point('P', [200, 150]).color('primary');
     }
   }
 ]);
@@ -91,7 +100,8 @@ ctrl.go(1);
 ```js
 // 以 500ms 的过渡动效绘制 P 点并等待其完成
 await s.frame(s => {
-  s.math.point('P', [100, 200]).color('danger');
+  const { point } = s.math;
+  point('P', [100, 200]).color('danger');
 }, { ms: 500 });
 ```
 
@@ -100,8 +110,8 @@ await s.frame(s => {
 ```js
 // 定义每一帧的绘制函数
 const frames = [
-  s => { s.math.point('P', [100, 200]); },
-  s => { s.math.point('P', [200, 150]); },
+  s => { const { point } = s.math; point('P', [100, 200]); },
+  s => { const { point } = s.math; point('P', [200, 150]); },
 ];
 // 自动连续播放，每帧时长 800ms
 await s.play(frames, { ms: 800 });
@@ -113,11 +123,13 @@ await s.play(frames, { ms: 800 });
 
 如果需要脱离生命周期糖 API，直接操作底层的 `FrameManager` 以实现对每帧的显式控制，必须遵守 `begin` 与 `commit` 配对规则。
 ```js
+const { point } = s.math;
+
 // 1. 开始新的一帧
 s.frames.begin();
 
 // 2. 声明本帧内的所有图元
-s.math.point('P', [100, 200]);
+point('P', [100, 200]);
 
 // 3. 提交该帧并渲染到 SVG 画布上
 s.frames.commit({ ms: 500, animate: true });
