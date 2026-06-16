@@ -31,14 +31,13 @@ const sections = [
   // ── Static: matrix display ──
   {
     name: 'Matrix Display',
-    desc: 'matrix() in viewport. Natural placement, bracket rendering.',
+    desc: 'matrix() in viewport. Wide spacing — no overlap.',
     width: 340, height: 200,
     setup(s) {
-      const { viewport, matrix } = s.math;
       s.render(() => {
-        const vp = viewport({ x: [-4, 4], y: [-3, 3], margin: 0.1 });
-        matrix('A', [[1, 2], [3, 4]], { x: -2, y: 1 }).color('primary').label('A');
-        matrix('I', [[1, 0], [0, 1]], { x: 1.5, y: 1 }).color('dim').label('I');
+        const vp = s.math.viewport({ x: [-5, 5], y: [-3, 3], margin: 0.1 });
+        vp.matrix('A', [[1, 2], [3, 4]], { x: -3.5, y: 1 }).color('primary').label('A');
+        vp.matrix('I', [[1, 0], [0, 1]], { x: 3, y: 1 }).color('dim').label('I');
       });
     },
   },
@@ -152,6 +151,38 @@ const sections = [
         })),
         { controls: true }
       );
+    },
+  },
+  {
+    name: 'coords() — Bottom-Left Origin',
+    desc: 'Traditional function-plot style: origin=(60,200), xDomain=[0,10], yDomain=[-2,2].',
+    width: 400, height: 260,
+    setup(s) {
+      const { coords } = s.math;
+      s.render(() => {
+        const c = coords('bl', [60, 200], { xDomain: [0, 10], yDomain: [-2, 2], xLabel: 'x', yLabel: 'y' });
+        c.axes({ color: 'dim' });
+        c.grid({ spacing: 30, color: 'dim' });
+        c.fn('sin', x => Math.sin(x) * 2, { color: 'danger', label: '2sin(x)' });
+        c.point('P', 3, 1.5, { color: 'accent', label: 'P', size: 5 });
+        c.vector('v', [2, 0], [5, 1.5], { color: 'info', label: 'v' });
+      });
+    },
+  },
+  {
+    name: 'coords() — Offset Center',
+    desc: 'Origin at (200,180) with custom domain [−3,3]. Like a magnified viewport.',
+    width: 400, height: 260,
+    setup(s) {
+      const { coords } = s.math;
+      s.render(() => {
+        const c = coords('oc', [200, 180], { xDomain: [-3, 3], yDomain: [-2, 2], margin: 0.1 });
+        c.axes({ color: 'dim' });
+        c.grid({ spacing: 30, color: 'dim' });
+        c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
+        c.vector('u', [0, 0], [2, 1], { color: 'warning', label: 'u' }).strokeW(2);
+        c.circle('c', [0, 0], 1.5).color('accent').opacity(0.4);
+      });
     },
   },
 ];

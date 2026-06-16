@@ -563,8 +563,6 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const w = ctx.W, h = ctx.H;
     const ox = origin === 'center' ? w / 2 : (origin[0] ?? w / 2);
     const oy = origin === 'center' ? h / 2 : (origin[1] ?? h / 2);
-    const xLen = opts.xLen ?? (w - 100), yLen = opts.yLen ?? (h - 100);
-    // Apply margin — extends domain so transforms have breathing room
     const margin = opts.margin ?? 0;
     let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
     if (margin > 0) {
@@ -573,7 +571,10 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       xd = [xd[0] - xpad, xd[1] + xpad];
       yd = [yd[0] - ypad, yd[1] + ypad];
     }
-    // Map math coords → screen: origin (0,0) → (ox, oy)
+    // Pixel scale: if xLen/yLen given, use those. Otherwise maintain domain aspect ratio.
+    const xLen = opts.xLen ?? (w - 100);
+    const defaultY = xLen * Math.abs((yd[1] - yd[0]) / (xd[1] - xd[0]));
+    const yLen = opts.yLen ?? (isNaN(defaultY) ? h - 100 : defaultY);
     const scX = xLen / (xd[1] - xd[0]);
     const scY = yLen / (yd[1] - yd[0]);
     const sx = (x: number) => ox + (x - 0) * scX;
@@ -634,7 +635,9 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         segment(id + '-yax', [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
       },
       grid(gOpts = {}) {
-        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+        const gw = Math.abs(sx(xd[1]) - sx(xd[0]));
+        const gh = Math.abs(sy(yd[0]) - sy(yd[1]));
+        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: gw, height: gh, spacing: gOpts.spacing ?? 40, color: gOpts.color });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
         return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });

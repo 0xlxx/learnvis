@@ -4865,7 +4865,6 @@ function createMathRenderer(fm, ctx, palette) {
 		const w = ctx.W, h = ctx.H;
 		const ox = origin === "center" ? w / 2 : origin[0] ?? w / 2;
 		const oy = origin === "center" ? h / 2 : origin[1] ?? h / 2;
-		const xLen = opts.xLen ?? w - 100, yLen = opts.yLen ?? h - 100;
 		const margin = opts.margin ?? 0;
 		let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
 		if (margin > 0) {
@@ -4874,6 +4873,9 @@ function createMathRenderer(fm, ctx, palette) {
 			xd = [xd[0] - xpad, xd[1] + xpad];
 			yd = [yd[0] - ypad, yd[1] + ypad];
 		}
+		const xLen = opts.xLen ?? w - 100;
+		const defaultY = xLen * Math.abs((yd[1] - yd[0]) / (xd[1] - xd[0]));
+		const yLen = opts.yLen ?? (isNaN(defaultY) ? h - 100 : defaultY);
 		const scX = xLen / (xd[1] - xd[0]);
 		const scY = yLen / (yd[1] - yd[0]);
 		const sx = (x) => ox + (x - 0) * scX;
@@ -4946,9 +4948,11 @@ function createMathRenderer(fm, ctx, palette) {
 				segment(id + "-yax", [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
 			},
 			grid(gOpts = {}) {
+				const gw = Math.abs(sx(xd[1]) - sx(xd[0]));
+				const gh = Math.abs(sy(yd[0]) - sy(yd[1]));
 				grid(id + "-g", [sx(xd[0]), sy(yd[1])], {
-					width: xLen,
-					height: yLen,
+					width: gw,
+					height: gh,
 					spacing: gOpts.spacing ?? 40,
 					color: gOpts.color
 				});
