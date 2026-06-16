@@ -205,24 +205,25 @@ export interface MathCoords {
   axes(opts?: { color?: string; strokeW?: number }): void;
   grid(opts?: { spacing?: number; color?: string }): void;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
-  fillFn(id: string, f: (x: number) => number, opts?: { color?: string; opacity?: number; baseline?: number }): MathFill;
-  point(id: string, x: number, y: number, opts?: { color?: string; label?: string; size?: number; fill?: string }): MathPoint;
-  vector(id: string, from: [number, number], to: [number, number], opts?: { color?: string; label?: string; strokeW?: number; dash?: string; labelPlace?: Place; labelGap?: number; marker?: import('./types').MarkerConfig }): MathVector;
-  segment(id: string, a: [number, number], b: [number, number], opts?: { color?: string; strokeW?: number; dash?: string; label?: string; labelGap?: number }): MathSegment;
-  polyline(id: string, pts: [number, number][], opts?: { color?: string; strokeW?: number; dash?: string; opacity?: number }): MathPolyline;
-  circle(id: string, center: [number, number], radius: number, opts?: { color?: string; fill?: string; strokeW?: number; dash?: string; opacity?: number }): MathCircle;
-  polygon(id: string, vertices: [number, number][], opts?: { color?: string; fill?: string; strokeW?: number; opacity?: number }): MathPolygon;
-  angle(id: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], opts?: { color?: string; fill?: string; label?: string; size?: number }): MathAngle;
-  projection(id: string, pt: [number, number], lf: [number, number], lt: [number, number], opts?: { color?: string; dash?: string; pointColor?: string }): MathProjection;
-  basis(id: string, origin: [number, number], opts?: { iColor?: string; jColor?: string; scale?: number; iLabel?: string; jLabel?: string; color?: string; strokeW?: number }): MathBasis;
-  matrix(id: string, data: number[][], opts?: { x?: number; y?: number; color?: string; label?: string; cellW?: number; cellH?: number }): MathMatrix;
+  fillFn(id: string, f: (x: number) => number, opts?: { color?: string; opacity?: number; baseline?: number; range?: [number, number] }): MathFill;
+  point(id: string, x: number | Vec2, y?: number, opts?: Record<string, any>): MathPoint;
+  // For vector/segment/etc: first arg of each pair accepts Vec2 or (x, y) separately.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  vector(id: string, fx: number | Vec2, fy: number | Vec2, tx?: number | Vec2, ty?: number | Record<string, any>, opts?: Record<string, any>): MathVector;
+  segment(id: string, ax: number | Vec2, ay: number | Vec2, bx?: number | Vec2, by?: number | Record<string, any>, opts?: Record<string, any>): MathSegment;
+  polyline(id: string, pts: Vec2[], opts?: Record<string, any>): MathPolyline;
+  circle(id: string, center: number | Vec2, radius: number, opts?: Record<string, any>): MathCircle;
+  polygon(id: string, vertices: Vec2[], opts?: Record<string, any>): MathPolygon;
+  angle(id: string, vertex: number | Vec2, ray1: number | Vec2, ray2: number | Vec2, opts?: Record<string, any>): MathAngle;
+  projection(id: string, pt: number | Vec2, lf: number | Vec2, lt: number | Vec2, opts?: Record<string, any>): MathProjection;
+  basis(id: string, origin: number | Vec2, opts?: Record<string, any>): MathBasis;
+  matrix(id: string, data: number[][], opts?: Record<string, any>): MathMatrix;
   rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
   ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
   ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
-  // Exposed screen mappers for direct use
   mapX(x: number): number;
   mapY(y: number): number;
-  mapPt(x: number, y: number): Vec2;
+  mapPt(x: number | Vec2, y?: number): Vec2;
 }
 
 export function createMathRenderer(fm: FrameManager, ctx: import('./types').StageCtx, palette: Palette): MathAPI {
@@ -563,6 +564,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const w = ctx.W, h = ctx.H;
     const ox = origin === 'center' ? w / 2 : (origin[0] ?? w / 2);
     const oy = origin === 'center' ? h / 2 : (origin[1] ?? h / 2);
+    const xLen = opts.xLen ?? (w - 100), yLen = opts.yLen ?? (h - 100);
     const margin = opts.margin ?? 0;
     let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
     if (margin > 0) {
@@ -571,15 +573,14 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       xd = [xd[0] - xpad, xd[1] + xpad];
       yd = [yd[0] - ypad, yd[1] + ypad];
     }
-    // Pixel scale: if xLen/yLen given, use those. Otherwise maintain domain aspect ratio.
-    const xLen = opts.xLen ?? (w - 100);
-    const defaultY = xLen * Math.abs((yd[1] - yd[0]) / (xd[1] - xd[0]));
-    const yLen = opts.yLen ?? (isNaN(defaultY) ? h - 100 : defaultY);
     const scX = xLen / (xd[1] - xd[0]);
     const scY = yLen / (yd[1] - yd[0]);
     const sx = (x: number) => ox + (x - 0) * scX;
     const sy = (y: number) => oy - (y - 0) * scY;
     const mapPt = (x: number, y: number): Vec2 => [sx(x), sy(y)];
+    // Normalise position argument: _pt(3, 1) → [3,1], _pt([3,1]) → [3,1]
+    const _pt = (x: number | Vec2, y?: number): Vec2 =>
+      typeof x === 'number' ? [x, y!] : x;
 
     // Wrap a returned fluent builder so transform methods accept math coords
     function _wrap<T extends Record<string, any>>(b: T): T {
@@ -625,7 +626,11 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     }
 
     return {
-      mapX: sx, mapY: sy, mapPt,
+      mapX: sx, mapY: sy,
+      mapPt(mx: number | Vec2, my?: number): Vec2 {
+        const [x, y] = _pt(mx, my!);
+        return [sx(x), sy(y)];
+      },
       axes(aOpts = {}) {
         // Bidirectional axes through math origin (0,0)
         const x0 = sx(xd[0]), x1 = sx(xd[1]), y0 = sy(yd[0]), y1$ = sy(yd[1]);
@@ -635,46 +640,57 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         segment(id + '-yax', [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
       },
       grid(gOpts = {}) {
-        const gw = Math.abs(sx(xd[1]) - sx(xd[0]));
-        const gh = Math.abs(sy(yd[0]) - sy(yd[1]));
-        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: gw, height: gh, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
-        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
+        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range ?? yd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
       },
-      fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number } = {}) {
-        return fillFn(fid, f, { domain: xd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
+      fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number; range?: [number, number] } = {}) {
+        return fillFn(fid, f, { domain: xd, range: fOpts.range ?? yd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
       },
-      point(pid: string, x: number, y: number, pOpts: { color?: string; label?: string; size?: number; fill?: string } = {}) {
-        return point(pid, [sx(x), sy(y)], pOpts);
+      point(pid: string, x: number | Vec2, y?: number, pOpts: Record<string, any> = {}) {
+        const [mx, my] = _pt(x, y!);
+        return point(pid, [sx(mx), sy(my)], pOpts as any);
       },
-      vector(vid: string, from: [number, number], to: [number, number], vOpts = {}) {
-        return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts));
+      vector(vid: string, fx: number | Vec2, fy: number | Vec2, tx?: number | Vec2 | Record<string, any>, ty?: number | Record<string, any>, vOpts: Record<string, any> = {}) {
+        const from = _pt(fx, typeof fy === 'number' ? fy : undefined);
+        const t1 = typeof fy === 'number' ? tx : fy;
+        const to = _pt(t1 as number | Vec2, typeof tx === 'number' ? ty as number : undefined);
+        const opts = (typeof tx === 'object' ? tx : (typeof ty === 'object' ? ty : vOpts)) as Record<string, any> || {};
+        return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], opts as any));
       },
-      segment(sid: string, a: [number, number], b: [number, number], sOpts = {}) {
-        return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
+      segment(sid: string, ax: number | Vec2, ay: number | Vec2, bx?: number | Vec2 | Record<string, any>, by?: number | Record<string, any>, sOpts: Record<string, any> = {}) {
+        const a = _pt(ax, typeof ay === 'number' ? ay : undefined);
+        const b1 = typeof ay === 'number' ? bx : ay;
+        const b = _pt(b1 as number | Vec2, typeof bx === 'number' ? by as number : undefined);
+        const opts = (typeof bx === 'object' ? bx : (typeof by === 'object' ? by : sOpts)) as Record<string, any> || {};
+        return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], opts as any);
       },
-      polyline(plid: string, pts: [number, number][], plOpts = {}) {
-        return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)] as Vec2), plOpts);
+      polyline(plid: string, pts: Vec2[], plOpts: Record<string, any> = {}) {
+        return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)] as Vec2), plOpts as any);
       },
-      circle(cid: string, center: [number, number], radius: number, cOpts = {}) {
-        const cx = sx(center[0]), cy = sy(center[1]);
-        const r = Math.abs(sx(center[0] + radius) - cx);
-        return circle(cid, [cx, cy], r, cOpts);
+      circle(cid: string, center: number | Vec2, radius: number, cOpts: Record<string, any> = {}) {
+        const c = _pt(center);
+        const cx = sx(c[0]), cy = sy(c[1]);
+        const r = Math.abs(sx(c[0] + radius) - cx);
+        return circle(cid, [cx, cy], r, cOpts as any);
       },
-      polygon(pgid: string, vertices: [number, number][], pgOpts = {}) {
-        return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts));
+      polygon(pgid: string, vertices: Vec2[], pgOpts: Record<string, any> = {}) {
+        return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts as any));
       },
-      angle(aid: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], aOpts = {}) {
+      angle(aid: string, vertex: number | Vec2, ray1: number | Vec2, ray2: number | Vec2, aOpts: Record<string, any> = {}) {
+        const v = _pt(vertex), r1 = _pt(ray1), r2 = _pt(ray2);
         const size = aOpts.size !== undefined ? sx(0) - sx(-aOpts.size) : undefined;
-        return angle(aid, [sx(vertex[0]), sy(vertex[1])], [sx(ray1[0]), sy(ray1[1])], [sx(ray2[0]), sy(ray2[1])], { ...aOpts, size });
+        return angle(aid, [sx(v[0]), sy(v[1])], [sx(r1[0]), sy(r1[1])], [sx(r2[0]), sy(r2[1])], { ...aOpts, size } as any);
       },
-      projection(prid: string, pt: [number, number], lf: [number, number], lt: [number, number], prOpts = {}) {
-        return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
+      projection(prid: string, pt: number | Vec2, lf: number | Vec2, lt: number | Vec2, prOpts: Record<string, any> = {}) {
+        const p = _pt(pt), l = _pt(lf), t = _pt(lt);
+        return projection(prid, [sx(p[0]), sy(p[1])], [sx(l[0]), sy(l[1])], [sx(t[0]), sy(t[1])], prOpts as any);
       },
-      basis(bid: string, borigin: [number, number], bOpts = {}) {
-        const pixelScale = bOpts.scale !== undefined ? bOpts.scale * scX : undefined;
-        return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], { ...bOpts, scale: pixelScale });
+      basis(bid: string, borigin: number | Vec2, bOpts: Record<string, any> = {}) {
+        const o = _pt(borigin);
+        const pixelScale = typeof bOpts.scale === 'number' ? bOpts.scale * scX : undefined;
+        return basisPrimitive(bid, [sx(o[0]), sy(o[1])], { ...bOpts, scale: pixelScale } as any);
       },
       matrix(mid: string, data: number[][], mOpts = {}) {
         return matrixPrimitive(mid, data, { ...mOpts, x: mOpts.x !== undefined ? sx(mOpts.x) : undefined, y: mOpts.y !== undefined ? sy(mOpts.y) : undefined });

@@ -4865,6 +4865,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const w = ctx.W, h = ctx.H;
 		const ox = origin === "center" ? w / 2 : origin[0] ?? w / 2;
 		const oy = origin === "center" ? h / 2 : origin[1] ?? h / 2;
+		const xLen = opts.xLen ?? w - 100, yLen = opts.yLen ?? h - 100;
 		const margin = opts.margin ?? 0;
 		let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
 		if (margin > 0) {
@@ -4873,14 +4874,11 @@ function createMathRenderer(fm, ctx, palette) {
 			xd = [xd[0] - xpad, xd[1] + xpad];
 			yd = [yd[0] - ypad, yd[1] + ypad];
 		}
-		const xLen = opts.xLen ?? w - 100;
-		const defaultY = xLen * Math.abs((yd[1] - yd[0]) / (xd[1] - xd[0]));
-		const yLen = opts.yLen ?? (isNaN(defaultY) ? h - 100 : defaultY);
 		const scX = xLen / (xd[1] - xd[0]);
 		const scY = yLen / (yd[1] - yd[0]);
 		const sx = (x) => ox + (x - 0) * scX;
 		const sy = (y) => oy - (y - 0) * scY;
-		const mapPt = (x, y) => [sx(x), sy(y)];
+		const _pt = (x, y) => typeof x === "number" ? [x, y] : x;
 		function _wrap(b) {
 			const w = {};
 			for (const key of Object.keys(b)) {
@@ -4939,7 +4937,10 @@ function createMathRenderer(fm, ctx, palette) {
 		return {
 			mapX: sx,
 			mapY: sy,
-			mapPt,
+			mapPt(mx, my) {
+				const [x, y] = _pt(mx, my);
+				return [sx(x), sy(y)];
+			},
 			axes(aOpts = {}) {
 				const x0 = sx(xd[0]), x1 = sx(xd[1]), y0 = sy(yd[0]), y1$ = sy(yd[1]);
 				const zx = sx(0), zy = sy(0);
@@ -4948,11 +4949,9 @@ function createMathRenderer(fm, ctx, palette) {
 				segment(id + "-yax", [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
 			},
 			grid(gOpts = {}) {
-				const gw = Math.abs(sx(xd[1]) - sx(xd[0]));
-				const gh = Math.abs(sy(yd[0]) - sy(yd[1]));
 				grid(id + "-g", [sx(xd[0]), sy(yd[1])], {
-					width: gw,
-					height: gh,
+					width: xLen,
+					height: yLen,
 					spacing: gOpts.spacing ?? 40,
 					color: gOpts.color
 				});
@@ -4960,7 +4959,7 @@ function createMathRenderer(fm, ctx, palette) {
 			fn(fid, f, fOpts = {}) {
 				return fn(fid, f, {
 					domain: fOpts.domain ?? xd,
-					range: fOpts.range,
+					range: fOpts.range ?? yd,
 					x: sx(xd[0]),
 					y: sy(yd[1]),
 					width: xLen,
@@ -4976,6 +4975,7 @@ function createMathRenderer(fm, ctx, palette) {
 			fillFn(fid, f, fOpts = {}) {
 				return fillFn(fid, f, {
 					domain: xd,
+					range: fOpts.range ?? yd,
 					x: sx(xd[0]),
 					y: sy(yd[1]),
 					width: xLen,
@@ -4986,38 +4986,49 @@ function createMathRenderer(fm, ctx, palette) {
 				});
 			},
 			point(pid, x, y, pOpts = {}) {
-				return point(pid, [sx(x), sy(y)], pOpts);
+				const [mx, my] = _pt(x, y);
+				return point(pid, [sx(mx), sy(my)], pOpts);
 			},
-			vector(vid, from, to, vOpts = {}) {
-				return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], vOpts));
+			vector(vid, fx, fy, tx, ty, vOpts = {}) {
+				const from = _pt(fx, typeof fy === "number" ? fy : void 0);
+				const to = _pt(typeof fy === "number" ? tx : fy, typeof tx === "number" ? ty : void 0);
+				const opts = (typeof tx === "object" ? tx : typeof ty === "object" ? ty : vOpts) || {};
+				return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], opts));
 			},
-			segment(sid, a, b, sOpts = {}) {
-				return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], sOpts);
+			segment(sid, ax, ay, bx, by, sOpts = {}) {
+				const a = _pt(ax, typeof ay === "number" ? ay : void 0);
+				const b = _pt(typeof ay === "number" ? bx : ay, typeof bx === "number" ? by : void 0);
+				const opts = (typeof bx === "object" ? bx : typeof by === "object" ? by : sOpts) || {};
+				return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], opts);
 			},
 			polyline(plid, pts, plOpts = {}) {
 				return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)]), plOpts);
 			},
 			circle(cid, center, radius, cOpts = {}) {
-				const cx = sx(center[0]), cy = sy(center[1]);
-				const r = Math.abs(sx(center[0] + radius) - cx);
+				const c = _pt(center);
+				const cx = sx(c[0]), cy = sy(c[1]);
+				const r = Math.abs(sx(c[0] + radius) - cx);
 				return circle(cid, [cx, cy], r, cOpts);
 			},
 			polygon(pgid, vertices, pgOpts = {}) {
 				return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)]), pgOpts));
 			},
 			angle(aid, vertex, ray1, ray2, aOpts = {}) {
+				const v = _pt(vertex), r1 = _pt(ray1), r2 = _pt(ray2);
 				const size = aOpts.size !== void 0 ? sx(0) - sx(-aOpts.size) : void 0;
-				return angle(aid, [sx(vertex[0]), sy(vertex[1])], [sx(ray1[0]), sy(ray1[1])], [sx(ray2[0]), sy(ray2[1])], {
+				return angle(aid, [sx(v[0]), sy(v[1])], [sx(r1[0]), sy(r1[1])], [sx(r2[0]), sy(r2[1])], {
 					...aOpts,
 					size
 				});
 			},
 			projection(prid, pt, lf, lt, prOpts = {}) {
-				return projection(prid, [sx(pt[0]), sy(pt[1])], [sx(lf[0]), sy(lf[1])], [sx(lt[0]), sy(lt[1])], prOpts);
+				const p = _pt(pt), l = _pt(lf), t = _pt(lt);
+				return projection(prid, [sx(p[0]), sy(p[1])], [sx(l[0]), sy(l[1])], [sx(t[0]), sy(t[1])], prOpts);
 			},
 			basis(bid, borigin, bOpts = {}) {
-				const pixelScale = bOpts.scale !== void 0 ? bOpts.scale * scX : void 0;
-				return basisPrimitive(bid, [sx(borigin[0]), sy(borigin[1])], {
+				const o = _pt(borigin);
+				const pixelScale = typeof bOpts.scale === "number" ? bOpts.scale * scX : void 0;
+				return basisPrimitive(bid, [sx(o[0]), sy(o[1])], {
 					...bOpts,
 					scale: pixelScale
 				});

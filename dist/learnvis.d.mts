@@ -508,82 +508,24 @@ interface MathCoords {
     color?: string;
     opacity?: number;
     baseline?: number;
+    range?: [number, number];
   }): MathFill;
-  point(id: string, x: number, y: number, opts?: {
-    color?: string;
-    label?: string;
-    size?: number;
-    fill?: string;
-  }): MathPoint;
-  vector(id: string, from: [number, number], to: [number, number], opts?: {
-    color?: string;
-    label?: string;
-    strokeW?: number;
-    dash?: string;
-    labelPlace?: Place;
-    labelGap?: number;
-    marker?: MarkerConfig;
-  }): MathVector;
-  segment(id: string, a: [number, number], b: [number, number], opts?: {
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    label?: string;
-    labelGap?: number;
-  }): MathSegment;
-  polyline(id: string, pts: [number, number][], opts?: {
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    opacity?: number;
-  }): MathPolyline;
-  circle(id: string, center: [number, number], radius: number, opts?: {
-    color?: string;
-    fill?: string;
-    strokeW?: number;
-    dash?: string;
-    opacity?: number;
-  }): MathCircle;
-  polygon(id: string, vertices: [number, number][], opts?: {
-    color?: string;
-    fill?: string;
-    strokeW?: number;
-    opacity?: number;
-  }): MathPolygon;
-  angle(id: string, vertex: [number, number], ray1: [number, number], ray2: [number, number], opts?: {
-    color?: string;
-    fill?: string;
-    label?: string;
-    size?: number;
-  }): MathAngle;
-  projection(id: string, pt: [number, number], lf: [number, number], lt: [number, number], opts?: {
-    color?: string;
-    dash?: string;
-    pointColor?: string;
-  }): MathProjection;
-  basis(id: string, origin: [number, number], opts?: {
-    iColor?: string;
-    jColor?: string;
-    scale?: number;
-    iLabel?: string;
-    jLabel?: string;
-    color?: string;
-    strokeW?: number;
-  }): MathBasis;
-  matrix(id: string, data: number[][], opts?: {
-    x?: number;
-    y?: number;
-    color?: string;
-    label?: string;
-    cellW?: number;
-    cellH?: number;
-  }): MathMatrix;
+  point(id: string, x: number | Vec2, y?: number, opts?: Record<string, any>): MathPoint;
+  vector(id: string, fx: number | Vec2, fy: number | Vec2, tx?: number | Vec2, ty?: number | Record<string, any>, opts?: Record<string, any>): MathVector;
+  segment(id: string, ax: number | Vec2, ay: number | Vec2, bx?: number | Vec2, by?: number | Record<string, any>, opts?: Record<string, any>): MathSegment;
+  polyline(id: string, pts: Vec2[], opts?: Record<string, any>): MathPolyline;
+  circle(id: string, center: number | Vec2, radius: number, opts?: Record<string, any>): MathCircle;
+  polygon(id: string, vertices: Vec2[], opts?: Record<string, any>): MathPolygon;
+  angle(id: string, vertex: number | Vec2, ray1: number | Vec2, ray2: number | Vec2, opts?: Record<string, any>): MathAngle;
+  projection(id: string, pt: number | Vec2, lf: number | Vec2, lt: number | Vec2, opts?: Record<string, any>): MathProjection;
+  basis(id: string, origin: number | Vec2, opts?: Record<string, any>): MathBasis;
+  matrix(id: string, data: number[][], opts?: Record<string, any>): MathMatrix;
   rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
   ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
   ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
   mapX(x: number): number;
   mapY(y: number): number;
-  mapPt(x: number, y: number): Vec2;
+  mapPt(x: number | Vec2, y?: number): Vec2;
 }
 //#endregion
 //#region vis/graph.d.ts
