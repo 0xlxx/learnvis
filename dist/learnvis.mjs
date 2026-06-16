@@ -4454,7 +4454,8 @@ function createMathRenderer(fm, ctx, palette) {
 			stroke: r.stroke,
 			fill: finalFill,
 			strokeW,
-			opacity
+			opacity,
+			label: ""
 		});
 		return {
 			...mixColor(eid$10, fm, p),
@@ -4462,6 +4463,7 @@ function createMathRenderer(fm, ctx, palette) {
 			...mixFill(eid$10, fm, p),
 			...mixDashed(eid$10, fm),
 			...mixOpacity(eid$10, fm),
+			...mixLabel(eid$10, fm),
 			...mixTransform(eid$10, fm, "polygon")
 		};
 	}

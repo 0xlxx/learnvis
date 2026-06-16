@@ -358,6 +358,7 @@ interface MathVector {
   rotate(a: number, cx: number, cy: number): MathVector;
   translate(dx: number, dy: number): MathVector;
   scale(sx: number, sy?: number): MathVector;
+  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathVector;
 }
 interface MathSegment {
   color(c: string): MathSegment;
@@ -386,9 +387,11 @@ interface MathPolygon {
   fill(c: string): MathPolygon;
   dashed(d?: string): MathPolygon;
   opacity(v: number): MathPolygon;
+  label(t: string): MathPolygon;
   rotate(a: number, cx: number, cy: number): MathPolygon;
   translate(dx: number, dy: number): MathPolygon;
   scale(sx: number, sy?: number): MathPolygon;
+  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathPolygon;
 }
 interface MathAngle {
   color(c: string): MathAngle;

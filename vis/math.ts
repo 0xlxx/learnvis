@@ -73,6 +73,7 @@ export interface MathVector {
   rotate(a: number, cx: number, cy: number): MathVector;
   translate(dx: number, dy: number): MathVector;
   scale(sx: number, sy?: number): MathVector;
+  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathVector;
 }
 
 export interface MathSegment {
@@ -105,9 +106,11 @@ export interface MathPolygon {
   fill(c: string): MathPolygon;
   dashed(d?: string): MathPolygon;
   opacity(v: number): MathPolygon;
+  label(t: string): MathPolygon;
   rotate(a: number, cx: number, cy: number): MathPolygon;
   translate(dx: number, dy: number): MathPolygon;
   scale(sx: number, sy?: number): MathPolygon;
+  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathPolygon;
 }
 
 export interface MathAngle {
@@ -307,7 +310,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     const opacity = opts.opacity ?? 1;
     const finalFill = opts.fill ?? r.fill;
 
-    fm.declare(eid, { type: 'region', shape: 'polygon', vertices, stroke: r.stroke, fill: finalFill, strokeW, opacity });
+    fm.declare(eid, { type: 'region', shape: 'polygon', vertices, stroke: r.stroke, fill: finalFill, strokeW, opacity, label: '' });
 
     return {
       ...mixColor(eid, fm, p),
@@ -315,6 +318,7 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
       ...mixFill(eid, fm, p),
       ...mixDashed(eid, fm),
       ...mixOpacity(eid, fm),
+      ...mixLabel(eid, fm),
       ...mixTransform(eid, fm, 'polygon'),
     } as unknown as MathPolygon;
   }

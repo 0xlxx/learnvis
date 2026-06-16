@@ -14,16 +14,16 @@
     .row{display:flex;gap:16px;flex-wrap:wrap}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
     .card .stage{display:block}
-    .lv-stepper-host .step-controls{display:flex;gap:4px;justify-content:center;align-items:center}
-    .lv-stepper-host button{font-size:0.7rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
+    .lv-stepper-host .step-controls{display:flex;gap:4px;margin-top:4px;justify-content:center;align-items:center}
+    .lv-stepper-host button{font-size:0.65rem;padding:2px 8px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
     .lv-stepper-host button:disabled{opacity:0.35;cursor:default}
-    .lv-stepper-host .step-label{font-size:0.68rem;color:var(--text-dim);min-width:80px}
+    .lv-stepper-host .step-label{font-size:0.65rem;color:var(--text-dim);min-width:70px}
   </style>
 </head>
 <body>
 
 <h1>Linear Algebra — Primitives</h1>
-<p class="sub">matrix display, basis vectors, matrixTransform animation, determinant</p>
+<p class="sub">matrix display · basis vectors · matrixTransform · determinant · eigenvalue animation</p>
 
 <div id="sections"></div>
 
@@ -31,34 +31,35 @@
 import { stage } from '../../dist/learnvis.mjs';
 
 const sections = [
+  // ── Static displays ──
   {
-    name: 'Matrix Display',
-    desc: '2×2 matrix with bracket rendering. color(), label(), set().',
-    width: 300, height: 180,
+    name: 'Matrix Display — Identity & Shear',
+    desc: 'matrix() renders [[a,b],[c,d]] with bracket glyphs and monospace font.',
+    width: 400, height: 160,
     setup(s) {
       const { matrix } = s.math;
       s.render(() => {
-        matrix('A', [[1, 2], [3, 4]], { x: 110, y: 50 })
-          .color('primary').label('A = [[1,2],[3,4]]');
+        matrix('I', [[1, 0], [0, 1]], { x: 20, y: 40 }).color('dim').label('I');
+        matrix('S', [[1, 0.8], [0.4, 1]], { x: 220, y: 40 }).color('accent').label('Shear');
       });
     },
   },
   {
-    name: 'Matrix — Row/Column Picture',
-    desc: 'Two matrices side by side: identity and shear.',
-    width: 380, height: 180,
+    name: 'Matrix — set() update',
+    desc: 'Chain .set([[new]]) to update values. Here 3×2 matrix.',
+    width: 340, height: 160,
     setup(s) {
-      const { matrix, axes } = s.math;
+      const { matrix } = s.math;
       s.render(() => {
-        matrix('I', [[1, 0], [0, 1]], { x: 30, y: 50 }).color('dim').label('I (identity)');
-        matrix('S', [[1, 0.8], [0.4, 1]], { x: 200, y: 50 }).color('accent').label('Shear');
+        matrix('A', [[2, -1], [0, 3], [1, 0]], { x: 100, y: 10 })
+          .color('primary').label('3×2 matrix');
       });
     },
   },
   {
-    name: 'Basis Vectors',
-    desc: 'î (accent/red) and ĵ (danger/blue), auto-labeled with hat notation.',
-    width: 300, height: 240,
+    name: 'Basis Vectors — Standard',
+    desc: 'î (accent) + ĵ (danger), arrow markers, hat labels. basis() is sugar over vector().',
+    width: 320, height: 240,
     setup(s) {
       const { basis, point } = s.math;
       s.render(() => {
@@ -68,91 +69,133 @@ const sections = [
     },
   },
   {
-    name: 'Basis — Custom Colors & Scale',
-    desc: 'iColor: accent, jColor: info, scale: 60.',
-    width: 300, height: 240,
+    name: 'Basis — Custom',
+    desc: '.iColor("info") .jColor("warning") .scale(100).strokeW(2.5)',
+    width: 320, height: 240,
     setup(s) {
       const { basis, point } = s.math;
       s.render(() => {
-        point('O', [150, 150]).color('primary').label('O').size(5);
-        basis('B', [150, 150], { scale: 60, iColor: 'accent', jColor: 'info' });
+        point('O', [160, 140]).color('primary').label('O').size(5);
+        basis('B', [160, 140], { scale: 100, iColor: 'info', jColor: 'warning', strokeW: 2.5 });
       });
     },
   },
+
+  // ── Animation demos ──
   {
-    name: 'Matrix Transform — Vector Rotation',
-    desc: 'Rotate a vector by 90° using matrixTransform().',
-    width: 340, height: 260,
+    name: 'Vector × Matrix — Step Animation',
+    desc: 'v = (200,0). Apply 90° rotation → shear. Smooth D3 interpolation.',
+    width: 380, height: 260,
     setup(s) {
-      const { axes, point, vector } = s.math;
       s.steps([
-        { label: '原始', frame(sv) {
+        { label: '原始 v', frame(sv) {
           const { axes, point, vector } = sv.math;
-          axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          axes('ax', [60, 220], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
           point('O', [60, 220]).color('primary').label('O');
           vector('v', [60, 220], [260, 220]).color('danger').label('v').strokeW(2);
         }},
-        { label: '90°', frame(sv) {
+        { label: 'rot 90°', frame(sv) {
           const { axes, point, vector } = sv.math;
-          axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          axes('ax', [60, 220], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
           point('O', [60, 220]).color('primary').label('O');
           vector('v', [60, 220], [260, 220]).color('danger').label('v').strokeW(2)
-            .matrixTransform(0, 1, -1, 0);  // 90° rotation matrix
+            .matrixTransform(0, 1, -1, 0);
         }},
         { label: 'shear', frame(sv) {
           const { axes, point, vector } = sv.math;
-          axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          axes('ax', [60, 220], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
           point('O', [60, 220]).color('primary').label('O');
           vector('v', [60, 220], [260, 220]).color('danger').label('v').strokeW(2)
-            .matrixTransform(1, 0.5, 0.5, 1);  // shear
+            .matrixTransform(1, 0.5, 0.5, 1);
+        }},
+        { label: 'reflect x', frame(sv) {
+          const { axes, point, vector } = sv.math;
+          axes('ax', [60, 220], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          point('O', [60, 220]).color('primary').label('O');
+          vector('v', [60, 220], [260, 220]).color('danger').label('v').strokeW(2)
+            .matrixTransform(1, 0, 0, -1);
         }},
       ], { controls: true });
     },
   },
   {
-    name: 'Determinant — Unit Square',
-    desc: 'Unit square transformed by [[2,0.5],[0.5,1.5]]. Area scales by det ≈ 2.75.',
-    width: 340, height: 260,
+    name: 'Determinant — Unit Square Transformed',
+    desc: '[[2,0.5],[0.5,1.5]]. det ≈ 2.75. Area scales by |det|.',
+    width: 380, height: 260,
     setup(s) {
-      const { axes, point, polygon } = s.math;
-      const cx = 170, cy = 150;
+      const ax = 30, ay = 220, sz = 70;
       s.steps([
         { label: '单位正方形', frame(sv) {
           const { axes, point, polygon } = sv.math;
-          axes('ax', [30, 220], { xLen: 280, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-          point('O', [30, 220]).color('primary').label('O');
-          const unit = [[0,0],[60,0],[60,-60],[0,-60]].map(([x,y]) => [30+x, 220+y]);
-          polygon('sq', unit).color('accent').opacity(0.5).label('det=1');
+          axes('ax', [ax, ay], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          point('O', [ax, ay]).color('primary').label('O');
+          const sq = [[0,0],[sz,0],[sz,-sz],[0,-sz]].map(([x,y]) => [ax+x, ay+y]);
+          polygon('sq', sq).color('accent').opacity(0.5).label('det = 1');
         }},
-        { label: '[[2,0.5],[0.5,1.5]]', frame(sv) {
+        { label: 'T(square)', frame(sv) {
           const { axes, point, polygon } = sv.math;
-          axes('ax', [30, 220], { xLen: 280, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-          point('O', [30, 220]).color('primary').label('O');
-          const unit = [[0,0],[60,0],[60,-60],[0,-60]].map(([x,y]) => [30+x, 220+y]);
-          polygon('sq', unit).color('danger').opacity(0.5).label('det≈2.75')
+          axes('ax', [ax, ay], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          point('O', [ax, ay]).color('primary').label('O');
+          const sq = [[0,0],[sz,0],[sz,-sz],[0,-sz]].map(([x,y]) => [ax+x, ay+y]);
+          polygon('sq', sq).color('danger').opacity(0.5).label('det ≈ 2.75')
             .matrixTransform(2, 0.5, 0.5, 1.5);
         }},
       ], { controls: true });
     },
   },
   {
-    name: 'Compose: Rotation + Basis',
-    desc: 'Basis vectors rotate with .rotate() (built-in) vs .matrixTransform().',
+    name: 'Eigen — Rotation + Scale',
+    desc: '[[2,1],[1,2]]. λ₁=3 ↖↗, λ₂=1 ↙↘. Eigenvectors stay on their span.',
+    width: 380, height: 260,
+    setup(s) {
+      const ax = 30, ay = 220;
+      // Matrix [[2,1],[1,2]] — eigenvectors: (1,1) with λ=3, (1,-1) with λ=1
+      s.steps([
+        { label: '原始基', frame(sv) {
+          const { axes, point, vector } = sv.math;
+          axes('ax', [ax, ay], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          point('O', [ax, ay]).color('primary').label('O');
+          vector('e1', [ax, ay], [ax+60, ay]).color('accent').label('e1').strokeW(2);
+          vector('e2', [ax, ay], [ax, ay-60]).color('info').label('e2').strokeW(2);
+          // eigenvector (1,1)
+          vector('v1', [ax, ay], [ax+45, ay-45]).color('warning').label('v1').strokeW(2.5).dashed('5 3');
+          // eigenvector (1,-1)
+          vector('v2', [ax, ay], [ax+45, ay+45]).color('success').label('v2').strokeW(2.5).dashed('5 3');
+        }},
+        { label: 'T = [[2,1],[1,2]]', frame(sv) {
+          const { axes, point, vector } = sv.math;
+          axes('ax', [ax, ay], { xLen: 300, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
+          point('O', [ax, ay]).color('primary').label('O');
+          vector('e1', [ax, ay], [ax+60, ay]).color('accent').label('e1').strokeW(2)
+            .matrixTransform(2, 1, 1, 2);
+          vector('e2', [ax, ay], [ax, ay-60]).color('info').label('e2').strokeW(2)
+            .matrixTransform(2, 1, 1, 2);
+          // v1=(1,1) scaled by λ=3
+          vector('v1', [ax, ay], [ax+45, ay-45]).color('warning').label('3·v1').strokeW(2.5)
+            .matrixTransform(2, 1, 1, 2);
+          // v2=(1,-1) scaled by λ=1 (unchanged direction)
+          vector('v2', [ax, ay], [ax+45, ay+45]).color('success').label('1·v2').strokeW(2.5)
+            .matrixTransform(2, 1, 1, 2);
+        }},
+      ], { controls: true });
+    },
+  },
+  {
+    name: 'Basis Rotation — Step by Step',
+    desc: 'î, ĵ rotate 0°→45°→90°→135° via .rotate() (built-in transform).',
     width: 400, height: 260,
     setup(s) {
-      const { point, vector } = s.math;
-      const degs = [0, 45, 90, 135];
+      const degs = [0, 30, 60, 90, 135];
       s.steps(
         degs.map(d => ({
           label: `${d}°`,
           frame(sv) {
             const { point, vector } = sv.math;
-            const O = [80, 200];
+            const O = [70, 200];
             point('O', O).color('primary').label('O').size(5);
-            // Show original î, ĵ rotated
-            vector('i', O, [O[0]+60, O[1]]).color('danger').label('î').strokeW(2)
+            vector('i', O, [O[0]+70, O[1]]).color('danger').label('î').strokeW(2)
               .rotate(d, O[0], O[1]);
-            vector('j', O, [O[0], O[1]-60]).color('info').label('ĵ').strokeW(2)
+            vector('j', O, [O[0], O[1]-70]).color('info').label('ĵ').strokeW(2)
               .rotate(d, O[0], O[1]);
           }
         })),
