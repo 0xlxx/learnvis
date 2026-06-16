@@ -8,8 +8,6 @@ export { stepper, descBox } from './stepper';
 export { katexify } from './katex';
 export { bootstrap } from './bootstrap';
 export { stage, stage3D } from './stage';
-export { createLayout } from './layout';
-export type { LayoutAPI, LayoutNode, LayoutPort, LayoutEdge, LayoutLayer } from './layout';
 export { FrameManager } from './frame';
 export { SVGRenderer } from './renderer/svg';
 export type { Renderer, RenderHandle } from './renderer';

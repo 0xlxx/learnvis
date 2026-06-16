@@ -159,24 +159,6 @@ function offsetLine(from, to, fromR, toR, _directed = true) {
 		y2: to[1] - uy * toR
 	};
 }
-/** Returns the intersection point on a rectangle's boundary towards a target point. */
-function intersectRect(cx, cy, w, h, tx, ty, margin = 0) {
-	const dx = tx - cx, dy = ty - cy;
-	if (Math.abs(dx) < 1e-9 && Math.abs(dy) < 1e-9) return [cx, cy];
-	const hw = w / 2 + margin, hh = h / 2 + margin;
-	const scaleX = dx !== 0 ? Math.abs(hw / dx) : Infinity;
-	const scaleY = dy !== 0 ? Math.abs(hh / dy) : Infinity;
-	const t = Math.min(scaleX, scaleY);
-	return [cx + dx * t, cy + dy * t];
-}
-/** Returns the intersection point on a circle's boundary towards a target point. */
-function intersectCircle(cx, cy, r, tx, ty, margin = 0) {
-	const dx = tx - cx, dy = ty - cy;
-	const l = len(dx, dy);
-	if (l < 1e-9) return [cx, cy];
-	const totalR = r + margin;
-	return [cx + dx / l * totalR, cy + dy / l * totalR];
-}
 
 //#endregion
 //#region node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/src/dispatch.js
@@ -4125,50 +4107,50 @@ function resolveColor(p, c) {
 		fill: c
 	};
 }
-function patch$1(eid, fm, props) {
+function patch(eid, fm, props) {
 	fm.patch(eid, props);
 }
 const mixColor = (eid, fm, p) => ({ color(c) {
 	const r = resolveColor(p, c);
-	patch$1(eid, fm, {
+	patch(eid, fm, {
 		stroke: r.stroke,
 		fill: r.fill
 	});
 	return this;
 } });
 const mixStroke = (eid, fm, p) => ({ color(c) {
-	patch$1(eid, fm, { stroke: resolveColor(p, c).stroke });
+	patch(eid, fm, { stroke: resolveColor(p, c).stroke });
 	return this;
 } });
 const mixStrokeW = (eid, fm) => ({ strokeW(n) {
-	patch$1(eid, fm, { strokeW: n });
+	patch(eid, fm, { strokeW: n });
 	return this;
 } });
 const mixFill = (eid, fm, p) => ({ fill(c) {
-	patch$1(eid, fm, { fill: resolveColor(p, c).fill });
+	patch(eid, fm, { fill: resolveColor(p, c).fill });
 	return this;
 } });
 const mixOpacity = (eid, fm) => ({ opacity(v) {
-	patch$1(eid, fm, { opacity: v });
+	patch(eid, fm, { opacity: v });
 	return this;
 } });
 const mixSize = (eid, fm) => ({ size(n) {
-	patch$1(eid, fm, {
+	patch(eid, fm, {
 		r: n,
 		pathSize: n
 	});
 	return this;
 } });
 const mixDashed = (eid, fm) => ({ dashed(d = "5 4") {
-	patch$1(eid, fm, { dash: d });
+	patch(eid, fm, { dash: d });
 	return this;
 } });
 const mixLabel = (eid, fm) => ({ label(t) {
-	patch$1(eid, fm, { label: t });
+	patch(eid, fm, { label: t });
 	return this;
 } });
 const mixLabelPos = (eid, fm, defaults) => ({ label(t, place, gap) {
-	patch$1(eid, fm, {
+	patch(eid, fm, {
 		label: t,
 		labelPlace: place ?? defaults.labelPlace,
 		labelGap: gap ?? defaults.labelGap
@@ -4183,7 +4165,7 @@ const mixNodeLabel = (eid, fm) => ({ label(t, place, gap) {
 	return this;
 } });
 const mixMoveTo = (eid, fm) => ({ moveTo(x, y) {
-	patch$1(eid, fm, {
+	patch(eid, fm, {
 		x,
 		y
 	});
@@ -4249,11 +4231,11 @@ const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
 	const e = fm.entities.get(eid);
 	if (!e) return this;
 	const d = e.desired;
-	if ("x" in d && d.x != null) patch$1(eid, fm, {
+	if ("x" in d && d.x != null) patch(eid, fm, {
 		x: d.x + dx,
 		y: (d.y ?? 0) + dy
 	});
-	else if ("cx" in d && d.cx != null) patch$1(eid, fm, {
+	else if ("cx" in d && d.cx != null) patch(eid, fm, {
 		cx: d.cx + dx,
 		cy: (d.cy ?? 0) + dy
 	});
@@ -4266,11 +4248,11 @@ const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
 function createMathRenderer(fm, ctx, palette) {
 	const p = palette;
 	function point(id, pos, opts = {}) {
-		const eid$8 = eid("point", id);
+		const eid$5 = eid("point", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const r = opts.size ?? 4;
 		const label = opts.label ?? "";
-		fm.declare(eid$8, {
+		fm.declare(eid$5, {
 			type: "node",
 			shape: "circle",
 			x: pos[0],
@@ -4286,19 +4268,19 @@ function createMathRenderer(fm, ctx, palette) {
 			pos() {
 				return [pos[0], pos[1]];
 			},
-			...mixColor(eid$8, fm, p),
-			...mixLabelPos(eid$8, fm, {
+			...mixColor(eid$5, fm, p),
+			...mixLabelPos(eid$5, fm, {
 				labelPlace: opts.labelPlace,
 				labelGap: opts.labelGap
 			}),
-			...mixSize(eid$8, fm),
-			...mixFill(eid$8, fm, p),
-			...mixOpacity(eid$8, fm),
-			...mixTranslatePos(eid$8, fm)
+			...mixSize(eid$5, fm),
+			...mixFill(eid$5, fm, p),
+			...mixOpacity(eid$5, fm),
+			...mixTranslatePos(eid$5, fm)
 		};
 	}
 	function vector(id, from, to, opts = {}) {
-		const eid$9 = eid("vector", id);
+		const eid$6 = eid("vector", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.6;
 		const dash = opts.dash ?? "";
@@ -4307,7 +4289,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const labelPlace = opts.labelPlace ?? "above";
 		const marker = opts.marker ?? null;
 		const a = offsetLine(from, to, 4, 4 + markerHalf(marker ?? void 0), true);
-		fm.declare(eid$9, {
+		fm.declare(eid$6, {
 			type: "line",
 			marker: "arrow",
 			from: [a.x1, a.y1],
@@ -4321,25 +4303,25 @@ function createMathRenderer(fm, ctx, palette) {
 			_markerCfg: marker
 		});
 		return {
-			...mixStroke(eid$9, fm, p),
-			...mixLabelPos(eid$9, fm, {
+			...mixStroke(eid$6, fm, p),
+			...mixLabelPos(eid$6, fm, {
 				labelPlace,
 				labelGap
 			}),
-			...mixStrokeW(eid$9, fm),
-			...mixDashed(eid$9, fm),
-			...mixOpacity(eid$9, fm),
-			...mixTransform(eid$9, fm, "vector")
+			...mixStrokeW(eid$6, fm),
+			...mixDashed(eid$6, fm),
+			...mixOpacity(eid$6, fm),
+			...mixTransform(eid$6, fm, "vector")
 		};
 	}
 	function segment(id, a, b, opts = {}) {
-		const eid$10 = eid("segment", id);
+		const eid$7 = eid("segment", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const dash = opts.dash ?? "";
 		const label = opts.label ?? "";
 		const labelGap = opts.labelGap ?? 10;
-		fm.declare(eid$10, {
+		fm.declare(eid$7, {
 			type: "line",
 			a,
 			b,
@@ -4350,20 +4332,20 @@ function createMathRenderer(fm, ctx, palette) {
 			labelGap
 		});
 		return {
-			...mixStroke(eid$10, fm, p),
-			...mixStrokeW(eid$10, fm),
-			...mixDashed(eid$10, fm),
-			...mixLabel(eid$10, fm),
-			...mixOpacity(eid$10, fm)
+			...mixStroke(eid$7, fm, p),
+			...mixStrokeW(eid$7, fm),
+			...mixDashed(eid$7, fm),
+			...mixLabel(eid$7, fm),
+			...mixOpacity(eid$7, fm)
 		};
 	}
 	function polyline(id, pts, opts = {}) {
-		const eid$11 = eid("segment", id);
+		const eid$8 = eid("segment", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const dash = opts.dash ?? "";
 		const opacity = opts.opacity ?? 1;
-		fm.declare(eid$11, {
+		fm.declare(eid$8, {
 			type: "line",
 			points: pts,
 			stroke,
@@ -4372,20 +4354,20 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity
 		});
 		return {
-			...mixStroke(eid$11, fm, p),
-			...mixStrokeW(eid$11, fm),
-			...mixDashed(eid$11, fm),
-			...mixOpacity(eid$11, fm)
+			...mixStroke(eid$8, fm, p),
+			...mixStrokeW(eid$8, fm),
+			...mixDashed(eid$8, fm),
+			...mixOpacity(eid$8, fm)
 		};
 	}
 	function circle(id, center, radius, opts = {}) {
-		const eid$12 = eid("circle", id);
+		const eid$9 = eid("circle", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.2;
 		const dash = opts.dash ?? "";
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? p.accent.a(8);
-		fm.declare(eid$12, {
+		fm.declare(eid$9, {
 			type: "region",
 			shape: "circle",
 			cx: center[0],
@@ -4398,21 +4380,21 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity
 		});
 		return {
-			...mixColor(eid$12, fm, p),
-			...mixStrokeW(eid$12, fm),
-			...mixFill(eid$12, fm, p),
-			...mixDashed(eid$12, fm),
-			...mixOpacity(eid$12, fm),
-			...mixTranslatePos(eid$12, fm)
+			...mixColor(eid$9, fm, p),
+			...mixStrokeW(eid$9, fm),
+			...mixFill(eid$9, fm, p),
+			...mixDashed(eid$9, fm),
+			...mixOpacity(eid$9, fm),
+			...mixTranslatePos(eid$9, fm)
 		};
 	}
 	function polygon(id, vertices, opts = {}) {
-		const eid$13 = eid("polygon", id);
+		const eid$10 = eid("polygon", id);
 		const r = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const opacity = opts.opacity ?? 1;
 		const finalFill = opts.fill ?? r.fill;
-		fm.declare(eid$13, {
+		fm.declare(eid$10, {
 			type: "region",
 			shape: "polygon",
 			vertices,
@@ -4422,16 +4404,16 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity
 		});
 		return {
-			...mixColor(eid$13, fm, p),
-			...mixStrokeW(eid$13, fm),
-			...mixFill(eid$13, fm, p),
-			...mixDashed(eid$13, fm),
-			...mixOpacity(eid$13, fm),
-			...mixTransform(eid$13, fm, "polygon")
+			...mixColor(eid$10, fm, p),
+			...mixStrokeW(eid$10, fm),
+			...mixFill(eid$10, fm, p),
+			...mixDashed(eid$10, fm),
+			...mixOpacity(eid$10, fm),
+			...mixTransform(eid$10, fm, "polygon")
 		};
 	}
 	function rightAngle(id, vertex, ray1, ray2, opts = {}) {
-		const eid$14 = eid("angle", id);
+		const eid$11 = eid("angle", id);
 		const { stroke } = resolveColor(p, opts.color ?? "dim");
 		const sz = opts.size ?? 8;
 		const [vx, vy] = vertex;
@@ -4444,7 +4426,7 @@ function createMathRenderer(fm, ctx, palette) {
 			[vx + (u1x + u2x) * sz, vy + (u1y + u2y) * sz],
 			[vx + u2x * sz, vy + u2y * sz]
 		].map((p) => p.join(",")).join(" ");
-		fm.declare(eid$14, {
+		fm.declare(eid$11, {
 			type: "region",
 			shape: "polygon",
 			d: `M${ptsStr}`,
@@ -4455,19 +4437,19 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: 1.5
 		});
 		return {
-			...mixStroke(eid$14, fm, p),
-			...mixStrokeW(eid$14, fm),
-			...mixSize(eid$14, fm),
-			...mixOpacity(eid$14, fm)
+			...mixStroke(eid$11, fm, p),
+			...mixStrokeW(eid$11, fm),
+			...mixSize(eid$11, fm),
+			...mixOpacity(eid$11, fm)
 		};
 	}
 	function angle(id, vertex, ray1, ray2, opts = {}) {
-		const eid$15 = eid("angle", id);
+		const eid$12 = eid("angle", id);
 		const { stroke, fill } = resolveColor(p, opts.color);
 		const label = opts.label ?? "";
 		const arcR = opts.size ?? 30;
 		const finalFill = opts.fill ?? p.warning.a(15);
-		fm.declare(eid$15, {
+		fm.declare(eid$12, {
 			type: "group",
 			subtype: "angle",
 			vertex,
@@ -4479,16 +4461,16 @@ function createMathRenderer(fm, ctx, palette) {
 			arcR
 		});
 		return {
-			...mixColor(eid$15, fm, p),
-			...mixStrokeW(eid$15, fm),
-			...mixFill(eid$15, fm, p),
-			...mixDashed(eid$15, fm),
-			...mixOpacity(eid$15, fm),
-			...mixLabel(eid$15, fm)
+			...mixColor(eid$12, fm, p),
+			...mixStrokeW(eid$12, fm),
+			...mixFill(eid$12, fm, p),
+			...mixDashed(eid$12, fm),
+			...mixOpacity(eid$12, fm),
+			...mixLabel(eid$12, fm)
 		};
 	}
 	function fn(id, f, opts = {}) {
-		const eid$16 = eid("fn", id);
+		const eid$13 = eid("fn", id);
 		const { stroke } = resolveColor(p, opts.color);
 		const strokeW = opts.strokeW ?? 1.5;
 		const dash = opts.dash ?? "";
@@ -4500,7 +4482,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const oy = opts.y ?? 300;
 		const pw = opts.width ?? 780;
 		const ph = opts.height ?? 460;
-		fm.declare(eid$16, {
+		fm.declare(eid$13, {
 			type: "curve",
 			f: f.toString(),
 			domain,
@@ -4517,17 +4499,17 @@ function createMathRenderer(fm, ctx, palette) {
 			label
 		});
 		return {
-			...mixStroke(eid$16, fm, p),
-			...mixStrokeW(eid$16, fm),
-			...mixDashed(eid$16, fm),
-			...mixOpacity(eid$16, fm),
-			...mixLabel(eid$16, fm)
+			...mixStroke(eid$13, fm, p),
+			...mixStrokeW(eid$13, fm),
+			...mixDashed(eid$13, fm),
+			...mixOpacity(eid$13, fm),
+			...mixLabel(eid$13, fm)
 		};
 	}
 	function grid(id, origin, opts = {}) {
-		const eid$17 = eid("grid", id);
+		const eid$14 = eid("grid", id);
 		const { stroke } = resolveColor(p, opts.color);
-		fm.declare(eid$17, {
+		fm.declare(eid$14, {
 			type: "group",
 			subtype: "grid",
 			ox: origin[0],
@@ -4540,9 +4522,9 @@ function createMathRenderer(fm, ctx, palette) {
 		});
 	}
 	function axes(id, origin, opts = {}) {
-		const eid$18 = eid("axes", id);
+		const eid$15 = eid("axes", id);
 		const { stroke } = resolveColor(p, opts.color);
-		fm.declare(eid$18, {
+		fm.declare(eid$15, {
 			type: "group",
 			subtype: "axes",
 			ox: origin[0],
@@ -4581,7 +4563,7 @@ function createMathRenderer(fm, ctx, palette) {
 		return polygon(id, verts);
 	}
 	function symbol(id, pos, opts = {}) {
-		const eid$19 = eid("path", id);
+		const eid$16 = eid("path", id);
 		const t = {
 			circle: circle_default,
 			cross: cross_default,
@@ -4595,7 +4577,7 @@ function createMathRenderer(fm, ctx, palette) {
 		const d = sy ? `${sy}` : "";
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid$19, {
+		fm.declare(eid$16, {
 			type: "region",
 			shape: "polygon",
 			d,
@@ -4606,17 +4588,17 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: 1.2
 		});
 		return {
-			...mixStroke(eid$19, fm, p),
-			...mixStrokeW(eid$19, fm),
-			...mixDashed(eid$19, fm),
-			...mixSize(eid$19, fm),
-			...mixFill(eid$19, fm, p),
-			...mixOpacity(eid$19, fm),
-			...mixTranslatePos(eid$19, fm)
+			...mixStroke(eid$16, fm, p),
+			...mixStrokeW(eid$16, fm),
+			...mixDashed(eid$16, fm),
+			...mixSize(eid$16, fm),
+			...mixFill(eid$16, fm, p),
+			...mixOpacity(eid$16, fm),
+			...mixTranslatePos(eid$16, fm)
 		};
 	}
 	function arc(id, center, opts) {
-		const eid$20 = eid("path", id);
+		const eid$17 = eid("path", id);
 		const a = arc_default()({
 			innerRadius: opts.innerR ?? 0,
 			outerRadius: opts.outerR,
@@ -4625,7 +4607,7 @@ function createMathRenderer(fm, ctx, palette) {
 		}) || "";
 		const r = resolveColor(p, opts.color);
 		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid$20, {
+		fm.declare(eid$17, {
 			type: "region",
 			shape: "polygon",
 			d: `${a}`,
@@ -4636,13 +4618,13 @@ function createMathRenderer(fm, ctx, palette) {
 			strokeW: opts.strokeW ?? 1.2
 		});
 		return {
-			...mixStroke(eid$20, fm, p),
-			...mixStrokeW(eid$20, fm),
-			...mixDashed(eid$20, fm),
-			...mixSize(eid$20, fm),
-			...mixFill(eid$20, fm, p),
-			...mixOpacity(eid$20, fm),
-			...mixTranslatePos(eid$20, fm)
+			...mixStroke(eid$17, fm, p),
+			...mixStrokeW(eid$17, fm),
+			...mixDashed(eid$17, fm),
+			...mixSize(eid$17, fm),
+			...mixFill(eid$17, fm, p),
+			...mixOpacity(eid$17, fm),
+			...mixTranslatePos(eid$17, fm)
 		};
 	}
 	function projection(id, pt, lf, lt, opts = {}) {
@@ -4684,9 +4666,9 @@ function createMathRenderer(fm, ctx, palette) {
 		};
 	}
 	function fill(id, pts, opts = {}) {
-		const eid$21 = eid("fill", id);
+		const eid$18 = eid("fill", id);
 		const r = resolveColor(p, opts.color);
-		fm.declare(eid$21, {
+		fm.declare(eid$18, {
 			type: "region",
 			shape: "fill",
 			pts,
@@ -4694,12 +4676,12 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity: opts.opacity
 		});
 		return {
-			...mixFill(eid$21, fm, p),
-			...mixOpacity(eid$21, fm)
+			...mixFill(eid$18, fm, p),
+			...mixOpacity(eid$18, fm)
 		};
 	}
 	function fillFn(id, f, opts = {}) {
-		const eid$22 = eid("fill", id);
+		const eid$19 = eid("fill", id);
 		const domain = opts.domain ?? [0, 10];
 		const samples = opts.samples ?? 200;
 		const ox = opts.x ?? 0, oy = opts.y ?? 300;
@@ -4726,7 +4708,7 @@ function createMathRenderer(fm, ctx, palette) {
 		pts.push([sx(d0), sy(baseline)]);
 		for (let i = 0; i < samples; i++) pts.push([sx(d0 + i * step), sy(f(d0 + i * step))]);
 		pts.push([sx(d1), sy(baseline)]);
-		fm.declare(eid$22, {
+		fm.declare(eid$19, {
 			type: "region",
 			shape: "fill",
 			pts,
@@ -4734,8 +4716,8 @@ function createMathRenderer(fm, ctx, palette) {
 			opacity: opts.opacity ?? .45
 		});
 		return {
-			...mixFill(eid$22, fm, p),
-			...mixOpacity(eid$22, fm)
+			...mixFill(eid$19, fm, p),
+			...mixOpacity(eid$19, fm)
 		};
 	}
 	function coords(id, origin, opts = {}) {
@@ -4824,7 +4806,7 @@ function createMathRenderer(fm, ctx, palette) {
 //#region vis/graph.ts
 function createGraph(fm, ctx, palette) {
 	const p = palette;
-	function resolveColor(c) {
+	function localResolveColor(c) {
 		const col = p[c];
 		if (col) return {
 			stroke: col.fg,
@@ -4835,13 +4817,16 @@ function createGraph(fm, ctx, palette) {
 			fill: c
 		};
 	}
+	function patch(eid, fm, props) {
+		fm.patch(eid, props);
+	}
 	const _vertices = /* @__PURE__ */ new Map();
 	function vertex(id, pos) {
-		const eid$6 = eid("vertex", id);
+		const eid$1 = eid("vertex", id);
 		const r = 10;
 		const stroke = p.primary.fg;
 		const fill = p.primary.a(15);
-		fm.declare(eid$6, {
+		fm.declare(eid$1, {
 			type: "node",
 			x: pos[0],
 			y: pos[1],
@@ -4861,27 +4846,27 @@ function createGraph(fm, ctx, palette) {
 				return [this.x, this.y];
 			},
 			color(c) {
-				const resolved = resolveColor(c);
+				const resolved = localResolveColor(c);
 				this._stroke = resolved.stroke;
 				this._fill = resolved.fill;
-				fm.patch(eid$6, {
+				fm.patch(eid$1, {
 					stroke: this._stroke,
 					fill: this._fill
 				});
 				return this;
 			},
 			label(t) {
-				fm.patch(eid$6, { label: t });
+				fm.patch(eid$1, { label: t });
 				return this;
 			},
 			size(r) {
 				this._r = r;
-				fm.patch(eid$6, { r });
+				fm.patch(eid$1, { r });
 				return this;
 			},
 			fill(c) {
 				this._fill = c;
-				fm.patch(eid$6, { fill: c });
+				fm.patch(eid$1, { fill: c });
 				return this;
 			}
 		};
@@ -4889,14 +4874,14 @@ function createGraph(fm, ctx, palette) {
 		return v;
 	}
 	function edge(a, b, opts) {
-		const eid$7 = eid("edge", a.id + ":" + b.id);
+		const eid$2 = eid("edge", a.id + ":" + b.id);
 		const stroke = p.dim.fg;
 		const strokeW = 1.8;
 		const directed = opts?.directed !== false;
 		const gap = opts?.gap ?? 4;
 		const marker = opts?.marker;
 		const { x1, y1, x2, y2 } = offsetLine([a.x, a.y], [b.x, b.y], a._r + gap, b._r + markerHalf(marker), directed);
-		fm.declare(eid$7, {
+		fm.declare(eid$2, {
 			type: "line",
 			from: a.id,
 			to: b.id,
@@ -4912,16 +4897,16 @@ function createGraph(fm, ctx, palette) {
 		});
 		return {
 			color(c) {
-				const resolved = resolveColor(c);
-				fm.patch(eid$7, { stroke: resolved.stroke });
+				const resolved = localResolveColor(c);
+				fm.patch(eid$2, { stroke: resolved.stroke });
 				return this;
 			},
 			strokeW(n) {
-				fm.patch(eid$7, { strokeW: n });
+				fm.patch(eid$2, { strokeW: n });
 				return this;
 			},
 			dashed(d = "5 4") {
-				fm.patch(eid$7, { dash: d });
+				fm.patch(eid$2, { dash: d });
 				return this;
 			},
 			label(t) {
@@ -4971,98 +4956,6 @@ function createGraph(fm, ctx, palette) {
 			label: v.label
 		});
 	}
-	return {
-		vertex,
-		edge,
-		layout
-	};
-}
-
-//#endregion
-//#region vis/layout.ts
-function patch(eid, fm, props) {
-	fm.patch(eid, props);
-}
-/** Compute absolute port position from owner node position + port placement */
-function portPos(ownerId, pos, fm) {
-	const e = fm.entities.get(`vertex:${ownerId}`);
-	if (!e) return [0, 0];
-	const d = e.desired;
-	const cx = d.x ?? 0, cy = d.y ?? 0;
-	const bw = d._blockW ?? (d.r ?? 10) * 2;
-	const bh = d._blockH ?? (d.r ?? 10) * 2;
-	const hw = bw / 2, hh = bh / 2;
-	if (Array.isArray(pos)) return [cx + pos[0], cy + pos[1]];
-	switch (pos) {
-		case "top": return [cx, cy - hh];
-		case "bottom": return [cx, cy + hh];
-		case "left": return [cx - hw, cy];
-		case "right": return [cx + hw, cy];
-	}
-}
-function createLayout(fm, p, ctx) {
-	function port(id, ownerId, pos, opts = {}) {
-		const eid$1 = eid("port", id);
-		const r = resolveColor(p, opts.stroke);
-		const [px, py] = portPos(ownerId, pos, fm);
-		fm.declare(eid$1, {
-			type: "node",
-			shape: "circle",
-			x: px,
-			y: py,
-			r: opts.size ?? 4,
-			stroke: r.stroke,
-			fill: opts.fill ?? r.fill,
-			label: opts.label ?? "",
-			_owner: eid("vertex", ownerId),
-			_portPos: pos
-		});
-		return {
-			...coreNodeMixin(eid$1, fm, p),
-			pos() {
-				const e = fm.entities.get(eid$1);
-				if (!e) return [0, 0];
-				const d = e.desired;
-				return [d.x ?? 0, d.y ?? 0];
-			}
-		};
-	}
-	function node(id, x, y, opts = {}) {
-		const eid$2 = eid("vertex", id);
-		const r = resolveColor(p, opts.stroke ?? "primary");
-		const isCircle = opts.shape === "circle";
-		const sizeW = opts.w ?? 32, sizeH = opts.h ?? 24;
-		opts.r;
-		fm.declare(eid$2, {
-			type: "node",
-			shape: opts.shape ?? "rect",
-			x,
-			y,
-			r: opts.rx ?? 5,
-			fill: opts.fill ?? r.fill,
-			stroke: r.stroke,
-			strokeW: opts.strokeW ?? 1.5,
-			opacity: opts.opacity ?? 1,
-			label: opts.label ?? "",
-			labelPlace: opts.labelPlace ?? "above",
-			_blockW: isCircle ? void 0 : sizeW,
-			_blockH: isCircle ? void 0 : sizeH,
-			_shape: opts.shape ?? "rect"
-		});
-		return {
-			...coreNodeMixin(eid$2, fm, p),
-			size(w, h) {
-				patch(eid$2, fm, {
-					_blockW: w,
-					_blockH: h ?? w
-				});
-				return this;
-			},
-			port(pid, pos, portOpts = {}) {
-				return port(pid, id, pos, portOpts);
-			}
-		};
-	}
 	const BLOCK_STYLE = {
 		muted: {
 			stroke: "dim",
@@ -5082,25 +4975,13 @@ function createLayout(fm, p, ctx) {
 	};
 	function block(id, x, y, w, h, opts = {}) {
 		const eid$3 = eid("vertex", id);
-		const s = BLOCK_STYLE[opts.style ?? "normal"];
-		const stroke = opts.stroke ?? resolveColor(p, s.stroke).stroke;
-		const fill = opts.fill ?? resolveColor(p, s.fill).fill;
-		fm.declare(eid$3, {
-			type: "node",
-			shape: "rect",
-			x: x + w / 2,
-			y: y + h / 2,
-			r: opts.rx ?? 8,
-			fill,
-			stroke,
-			strokeW: opts.strokeW ?? s.strokeW,
-			opacity: opts.opacity ?? 1,
-			label: opts.label ?? "",
-			labelPlace: opts.labelPlace ?? "above",
-			_blockW: w,
-			_blockH: h
-		});
-		return {
+		if (x === void 0 && y === void 0 && fm.entities.has(eid$3)) return {
+			id,
+			x: fm.entities.get(eid$3).desired.x,
+			y: fm.entities.get(eid$3).desired.y,
+			pos() {
+				return [this.x, this.y];
+			},
 			...coreNodeMixin(eid$3, fm, p),
 			size(nw, nh) {
 				patch(eid$3, fm, {
@@ -5108,138 +4989,44 @@ function createLayout(fm, p, ctx) {
 					_blockH: nh ?? nw
 				});
 				return this;
-			},
-			port(pid, pos, portOpts = {}) {
-				return port(pid, id, pos, portOpts);
 			}
 		};
-	}
-	function edge(id, fromId, toId, opts = {}) {
-		const eid$4 = eid("edge", id);
-		const r = resolveColor(p, opts.color ?? "dim");
-		const directed = opts.directed ?? false;
-		fm.declare(eid$4, {
-			type: "line",
-			x1: 0,
-			y1: 0,
-			x2: 0,
-			y2: 0,
-			stroke: r.stroke,
-			strokeW: opts.strokeW ?? 1.5,
-			dash: opts.dash ?? "",
-			directed,
-			_bend: opts.bend ?? false,
-			_fromPort: fromId,
-			_toPort: toId,
-			label: opts.label ?? ""
-		});
-		return {
-			color(c) {
-				patch(eid$4, fm, { stroke: resolveColor(p, c).stroke });
-				return this;
-			},
-			...mixStrokeW(eid$4, fm),
-			...mixDashed(eid$4, fm),
-			...mixOpacity(eid$4, fm),
-			...mixLabel(eid$4, fm),
-			directed(v) {
-				patch(eid$4, fm, { directed: v });
-				return this;
-			},
-			bend() {
-				patch(eid$4, fm, { _bend: true });
-				return this;
-			},
-			route(pts) {
-				patch(eid$4, fm, { points: pts || void 0 });
-				return this;
-			}
-		};
-	}
-	function layer(id, rank, opts = {}) {
-		const eid$5 = eid("fill", id);
-		const style = opts.style ?? "band";
-		const r = resolveColor(p, opts.color ?? "accent");
-		let y, h;
-		if (opts.totalRanks != null) {
-			const total = opts.totalRanks;
-			const gap = opts.layerGap ?? 4;
-			const startY = opts.startY ?? 48;
-			const available = (opts.endY ?? (ctx?.H ? ctx.H - 48 : 412)) - startY;
-			h = opts.h ?? (available - (total - 1) * gap) / total;
-			y = opts.y ?? startY + rank * (h + gap);
-		} else {
-			y = opts.y ?? 0;
-			h = opts.h ?? 60;
-		}
-		const x = opts.x ?? 0, w = opts.w ?? ctx?.W ?? 780;
-		const vertices = [
-			[x, y],
-			[x + w, y],
-			[x + w, y + h],
-			[x, y + h]
-		];
-		const rx = opts.rx ?? 8;
-		const label = opts.label ?? "";
-		const labelPlace = opts.labelPlace ?? "left";
-		const labelGap = opts.labelGap ?? 6;
-		if (style === "band") {
-			const opacity = opts.opacity ?? .3;
-			fm.declare(eid$5, {
-				type: "region",
-				shape: "polygon",
-				vertices,
-				stroke: "none",
-				fill: r.fill,
-				strokeW: 0,
-				opacity,
-				_rx: rx,
-				label,
-				labelPlace,
-				labelGap
-			});
-			return {
-				color(c) {
-					patch(eid$5, fm, { fill: resolveColor(p, c).fill });
-					return this;
-				},
-				...mixOpacity(eid$5, fm),
-				...mixLabel(eid$5, fm),
-				...mixDashed(eid$5, fm),
-				...mixStrokeW(eid$5, fm)
-			};
-		}
-		const dash = opts.dash ?? "4 3";
-		const strokeW = opts.strokeW ?? 1.2;
-		const opacity = opts.opacity ?? .7;
-		const fill = r.fill + " / 0.05";
-		fm.declare(eid$5, {
-			type: "region",
-			shape: "polygon",
-			vertices,
-			stroke: r.stroke,
+		const safeW = w ?? 100, safeH = h ?? 100;
+		const safeX = (x ?? 0) + safeW / 2;
+		const safeY = (y ?? 0) + safeH / 2;
+		const sStyle = BLOCK_STYLE[opts.style ?? "normal"];
+		const stroke = opts.stroke ?? resolveColor(p, opts.stroke ?? sStyle.stroke).stroke;
+		const fill = opts.fill ?? resolveColor(p, opts.fill ?? sStyle.fill).fill;
+		fm.declare(eid$3, {
+			type: "node",
+			shape: "rect",
+			x: safeX,
+			y: safeY,
+			r: opts.rx ?? 8,
 			fill,
-			strokeW,
-			dash,
-			opacity,
-			_rx: rx,
-			label,
-			labelPlace,
-			labelGap
+			stroke,
+			strokeW: opts.strokeW ?? sStyle.strokeW,
+			opacity: opts.opacity ?? 1,
+			label: opts.label ?? "",
+			labelPlace: opts.labelPlace ?? "above",
+			_blockW: w,
+			_blockH: h
 		});
 		return {
-			color(c) {
-				const rc = resolveColor(p, c);
-				patch(eid$5, fm, {
-					stroke: rc.stroke,
-					fill: rc.fill + " / 0.05"
+			id,
+			x: safeX,
+			y: safeY,
+			pos() {
+				return [this.x, this.y];
+			},
+			...coreNodeMixin(eid$3, fm, p),
+			size(nw, nh) {
+				patch(eid$3, fm, {
+					_blockW: nw,
+					_blockH: nh ?? nw
 				});
 				return this;
-			},
-			...mixOpacity(eid$5, fm),
-			...mixLabel(eid$5, fm),
-			...mixDashed(eid$5, fm),
-			...mixStrokeW(eid$5, fm)
+			}
 		};
 	}
 	function array(id, x, y, items, opts = {}) {
@@ -5275,17 +5062,97 @@ function createLayout(fm, p, ctx) {
 		items.forEach((item, i) => {
 			const ix = dir === "x" ? startX + i * (itemW + gap) : startX;
 			const iy = dir === "y" ? startY + i * (itemH + gap) : startY;
-			const nd = node(`array-${id}-item-${item}`, ix, iy, {
-				w: itemW,
-				h: itemH,
-				rx: 4,
-				shape: "rect"
-			}).color(color).label(item);
+			const nd = block(`array-${id}-item-${item}`, ix - itemW / 2, iy - itemH / 2, itemW, itemH, { rx: 4 }).color(color).label(item);
 			res.push(nd);
 		});
 		return res;
 	}
-	/** 批量声明 N 层，自动推导 totalRanks、w、y、h */
+	function layer(id, rank, opts = {}) {
+		const eid$4 = eid("fill", id);
+		const style = opts.style ?? "band";
+		const r = resolveColor(p, opts.color ?? "accent");
+		let y, h;
+		if (opts.totalRanks != null) {
+			const total = opts.totalRanks;
+			const gap = opts.layerGap ?? 4;
+			const startY = opts.startY ?? 48;
+			const available = (opts.endY ?? (ctx?.H ? ctx.H - 48 : 412)) - startY;
+			h = opts.h ?? (available - (total - 1) * gap) / total;
+			y = opts.y ?? startY + rank * (h + gap);
+		} else {
+			y = opts.y ?? 0;
+			h = opts.h ?? 60;
+		}
+		const x = opts.x ?? 0, w = opts.w ?? ctx?.W ?? 780;
+		const vertices = [
+			[x, y],
+			[x + w, y],
+			[x + w, y + h],
+			[x, y + h]
+		];
+		const rx = opts.rx ?? 8;
+		const label = opts.label ?? "";
+		const labelPlace = opts.labelPlace ?? "left";
+		const labelGap = opts.labelGap ?? 6;
+		if (style === "band") {
+			const opacity = opts.opacity ?? .3;
+			fm.declare(eid$4, {
+				type: "region",
+				shape: "polygon",
+				vertices,
+				stroke: "none",
+				fill: r.fill,
+				strokeW: 0,
+				opacity,
+				_rx: rx,
+				label,
+				labelPlace,
+				labelGap
+			});
+			return {
+				color(c) {
+					patch(eid$4, fm, { fill: resolveColor(p, c).fill });
+					return this;
+				},
+				...mixOpacity(eid$4, fm),
+				...mixLabel(eid$4, fm),
+				...mixDashed(eid$4, fm),
+				...mixStrokeW(eid$4, fm)
+			};
+		}
+		const dash = opts.dash ?? "4 3";
+		const strokeW = opts.strokeW ?? 1.2;
+		const opacity = opts.opacity ?? .7;
+		const fill = r.fill + " / 0.05";
+		fm.declare(eid$4, {
+			type: "region",
+			shape: "polygon",
+			vertices,
+			stroke: r.stroke,
+			fill,
+			strokeW,
+			dash,
+			opacity,
+			_rx: rx,
+			label,
+			labelPlace,
+			labelGap
+		});
+		return {
+			color(c) {
+				const rc = resolveColor(p, c);
+				patch(eid$4, fm, {
+					stroke: rc.stroke,
+					fill: rc.fill + " / 0.05"
+				});
+				return this;
+			},
+			...mixOpacity(eid$4, fm),
+			...mixLabel(eid$4, fm),
+			...mixDashed(eid$4, fm),
+			...mixStrokeW(eid$4, fm)
+		};
+	}
 	function layers(count, opts = {}) {
 		const results = [];
 		for (let i = 0; i < count; i++) {
@@ -5299,13 +5166,13 @@ function createLayout(fm, p, ctx) {
 		return results;
 	}
 	return {
-		node,
-		block,
-		port,
+		vertex,
 		edge,
+		layout,
+		block,
+		array,
 		layer,
-		layers,
-		array
+		layers
 	};
 }
 
@@ -5923,51 +5790,7 @@ var SVGHandle = class {
 
 //#endregion
 //#region vis/resolver.ts
-function resolveGeometry(store) {
-	for (const entity of store.values()) if (entity.desired.type === "line" && entity.desired._fromPort && entity.desired._toPort) {
-		const ld = entity.desired;
-		const fromId = ld._fromPort;
-		const toId = ld._toPort;
-		const isFromFallback = !store.has(`port:${fromId}`);
-		const isToFallback = !store.has(`port:${toId}`);
-		const fpe = store.get(isFromFallback ? `vertex:${fromId}` : `port:${fromId}`);
-		const tpe = store.get(isToFallback ? `vertex:${toId}` : `port:${toId}`);
-		if (!fpe) console.warn(`[vis.js] Edge '${entity.id}': Source '${fromId}' not found.`);
-		if (!tpe) console.warn(`[vis.js] Edge '${entity.id}': Destination '${toId}' not found.`);
-		const fs = fpe?.desired;
-		const ts = tpe?.desired;
-		const fx = fs?.x ?? 0, fy = fs?.y ?? 0;
-		const tx = ts?.x ?? 0, ty = ts?.y ?? 0;
-		const mt = ld.directed ? markerTip() : 0;
-		const GAP = 2;
-		if (isFromFallback && fs) {
-			const margin = 0;
-			let pt;
-			if (fs.shape === "rect") pt = intersectRect(fx, fy, fs._blockW ?? 60, fs._blockH ?? 36, tx, ty, margin);
-			else pt = intersectCircle(fx, fy, fs.r ?? 10, tx, ty, margin);
-			ld.x1 = pt[0];
-			ld.y1 = pt[1];
-		} else {
-			const portR = ld._portR ?? fs?.r ?? 4;
-			const pt = offsetLine([fx, fy], [tx, ty], portR, 0, ld.directed);
-			ld.x1 = pt.x1;
-			ld.y1 = pt.y1;
-		}
-		if (isToFallback && ts) {
-			const margin = mt + GAP;
-			let pt;
-			if (ts.shape === "rect") pt = intersectRect(tx, ty, ts._blockW ?? 60, ts._blockH ?? 36, fx, fy, margin);
-			else pt = intersectCircle(tx, ty, ts.r ?? 10, fx, fy, margin);
-			ld.x2 = pt[0];
-			ld.y2 = pt[1];
-		} else {
-			const toR = ld._toR ?? ts?.r ?? 4;
-			const pt = offsetLine([tx, ty], [fx, fy], toR + mt + GAP, 0, ld.directed);
-			ld.x2 = pt.x1;
-			ld.y2 = pt.y1;
-		}
-	}
-}
+function resolveGeometry(store) {}
 
 //#endregion
 //#region vis/frame.ts
@@ -6036,7 +5859,7 @@ var FrameManager = class {
 	commit(opts) {
 		if (!this._uncommitted) throw new Error("begin() required before commit()");
 		this._uncommitted = false;
-		resolveGeometry(this.store);
+		/* @__PURE__ */ resolveGeometry(this.store);
 		if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
 			this._commitStatic();
 			this.renderer.commitFrame({ animate: false });
@@ -6224,7 +6047,6 @@ function stage(selector, opts = {}) {
 		theme: _theme,
 		math: void 0,
 		graph: void 0,
-		layout: void 0,
 		[Symbol.dispose]() {
 			_stages.delete(selector);
 			_observer?.disconnect();
@@ -6245,10 +6067,6 @@ function stage(selector, opts = {}) {
 	_stages.set(selector, api);
 	api.math = createMathRenderer(fm, ctx, p);
 	api.graph = createGraph(fm, ctx, p);
-	api.layout = createLayout(fm, p, {
-		W: width,
-		H: height
-	});
 	return api;
 }
 /** 3D stage (placeholder — requires three.js renderer) */
@@ -6265,4 +6083,4 @@ if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispo
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };

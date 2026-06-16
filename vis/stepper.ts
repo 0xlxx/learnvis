@@ -71,14 +71,14 @@ export function stepper(
     cleanup = ctrl.onChange((i, step) => {
       prevBtn.disabled = i <= 0;
       nextBtn.disabled = i >= ctrl.total - 1;
-      // title falls back to label, then generic text
-      labelSpan.textContent = step.title ?? step.label ?? `步骤 ${i + 1}`;
+      const sObj = step as any;
+      labelSpan.textContent = sObj.title ?? sObj.label ?? `步骤 ${i + 1}`;
     });
     
     // Initialize state
     prevBtn.disabled = ctrl.current <= 0;
     nextBtn.disabled = ctrl.current >= ctrl.total - 1;
-    const initialStep = ctrl.currentStepDef;
+    const initialStep = ctrl.currentStepDef as any;
     if (initialStep) labelSpan.textContent = initialStep.title ?? initialStep.label ?? `步骤 ${ctrl.current + 1}`;
 
   } else {
@@ -105,11 +105,11 @@ export function descBox(
   }
 
   const cleanup = ctrl.onChange((_, step) => {
-    ct.innerHTML = step.desc ?? '';
+    ct.innerHTML = (step as any).desc ?? '';
   });
 
   // Init
-  const initialStep = ctrl.currentStepDef;
+  const initialStep = ctrl.currentStepDef as any;
   if (initialStep) ct.innerHTML = initialStep.desc ?? '';
 
   return { destroy: () => { cleanup(); ct.innerHTML = ''; } };

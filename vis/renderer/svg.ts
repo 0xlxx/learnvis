@@ -579,7 +579,7 @@ export class SVGRenderer implements Renderer {
       const gap = 6;
       const tx = nd.x + place.dx * (halfW + gap);
       const ty = nd.y + place.dy * (halfH + gap);
-      h.setTextPosition(tx, ty, place.anchor, place.dyAttr, opts);
+      h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
     }
   }
 }

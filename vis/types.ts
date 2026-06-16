@@ -4,7 +4,6 @@
 import type { BaseType, Selection } from 'd3';
 import type { MathAPI } from './math';
 import type { GraphAPI } from './graph';
-import type { LayoutAPI } from './layout';
 import type { Renderer } from './renderer';
 
 // ── Primitives ──
@@ -88,8 +87,7 @@ export type LineState = WithTransform<{
   marker?: LineMarker; directed?: boolean;
   bend?: boolean; _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
-  _fromPort?: string; _toPort?: string;  // for layout edges
-  _portR?: number; _toR?: number;  // for lazy evaluation of port radius
+  _fromPort?: string; _toPort?: string;
 }>;
 
 export type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
@@ -175,7 +173,7 @@ export interface StepsController {
 export interface AgentStage extends Disposable {
   ctx: StageCtx; palette: Palette;
   stage: { bg: S; nodes: S; edges: S; overlay: S }; root: S;
-  math: MathAPI; graph: GraphAPI; layout: LayoutAPI;
+  math: MathAPI; graph: GraphAPI;
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: { ms?: number }): Promise<void>;
   play(frames: ((s: AgentStage) => void)[], opts?: { ms?: number }): Promise<void>;

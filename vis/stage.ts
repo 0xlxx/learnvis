@@ -5,7 +5,6 @@ import { bootstrap } from './bootstrap';
 import { resolveTheme } from './themes';
 import { createMathRenderer } from './math';
 import { createGraph } from './graph';
-import { createLayout } from './layout';
 import { FrameManager } from './frame';
 import { SVGRenderer } from './renderer/svg';
 import type { Renderer } from './renderer';
@@ -27,7 +26,7 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
 
   // Combine baseline TOKENS with theme specific palette
   const tp = _theme.palette ? { ...TOKENS, ..._theme.palette } : TOKENS;
-  const fills = { ...TOKENS.fills, ...(_theme.palette?.fills || {}) };
+  const fills = { ...TOKENS.fills, ...((_theme.palette as any)?.fills || {}) };
   
   let cssVars = '';
   for (const key of Object.keys(tp)) {
@@ -123,7 +122,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
     theme: _theme,
     math: undefined,
     graph: undefined,
-    layout: undefined,
     [Symbol.dispose]() {
       _stages.delete(selector);
       _observer?.disconnect();
@@ -143,7 +141,6 @@ export function stage(selector: string, opts: StageOptions = {}): AgentStage {
   _stages.set(selector, api as unknown as { [Symbol.dispose](): void });
   api.math = createMathRenderer(fm, ctx, p as any);
   api.graph = createGraph(fm, ctx, p as any);
-  api.layout = createLayout(fm, p, { W: width, H: height });
   return api as unknown as AgentStage;
 }
 

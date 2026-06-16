@@ -153,3 +153,47 @@ describe('graph lifecycle (frame integration)', () => {
     expect(fm.entities.has('edge:A:B')).toBe(false);
   });
 });
+
+describe('graph merged block, array, and layer primitives', () => {
+  let graph: ReturnType<typeof createGraph>;
+  let fm: FrameManager;
+
+  beforeEach(() => {
+    const env = setupGraph();
+    graph = env.graph;
+    fm = env.fm;
+  });
+
+  it('block() creates rect node entity', () => {
+    fm.begin();
+    graph.block('B1', 100, 150, 80, 50);
+    fm.commit({ animate: false });
+    expect(fm.entities.has('vertex:B1')).toBe(true);
+    const e = fm.entities.get('vertex:B1')!;
+    expect(e.desired.type).toBe('node');
+    expect((e.desired as any).shape).toBe('rect');
+    expect((e.desired as any)._blockW).toBe(80);
+    expect((e.desired as any)._blockH).toBe(50);
+  });
+
+  it('array() creates array background block and item block cells', () => {
+    fm.begin();
+    graph.array('arr', 10, 20, ['X', 'Y']);
+    fm.commit({ animate: false });
+    expect(fm.entities.has('vertex:array-bg-arr')).toBe(true);
+    expect(fm.entities.has('vertex:array-arr-item-X')).toBe(true);
+    expect(fm.entities.has('vertex:array-arr-item-Y')).toBe(true);
+  });
+
+  it('layer() and layers() create region entities', () => {
+    fm.begin();
+    graph.layer('lay', 0, { totalRanks: 2 });
+    graph.layers(3);
+    fm.commit({ animate: false });
+    expect(fm.entities.has('fill:lay')).toBe(true);
+    expect(fm.entities.has('fill:L0')).toBe(true);
+    expect(fm.entities.has('fill:L1')).toBe(true);
+    expect(fm.entities.has('fill:L2')).toBe(true);
+  });
+});
+

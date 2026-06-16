@@ -1,11 +1,11 @@
 ---
 name: learnvis
-description: 一个用于在 HTML/SVG 中创建高品质算法、数学和图论数据结构动画的高级可视化库。包含点、向量、线、多边形、图顶点/边、自动分层/层级布局、步骤控制等开箱即用的图元。只要用户提到“算法流程动画”、“数学几何演示”、“图结构/网络拓扑可视化”、“D3 绘图”、“SVG canvas 动画”、“二叉树/红黑树/Sugiyama 布局”或希望“以动画逐步演示算法/数学逻辑”，哪怕用户没有指明使用什么库，你都必须并且应当优先触发并使用本技能。
+description: 一个用于在 HTML/SVG 中创建高品质算法、数学和图论数据结构动画的高级可视化库。包含点、向量、线、多边形、图顶点/边/容器块/图层、步骤控制等开箱即用的图元。只要用户提到“算法流程动画”、“数学几何演示”、“图结构/网络拓扑可视化”、“D3 绘图”、“SVG canvas 动画”、“二叉树/红黑树/Sugiyama 布局”或希望“以动画逐步演示算法/数学逻辑”，哪怕用户没有指明使用什么库，你都必须并且应当优先触发并使用本技能。
 ---
 
 # learnvis
 
-使用 learnvis 进行高效的可视化开发。它提供了高阶的 SVG 可视化原语，包含点、线、顶点、边、图层等，让你可以通过少量的声明即可绘制出专业级别的数学公式、数据结构与算法动画。
+使用 learnvis 进行高效的可视化开发。它提供了高阶的 SVG 可视化原语，包含点、线、顶点、边、容器块、图层等，让你可以通过少量的声明即可绘制出专业级别的数学公式、数据结构与算法动画。
 
 ## 🚀 Quick Start & Workspace Setup
 
@@ -75,25 +75,20 @@ s.render(s => {
 为保证生成的代码能够一次性运行成功，在编写可视化逻辑时，**必须**规避以下常见陷阱：
 
 1. **规避 rank 的像素值污染**：
-   - 错误：`s.layout.layer('L0', 120)` （把像素高度 120 作为 rank 传给它）
-   - 正确：`s.layout.layer('L0', 0, { totalRanks: 3 })`
+   - 错误：`s.graph.layer('L0', 120)` （把像素高度 120 作为 rank 传给它）
+   - 正确：`s.graph.layer('L0', 0, { totalRanks: 3 })`
    - *Why*：`rankIndex` 是逻辑层级索引（从 0 开始的整数）。引擎内部会通过公式 `(endY - startY) / totalRanks * rankIndex` 自动算出 Y 坐标像素。若传入像素值，图层会被渲染到上万像素以外。
 2. **规范变量名隔离**：
    - 错误：`for (const [s, d] of edges)` （解构出的 `s` 会覆盖全局的 `s = LearnVis.stage` 实例）
    - 正确：`for (const [src, dst] of edges)`
    - *Why*：覆盖 `s` 会使后续对 `s.math` 等 API 的访问触发 `TypeError` 崩溃。
-3. **为 Edge 创建必要的 Port**：
-   - 错误：`s.layout.edge('e1', 'nodeA', 'nodeB')`
-   - 正确：先 `const nA = s.layout.node('A', x, y); nA.port('A-out', 'bottom');` 再 `s.layout.edge('e1', 'A-out', 'B-in')`
-   - *Why*：连线必须锚定到 Node 的具体 Port ID。直接连 Node ID 会导致连线由于找不到 Port 信息而堆叠在中心或引发运行时报错。
 
 ## 📖 API 导航指南
 
 请在设计不同可视化需求时，加载对应的详细 API 参考文档：
 - **[控制流与动画 (api-controlflow.md)](references/api-controlflow.md)**: 了解 `render` 单帧渲染、`steps` 步骤动画控制、`Card` 容器封装。
-- **[布局原语 (api-layout.md)](references/api-layout.md)**: 了解 `node` 节点、`port` 端口、`edge` 边、以及 `layers` 批量声明（用于分层布局如 Sugiyama）。
 - **[数学几何原语 (api-math.md)](references/api-math.md)**: 了解 `point` 点、`vector` 向量、`circle` 圆、投影、各种多边形、以及 `fn` 连续函数图像的绘制。
-- **[图论网络原语 (api-graph.md)](references/api-graph.md)**: 了解 `vertex` 顶点、`edge` 图边，以及内置的力导向布局 `force`、环形布局 `circular` 的使用。
+- **[图论拓扑与结构原语 (api-graph.md)](references/api-graph.md)**: 了解 `vertex` 顶点、`edge` 边、`block` 容器块、`array` 数组序列，以及内置的力导向布局 `force`、环形布局 `circular` 和背景 `layers` 分层声明的使用。
 - **[底层原子 API (api-atomic.md)](references/api-atomic.md)**: 了解底层 `FrameManager` 状态机与 `EntityId` 的 Branded Type，仅在需要进行高度自定义渲染或精细动画控制时加载。
 - **[独立部署指南 (guide-standalone.md)](references/guide-standalone.md)**: 了解内置主题（`warm`/`cool`/`dark`/`paper` 等）的视觉配置。
 

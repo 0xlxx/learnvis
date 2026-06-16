@@ -8,7 +8,6 @@ import { FrameManager } from './frame';
 import { SVGRenderer } from './renderer/svg';
 import { createMathRenderer } from './math';
 import { createGraph } from './graph';
-import { createLayout } from './layout';
 import { bootstrap } from './bootstrap';
 import { eid } from './types';
 
@@ -224,40 +223,6 @@ describe('graph API (v4 entity types)', () => {
 
 // ── Layout API through consolidation ──
 
-describe('layout API (v4 entity types)', () => {
-  it('node() creates node entity', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    layout.node('A', 100, 100);
-    fm.commit();
-    const e = fm.entities.get('vertex:A');
-    expect(e!.desired.type).toBe('node');
-  });
-
-  it('port() creates node entity', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    layout.node('A', 100, 100);
-    layout.port('p', 'A', 'right');
-    fm.commit();
-    const e = fm.entities.get('port:p');
-    expect(e!.desired.type).toBe('node');
-    expect((e!.desired as any).shape).toBe('circle');
-  });
-
-  it('layer() creates region entity', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    layout.layer('L1', 50, 30);
-    fm.commit();
-    const e = fm.entities.get('fill:L1');
-    expect(e!.desired.type).toBe('region');
-    expect((e!.desired as any).shape).toBe('polygon');
-    expect((e!.desired as any).stroke).toBeTruthy();
-  });
-
-});
-
 // ═══════════════════════════════════════════════════════════
 //  Regression invariants
 // ═══════════════════════════════════════════════════════════
@@ -270,36 +235,6 @@ describe('regression invariants', () => {
     ctx = bootstrap('#app', { width: 400, height: 300 });
     fm = new FrameManager(ctx);
   }
-
-  it('edge() with missing port IDs should not produce NaN coordinates', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    fm.begin();
-    layout.node('A', 100, 100);
-    layout.node('B', 300, 200);
-    layout.edge('e', 'A-out', 'B-in').color('dim');
-    fm.commit({ animate: false });
-    const e = fm.entities.get('edge:e');
-    const ld = e!.desired as import('./types').LineState;
-    expect(Number.isFinite(ld.x1 ?? 0)).toBe(true);
-    expect(Number.isFinite(ld.y1 ?? 0)).toBe(true);
-    expect(Number.isFinite(ld.x2 ?? 0)).toBe(true);
-    expect(Number.isFinite(ld.y2 ?? 0)).toBe(true);
-  });
-
-  it('edge() with same port (zero-length) should not produce NaN', () => {
-    setup();
-    const layout = createLayout(fm, ctx.palette);
-    fm.begin();
-    const n = layout.node('A', 100, 100);
-    n.port('p', 'right', { size: 4 });
-    layout.edge('e', 'p', 'p');
-    fm.commit({ animate: false });
-    const e = fm.entities.get('edge:e');
-    const ld = e!.desired as import('./types').LineState;
-    expect(Number.isFinite(ld.x1 ?? 0)).toBe(true);
-    expect(Number.isFinite(ld.y1 ?? 0)).toBe(true);
-  });
 
   it('eid() with empty string produces valid ID', () => {
     const id = eid('point', '');

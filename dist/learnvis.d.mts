@@ -473,7 +473,6 @@ interface MathCoords {
 }
 //#endregion
 //#region vis/graph.d.ts
-type Vec2$1 = [number, number];
 interface Vertex {
   id: string;
   x: number;
@@ -481,7 +480,7 @@ interface Vertex {
   _r: number;
   _stroke: string;
   _fill: string;
-  pos(): Vec2$1;
+  pos(): Vec2;
   color(c: string): Vertex;
   label(t: string): Vertex;
   size(r: number): Vertex;
@@ -494,49 +493,16 @@ interface Edge {
   label(t: string): Edge;
   weight(n: number): Edge;
 }
-interface GraphAPI {
-  vertex(id: string, pos: Vec2$1): Vertex;
-  edge(a: Vertex, b: Vertex, opts?: {
-    directed?: boolean;
-    gap?: number;
-  }): Edge;
-  layout(type: 'force' | 'circular', vertices: Vertex[], edges?: {
-    from: Vertex;
-    to: Vertex;
-  }[], opts?: {
-    center?: Vec2$1;
-    radius?: number;
-  }): void;
-}
-//#endregion
-//#region vis/layout.d.ts
-interface LayoutNode {
-  color(c: string): LayoutNode;
-  fill(c: string): LayoutNode;
-  strokeW(n: number): LayoutNode;
-  opacity(v: number): LayoutNode;
-  label(t: string, place?: Place): LayoutNode;
-  size(w: number, h?: number): LayoutNode;
-  moveTo(x: number, y: number): LayoutNode;
-  port(id: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
-}
-interface LayoutPort {
-  color(c: string): LayoutPort;
-  size(r: number): LayoutPort;
-  fill(c: string): LayoutPort;
-  opacity(v: number): LayoutPort;
-  label(t: string): LayoutPort;
+interface Block {
+  id: string;
+  x: number;
+  y: number;
   pos(): Vec2;
-}
-interface LayoutEdge {
-  color(c: string): LayoutEdge;
-  strokeW(n: number): LayoutEdge;
-  dash(d: string): LayoutEdge;
-  opacity(v: number): LayoutEdge;
-  label(t: string): LayoutEdge;
-  directed(v: boolean): LayoutEdge;
-  bend(): LayoutEdge;
-  route(pts: Vec2[] | null): LayoutEdge;
+  color(c: string): Block;
+  label(t: string, place?: Place): Block;
+  size(w: number, h?: number): Block;
+  fill(c: string): Block;
+  opacity(v: number): Block;
 }
 interface LayoutLayer {
   color(c: string): LayoutLayer;
@@ -559,21 +525,6 @@ interface NodeOpts {
   labelGap?: number;
   shape?: 'rect' | 'circle';
 }
-type PortPosition = 'top' | 'bottom' | 'left' | 'right' | [number, number];
-interface PortOpts {
-  size?: number;
-  fill?: string;
-  stroke?: string;
-  label?: string;
-}
-interface EdgeOpts {
-  color?: string;
-  strokeW?: number;
-  dash?: string;
-  directed?: boolean;
-  bend?: boolean;
-  label?: string;
-}
 interface LayerOpts {
   totalRanks?: number;
   layerGap?: number;
@@ -593,7 +544,6 @@ interface LayerOpts {
   rx?: number;
   strokeW?: number;
 }
-/** Options for batch layer declaration via layers() */
 interface LayersOpts extends LayerOpts {
   labels?: string[];
 }
@@ -607,22 +557,26 @@ interface ArrayOpts {
   bg?: string;
   padding?: number;
 }
-interface LayoutAPI {
-  node(id: string, x: number, y: number, opts?: NodeOpts): LayoutNode;
-  block(id: string, x: number, y: number, w: number, h: number, opts?: NodeOpts & {
+interface GraphAPI {
+  vertex(id: string, pos: Vec2): Vertex;
+  edge(a: Vertex, b: Vertex, opts?: {
+    directed?: boolean;
+    gap?: number;
+  }): Edge;
+  layout(type: 'force' | 'circular', vertices: Vertex[], edges?: {
+    from: Vertex;
+    to: Vertex;
+  }[], opts?: {
+    center?: Vec2;
+    radius?: number;
+  }): void;
+  block(id: string, x?: number, y?: number, w?: number, h?: number, opts?: NodeOpts & {
     style?: 'muted' | 'normal' | 'active';
-  }): LayoutNode;
-  port(id: string, ownerId: string, pos: PortPosition, opts?: PortOpts): LayoutPort;
-  edge(id: string, fromPortId: string, toPortId: string, opts?: EdgeOpts): LayoutEdge;
+  }): Block;
+  array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): Block[];
   layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
-  /** 批量声明 N 层，自动推导 totalRanks、w、y、h。返回 LayoutLayer[]。 */
   layers(count: number, opts?: LayersOpts): LayoutLayer[];
-  array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): LayoutNode[];
 }
-declare function createLayout(fm: FrameManager, p: Palette, ctx?: {
-  W: number;
-  H: number;
-}): LayoutAPI;
 //#endregion
 //#region vis/types.d.ts
 type Vec2 = [number, number];
@@ -739,10 +693,6 @@ type LineState = WithTransform<{
   bend?: boolean;
   _bend?: boolean;
   _markerCfg?: MarkerConfig | null;
-  _fromPort?: string;
-  _toPort?: string;
-  _portR?: number;
-  _toR?: number;
 }>;
 type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
 type RegionState = WithTransform<{
@@ -888,7 +838,6 @@ interface AgentStage extends Disposable {
   root: S;
   math: MathAPI;
   graph: GraphAPI;
-  layout: LayoutAPI;
   steps(defs: StepLike[], opts?: StepsOptions): StepsController;
   frame(frameFn: (s: AgentStage) => void, opts?: {
     ms?: number;
@@ -1248,4 +1197,4 @@ declare function resolveTheme(name: string): {
   };
 };
 //#endregion
-export { FrameManager, type LayoutAPI, type LayoutEdge, type LayoutLayer, type LayoutNode, type LayoutPort, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, createLayout, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, type RenderHandle, type Renderer, SVGRenderer, TOKENS, alpha, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, getBounds, halo, katexify, len, markerTip, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
