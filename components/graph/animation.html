@@ -13,10 +13,10 @@
     .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:8px}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
     .card .stage{width:300px;height:220px;display:block}
-    .step-controls{display:flex;gap:4px;margin-top:6px;justify-content:center;align-items:center}
-    .step-controls button{font-size:0.7rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
-    .step-controls button:disabled{opacity:0.35;cursor:default}
-    .step-controls .step-label{font-size:0.68rem;color:var(--text-dim);min-width:80px}
+    .lv-stepper-host .step-controls{display:flex;gap:4px;justify-content:center;align-items:center}
+    .lv-stepper-host button{font-size:0.7rem;padding:2px 10px;border:1px solid var(--border);border-radius:4px;background:var(--card);cursor:pointer}
+    .lv-stepper-host button:disabled{opacity:0.35;cursor:default}
+    .lv-stepper-host .step-label{font-size:0.68rem;color:var(--text-dim);min-width:80px}
   </style>
 </head>
 <body>
@@ -27,7 +27,7 @@
 <div id="sections"></div>
 
 <script type="module">
-import { stage, stepper } from '../../dist/learnvis.mjs';
+import { stage } from '../../dist/learnvis.mjs';
 
 const sections = [
   {
@@ -96,15 +96,14 @@ const sections = [
 ];
 
 const container = document.getElementById('sections');
-sections.forEach((sec, si) => {
+for (const [si, sec] of sections.entries()) {
   const el = document.createElement('section');
-  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div><div class="stepper" id="sp${si}"></div></div>`;
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div></div>`;
   container.appendChild(el);
 
   const s = stage(`#st${si}`, { width: 300, height: 220, theme: 'warm' });
-  const ctrl = s.steps(sec.steps);
-  stepper(`#sp${si}`, ctrl);
-});
+  s.steps(sec.steps, { controls: true });
+}
 </script>
 </body>
 </html>
