@@ -51,8 +51,8 @@ fn(Math.sin, {
 
 ## 2. 渲染生命周期管理
 
-### s.render (零仪式感同步单帧渲染) ✅ 首选推荐
-绘制静态场景或仅有一帧的可视化图表时，**必须**使用 `s.render()`。它会自动处理 `begin()` 和 `commit()` 的时序，确保渲染必定触发。
+### s.render — 单帧渲染
+绘制静态场景时使用 `s.render()`，自动包裹 `begin()`/`commit()`。
 ```js
 // s.render 同步执行，接收一个回调函数，自动包裹在帧提交管道中
 s.render(s => {
@@ -63,10 +63,9 @@ s.render(s => {
   layers(4, { style: 'band' });
 });
 ```
-- *Why*：底层的状态渲染是基于 ECS（实体组件系统）的。单独声明图元不会自动呈现到页面上，必须包含在一个 `begin()` 与 `commit()` 对中。`s.render()` 隐藏了这些底层的状态提交仪式，消除了忘记提交或在错误的时机提交的错误。
 
-### s.steps (步骤式多帧动画)
-当需要以幻灯片形式逐步演示算法逻辑（如排序算法的各轮对比、图遍历的各个步骤）时，**必须**使用 `s.steps` 进行声明。
+### s.steps — 多帧步骤动画
+逐步演示算法逻辑时使用 `s.steps`，同名图元自动平滑过渡。
 ```js
 // 定义两步动画。各步骤中的同名图元（如 P 点）在跳转时会自动平滑过渡
 const ctrl = s.steps([
@@ -114,13 +113,13 @@ const ctrl = s.steps([
   }
 ], { mode: 'update' });
 ```
-- *Why*：`steps` 内部的 `frame(s)` 回调被执行时，底层会自动完成两帧之间图元增量（enter/update/exit）的 Diff 计算。只要前后步骤中的图元拥有相同的 `id`，引擎便会通过 D3 过渡将它们的位置、颜色等平滑地转过去。
-- `ctrl.current` — 获取当前步骤索引。
-- `ctrl.total` — 获取总步骤数。
-- `ctrl.onChange(index => { ... })` — 注册步骤切换回调。
+- `ctrl.current` — 当前步骤索引。
+- `ctrl.total` — 总步骤数。
+- `ctrl.go(i)` — 跳转到步骤 i。
+- `ctrl.prev()` / `ctrl.next()` — 上/下一步。
 - `ctrl.reset()` — 回到第 0 步。
 
-**内置导航 (`controls: true`)**：自动在 SVG 下方注入 prev/next/reset UI。
+**内置导航 (`controls: true`)**：自动在 SVG 下方注入 prev/next 导航 UI。
 ```js
 const ctrl = s.steps([...], { controls: true });  // 一行搞定
 ```
@@ -137,44 +136,9 @@ stepper('#controls', ctrl);  // [◀] 标题 ●●◐○○ 2/5 [▶]
 - 键盘快捷键：`←` 上一步、`→` 下一步、`Home` 第一步、`End` 最后一步（stepper 获得焦点时）。
 - 与 `steps()` 完全解耦，不使用时无开销。
 
-### s.frame (异步单帧控制)
-需要在逻辑代码中使用 `await` 进行延迟等待，或者编排特定的时序时，使用 `s.frame()`。
-```js
-// 以 500ms 的过渡动效绘制 P 点并等待其完成
-await s.frame(s => {
-  const { point } = s.math;
-  point('P', [100, 200]).color('danger');
-}, { ms: 500 });
-```
+### s.frame — 异步单帧
+`await s.frame(fn, { ms })` — 执行一帧并等待过渡完成。
 
-### s.play (自动连续播放)
-需要按顺序自动播放一组帧，并控制每帧过渡时间时，使用 `s.play()`。
-```js
-// 定义每一帧的绘制函数
-const frames = [
-  s => { const { point } = s.math; point('P', [100, 200]); },
-  s => { const { point } = s.math; point('P', [200, 150]); },
-];
-// 自动连续播放，每帧时长 800ms
-await s.play(frames, { ms: 800 });
-```
+### s.play — 连续播放
+`await s.play(frames, { ms })` — 依次播放一组帧。
 
----
-
-## 3. 底层帧控制（仅在特殊需要时使用）
-
-如果需要脱离生命周期糖 API，直接操作底层的 `FrameManager` 以实现对每帧的显式控制，必须遵守 `begin` 与 `commit` 配对规则。
-```js
-const { point } = s.math;
-
-// 1. 开始新的一帧
-s.frames.begin();
-
-// 2. 声明本帧内的所有图元
-point('P', [100, 200]);
-
-// 3. 提交该帧并渲染到 SVG 画布上
-s.frames.commit({ ms: 500, animate: true });
-```
-- `s.frames.begin()` — 启动当前帧缓冲，清除旧帧中未继承的状态。
-- `s.frames.commit(opts)` — 将计算结果推入渲染队列。**注意：必须确保 commit 被最终调用，否则任何绘制结果都不会呈现到屏幕上。**

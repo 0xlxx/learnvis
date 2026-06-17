@@ -1,6 +1,6 @@
 # math — 数学几何原语
 
-使用 math API 绘制坐标系、函数图像、向量几何、角度与基本图形（点、线、面）。**注意：所有数学原语的第一个参数永远是唯一标识符 `id`。**
+使用 math API 绘制坐标系、函数图像、向量、角度与基本图形。
 
 ```js
 const { point, segment, polyline, vector, projection, circle, polygon, rect, ngon, ellipse, angle, rightAngle, fillFn, fn, viewport, coords } = s.math;
@@ -176,9 +176,7 @@ projection('proj1', pt, lineFrom, lineTo);
 ## 4. 圆与多边形
 
 ### circle (圆)
-绘制指定中心点与半径的圆。
 ```js
-// 绘制以 (cx, cy) 为圆心，半径为 r 的圆。默认描边粗细 1.2px 并带淡背景填充
 circle('c1', [cx, cy], r);
 ```
 
@@ -244,20 +242,16 @@ fn('sin', Math.sin, {
 
 ---
 
-## 6. 链式调用方法支持汇总
+## 6. 通用链式方法
 
-在声明几何对象后，**必须**调用与之兼容的链式修饰方法，以定制样式：
-- **封闭图元类**（point, circle, polygon, rect, symbol 等）：
-  - `.color(c)`: 绑定语义颜色 Token（如 `'primary'`, `'danger'` 等）。
-  - `.strokeW(w)`: 修改描边粗细（像素）。
-  - `.fill(color)`: 修改填充色。
-  - `.opacity(opacityValue)`: 修改透明度（0~1）。
-  - `.label(text, pos?)`: 挂载文本标签。
-  - `.size(sizeVal)`: 设置特定几何大小。
-  - `.translate(dx, dy)`: 平移。
-- **线段图元类**（segment, polyline, vector 等）：
-  - `.color(c)`、`.strokeW(w)`、`.opacity(v)`、`.label(text)`。
-  - `.dashed(dashPattern)`: 设置虚线点阵间距（如 `'4 3'`）。
-- **坐标系原语**（viewport/coords 返回的 vp.*）：
-  - 以上所有方法，但坐标使用 math 单位（自动映射到屏幕）。
-  - `.rotate(angle, cx, cy)`、`.translate(dx, dy)`：math 坐标变换。
+| 方法 | 适用 | 说明 |
+|------|------|------|
+| `.color(c)` | 全部 | 语义色 Token |
+| `.strokeW(n)` | 全部 | 描边粗细 (px) |
+| `.fill(c)` | 封闭图元 | 填充色 |
+| `.opacity(v)` | 全部 | 透明度 0–1 |
+| `.label(t)` | 全部 | 文本标签 |
+| `.size(n)` | point/circle 等 | 尺寸 |
+| `.dashed(p)` | 线段类 | 虚线模式 `'4,3'` |
+| `.translate(dx,dy)` | 部分 | 平移（vp.* 为 math 坐标） |
+| `.rotate(a,cx,cy)` | vp.* | 旋转（math 坐标） |
