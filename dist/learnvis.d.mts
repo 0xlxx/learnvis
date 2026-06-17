@@ -967,14 +967,13 @@ interface AgentStage extends Disposable {
 }
 //#endregion
 //#region vis/stepper.d.ts
-interface StepperOpts {
-  layout?: 'tabs' | 'prev-next';
-}
 /**
- * Creates a step control bar.
- * Supports legacy signature (labels array) and progressive signature (StepsController).
+ * Creates a step control bar with prev/next buttons, step dots, and label.
+ * Keyboard: ← → to navigate, Home/End for first/last.
  */
-declare function stepper(container: string | HTMLElement, ctrlOrLabels: StepsController | string[], onChangeOrOpts?: ((i: number) => void) | StepperOpts, legacyOpts?: {
+declare function stepper(container: string | HTMLElement, ctrlOrLabels: StepsController | string[], onChangeOrOpts?: ((i: number) => void) | {
+  start?: number;
+}, legacyOpts?: {
   start?: number;
 }): {
   go?(i: number): void;
