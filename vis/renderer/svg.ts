@@ -445,12 +445,16 @@ function computeGridLines(gd: import('../../vis/types').GroupState): GridLine[] 
     const lines: GridLine[] = [];
     const toKey = (n: number) => Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(8)).toString();
 
-    for (let mx = gd.mx0; mx <= gd.mx1 + step * 0.5; mx += step) {
+    // Snap to step-multiples so the origin (0,0) is always a grid vertex.
+    // Axes at x=0 and y=0 will always overlap with grid lines.
+    const x0 = Math.ceil(gd.mx0 / step) * step;
+    const y0 = Math.ceil(gd.my0 / step) * step;
+    for (let mx = x0; mx <= gd.mx1 + step * 0.5; mx += step) {
       const [x1, y1] = scr(mx, gd.my0);
       const [x2, y2] = scr(mx, gd.my1);
       lines.push({ x1, y1, x2, y2, key: 'X' + toKey(mx) });
     }
-    for (let my = gd.my0; my <= gd.my1 + step * 0.5; my += step) {
+    for (let my = y0; my <= gd.my1 + step * 0.5; my += step) {
       const [x1, y1] = scr(gd.mx0, my);
       const [x2, y2] = scr(gd.mx1, my);
       lines.push({ x1, y1, x2, y2, key: 'Y' + toKey(my) });
