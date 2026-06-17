@@ -851,11 +851,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
-        const [px, py] = scr([xd[0], yd[1]]);
+        // fn() maps y=r0→oy (bottom), y=r1→oy-ph (top). Pass domain bottom-left.
+        const [px, py] = scr([xd[0], yd[0]]);
         return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range ?? yd, x: px, y: py, width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
       },
       fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number; range?: [number, number] } = {}) {
-        const [px, py] = scr([xd[0], yd[1]]);
+        const [px, py] = scr([xd[0], yd[0]]);
         return fillFn(fid, f, { domain: xd, range: fOpts.range ?? yd, x: px, y: py, width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
       },
       point(pid: string, x: number | Vec2, y?: number, pOpts: Record<string, any> = {}) {
