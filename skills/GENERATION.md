@@ -6,9 +6,9 @@ This document tracks how learnvis skills are generated and kept in sync with the
 
 **Generated from source at:**
 
-- **Commit SHA**: `latest`
-- **Date**: 2026-06-15
-- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts)
+- **Commit SHA**: `a6266cc`
+- **Date**: 2026-06-17
+- **Source**: `vis/` source modules (index.ts, types.ts, math.ts, graph.ts, stage.ts, frame.ts, mixins.ts, renderer/svg.ts, primitives.ts, themes.ts, tokens.ts, stepper.ts)
 - **Tooling**: `scripts/postinstall.mjs` — multi-platform skill symlink (Claude Code, Codex, Pi, OpenCode)
 
 ## Structure
@@ -81,6 +81,7 @@ git diff HEAD -- vis/
 - **CoreNode** — `coreNodeMixin(eid, fm, p)` shared across all domains (color, strokeW, fill, opacity, size, label, moveTo)
 - **CoordsConfig** — unified config for `viewport()` / `coords()`: domain, margin, nice, aspect, basis (Strang-style `[[i],[j]]`), ticks/tickFormat, axisArrow, gridSpacing/gridDash/gridColor
 - **Grid (math-space)** — grid lines generated from math coordinates mapped through `scr(mx,my)`. Key identity by math-k value (`"X-3"`) — stable across all basis transforms (scale/rotate/shear). Canvas-size adaptive density (~80px between lines).
+- **Stepper** — `vis/stepper.ts`: standalone prev/next UI with clickable step dots, keyboard nav (← → Home End), and step label + counter. Accepts `StepsController` from `s.steps()`.
 - **elements.ts** — DELETED. `zone`, `dot`, `arrow`, `line`, `path` no longer exist. Use `math` or `graph` primitives instead.
 
 ## Style Guidelines
@@ -100,9 +101,10 @@ git diff HEAD -- vis/
 | 2026-06-14 | Full skill refresh: all 6 reference files updated, SKILL.md layout section, README.md rewritten, segment a/b render fix, layer dual-style, postinstall multi-platform |
 | 2026-06-14 | Major: elements.ts deleted, layout API (node/block/port/edge/layer/enclosure), CoreNode mixin unified labels, layer style: band/swimlane, EntityId branded type, oklch→hex color pipeline, labelPlace on regions |
 | 2026-06-13 | Added `using` syntax support, `AgentStage extends Disposable`, polyfill |
+| 2026-06-17 | Stepper UI redesign: step dots (clickable), keyboard nav (← → Home End), cleaner circular buttons, removed reset button. Updated api-controlflow.md stepper section. |
 | 2026-06-17 | GridLine refactoring: math-space grid (stable key identity), canvas-size adaptive density, basis scale/rotate/shear support, clipLineToRect for screen-space fallback. Added CoordsConfig viewport/coords docs to api-math.md. |
 | 2026-06-17 | Removed layout.ts subsystem (node/block/port/edge/layer/enclosure); graph.layout() (force/circular) retained. api-atomic.md made internal. Code style switched to destructuring. Quick Start uses pnpm+TS+Vite. |
 
 ---
 
-Last updated: 2026-06-17 (gridline refactoring)
+Last updated: 2026-06-17 (stepper UI redesign)

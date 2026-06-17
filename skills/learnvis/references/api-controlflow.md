@@ -126,14 +126,15 @@ const ctrl = s.steps([...], { controls: true });  // 一行搞定
 ```
 
 ### stepper (独立导航 UI)
-为 steps 控制器绑定 prev/next/reset 按钮 UI。
+为 steps 控制器绑定 prev/next 按钮 + 步骤圆点指示器 + 标签。
 ```js
 import { stepper } from 'learnvis';
 
 const ctrl = s.steps([...]);
-stepper('#controls', ctrl);  // 在 #controls 元素中注入导航 UI
+stepper('#controls', ctrl);  // [◀] 标题 ●●◐○○ 2/5 [▶]
 ```
-- 自动绑定 prev/next/reset 按钮和步骤标签显示。
+- 圆点指示器可点击跳转到任意步骤。
+- 键盘快捷键：`←` 上一步、`→` 下一步、`Home` 第一步、`End` 最后一步（stepper 获得焦点时）。
 - 与 `steps()` 完全解耦，不使用时无开销。
 
 ### s.frame (异步单帧控制)
