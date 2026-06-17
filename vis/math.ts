@@ -844,14 +844,9 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
           ? Math.min(autoGridStep(xd[0], xd[1], xLen), autoGridStep(yd[0], yd[1], yLen))
           : o.spacing;
         const anchor: Vec2 = scr([0, 0]);
-        // Domain corners in screen space — for border rect
-        const [bx1, by1] = scr([xd[0], yd[1]]);  // top-left
-        const [bx2, by2] = scr([xd[1], yd[0]]);  // bottom-right
         fm.declare(gid, {
           type: 'group', subtype: 'grid',
           ox: anchor[0], oy: anchor[1],
-          gx: bx1, gy: by1,  // rectangle top-left = domain corner
-          w: bx2 - bx1, h: by2 - by1,  // width/height = domain extent
           mx0: xd[0], mx1: xd[1], my0: yd[0], my1: yd[1], mStep: step,
           stroke, strokeW: o.strokeW ?? 0.3,
           dash: o.dash,
