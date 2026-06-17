@@ -300,8 +300,8 @@ interface MathAPI {
     opacity?: number;
     baseline?: number;
   }): MathFill;
-  coords(id: string, origin: Vec2 | 'center', opts?: CoordsOpts): MathCoords;
-  viewport(opts?: ViewportOpts): MathCoords;
+  coords(id: string, origin: Vec2 | 'center', config?: CoordsConfig): MathCoords;
+  viewport(config?: CoordsConfig): MathCoords;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   grid(id: string, origin: Vec2, opts?: GridOpts): void;
   axes(id: string, origin: Vec2, opts?: AxesOpts): void;
@@ -468,6 +468,7 @@ interface GridOpts {
   spacing?: number;
   color?: string;
   strokeW?: number;
+  dash?: string;
 }
 interface AxesOpts {
   xLen?: number;
@@ -477,32 +478,60 @@ interface AxesOpts {
   color?: string;
   strokeW?: number;
 }
-interface CoordsOpts {
-  xLen?: number;
-  yLen?: number;
-  xDomain?: [number, number];
-  yDomain?: [number, number];
-  xLabel?: string;
-  yLabel?: string;
-  margin?: number;
-}
-interface ViewportOpts {
+interface CoordsConfig {
   x?: [number, number];
   y?: [number, number];
+  /** Domain expansion ratio. 0.15 = add 7.5% padding on each side. Default: viewport 0.15, coords 0 */
   margin?: number;
-  grid?: boolean;
-  axes?: boolean;
-  theme?: string;
+  /** Round domain bounds to nice values. Default: viewport true, coords false */
+  nice?: boolean;
+  /** Pixel ratio y/x. 'auto'=independent scaling | 'equal'=1:1 | number=custom */
+  aspect?: 'auto' | 'equal' | number;
+  /** Basis vectors [i, j]. Default [[1,0],[0,1]]. Sets the coordinate space — grid lines follow basis directions, axes align to basis. */
+  basis?: [Vec2, Vec2];
+  xLabel?: string;
+  yLabel?: string;
+  showAxes?: boolean;
+  showGrid?: boolean;
+  showOrigin?: boolean;
+  /** Tick count/values for both axes. true=auto | number=approx count | number[]=exact positions. Default: no ticks. */
+  ticks?: boolean | number | number[];
+  /** Per-axis tick override */
+  xTicks?: number | number[];
+  yTicks?: number | number[];
+  /** Tick label format. 'decimal'=numbers | 'pi'=π fractions | custom function */
+  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
+  /** Tick mark length in px. Default 5. */
+  tickSize?: number;
+  /** Axis arrow direction. Default 'none'. */
+  axisArrow?: 'none' | 'positive' | 'both';
+  axisColor?: string;
+  axisStrokeW?: number;
+  /** Grid line spacing in px, or 'auto' to adapt to domain. Default 40. */
+  gridSpacing?: number | 'auto';
+  /** Dash pattern e.g. '4,4'. Default solid. */
+  gridDash?: string;
+  gridColor?: string;
+}
+interface AxesRenderOpts {
+  color?: string;
+  strokeW?: number;
+  arrow?: 'none' | 'positive' | 'both';
+  ticks?: boolean | number | number[];
+  xTicks?: number | number[];
+  yTicks?: number | number[];
+  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
+  tickSize?: number;
+}
+interface GridRenderOpts {
+  color?: string;
+  strokeW?: number;
+  spacing?: number | 'auto';
+  dash?: string;
 }
 interface MathCoords {
-  axes(opts?: {
-    color?: string;
-    strokeW?: number;
-  }): void;
-  grid(opts?: {
-    spacing?: number;
-    color?: string;
-  }): void;
+  axes(opts?: AxesRenderOpts): void;
+  grid(opts?: GridRenderOpts): void;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   fillFn(id: string, f: (x: number) => number, opts?: {
     color?: string;
@@ -815,6 +844,17 @@ type GroupState = {
   w?: number;
   h?: number;
   sp?: number;
+  gx?: number;
+  gy?: number;
+  mx0?: number;
+  mx1?: number;
+  my0?: number;
+  my1?: number;
+  mStep?: number;
+  ix?: number;
+  iy?: number;
+  jx?: number;
+  jy?: number;
   vertex?: Vec2;
   ray1?: Vec2;
   ray2?: Vec2;

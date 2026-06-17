@@ -1,12 +1,121 @@
 # math — 数学几何原语
 
-使用 math API 绘制函数图像、向量几何、角度与基本图形（点、线、面）。**注意：所有数学原语的第一个参数永远是唯一标识符 `id`。**
+使用 math API 绘制坐标系、函数图像、向量几何、角度与基本图形（点、线、面）。**注意：所有数学原语的第一个参数永远是唯一标识符 `id`。**
 
 ```js
-const { point, segment, polyline, vector, projection, circle, polygon, rect, ngon, ellipse, angle, rightAngle, fillFn, fn } = s.math;
+const { point, segment, polyline, vector, projection, circle, polygon, rect, ngon, ellipse, angle, rightAngle, fillFn, fn, viewport, coords } = s.math;
 ```
 
-## 1. 基础点与线段
+## 1. 坐标系 — viewport() / coords()
+
+零配置或全手动控制的数学坐标系，自动生成坐标轴、网格和原点。
+
+### viewport() — 一键搭建
+
+```js
+// 零配置：原点居中，domain [-6,6]×[-4,4]，自动显示轴、网格、原点标记
+const vp = s.math.viewport();
+
+// 自定义 domain
+const vp = s.math.viewport({ x: [-5, 5], y: [-4, 4] });
+
+// 正方形像素 + basis 变换
+const vp = s.math.viewport({
+  x: [-3, 3], y: [-3, 3],
+  aspect: 'equal',
+  basis: [[2, 0], [1, 1]],   // Gilbert Strang 风格的基向量变换
+  xTicks: [-3, -2, -1, 0, 1, 2, 3],
+  tickFormat: 'pi',          // π 分数格式
+  axisArrow: 'positive',     // 轴末端箭头
+  gridDash: '4,4',           // 虚线网格
+});
+```
+
+### coords() — 全手动
+
+```js
+// 传统左下角原点 (x:[0,10], y:[-2,2])
+const c = s.math.coords('c', [60, 200], {
+  x: [0, 10], y: [-2, 2],
+  axisArrow: 'positive',
+  ticks: 5,
+});
+c.axes();                             // 手动调用轴
+c.grid({ dash: '2,4', color: 'dim' }); // 手动调用网格
+
+// 居中原点（与 viewport 类似但更灵活控制）
+const c = s.math.coords('c', 'center', {
+  x: [-3, 3], y: [-2, 2],
+  aspect: 'equal',
+});
+```
+
+### CoordsConfig 参数
+
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| `x`, `y` | `[number, number]` | `[-5,5]` / `[-5,5]` | math 坐标 domain |
+| `margin` | `number` | viewport: 0.15, coords: 0 | domain 扩展比例（给变换留空间） |
+| `nice` | `boolean` | viewport: true, coords: false | domain 取整（-4.7→-5, 4.3→5） |
+| `aspect` | `'auto'` / `'equal'` / `number` | `'auto'` | y/x 像素比。'equal'=1:1 |
+| `basis` | `[Vec2, Vec2]` | `[[1,0],[0,1]]` | 基向量对。支持 scale/rotate/shear |
+| `xLabel`, `yLabel` | `string` | `'x'`, `'y'` | 轴标签 |
+| `showAxes` | `boolean` | viewport: true | 显示坐标轴 |
+| `showGrid` | `boolean` | viewport: true | 显示网格 |
+| `showOrigin` | `boolean` | viewport: true | 显示原点标记 O |
+| `ticks` | `boolean` / `number` / `number[]` | - | 刻度：自动/数量/精确位置 |
+| `xTicks`, `yTicks` | `number` / `number[]` | - | 单轴刻度覆盖 |
+| `tickFormat` | `'decimal'` / `'pi'` / `(n)=>string` | `'decimal'` | 刻度标签格式 |
+| `tickSize` | `number` | 5 | 刻度线长度 (px) |
+| `axisArrow` | `'none'` / `'positive'` / `'both'` | `'none'` | 轴末端箭头 |
+| `axisColor` | `string` | - | 轴颜色 |
+| `axisStrokeW` | `number` | 1.4 | 轴线宽 |
+| `gridSpacing` | `number` / `'auto'` | `'auto'` | 网格间距（math 单位）。'auto' 根据 canvas 大小自适应 |
+| `gridDash` | `string` | - | 网格虚线（如 `'4,4'`） |
+| `gridColor` | `string` | `'dim'` | 网格颜色 |
+
+### 坐标系上的原语
+
+所有几何原语都可以在 viewport/coords 上以**math 坐标**调用：
+
+```js
+const vp = s.math.viewport({ x: [-5, 5], y: [-4, 4] });
+
+// 点、向量、圆 — 自动转换到屏幕坐标
+vp.point('P', 2, 1, { color: 'danger', label: 'P' });
+vp.vector('v', [0, 0], [2, 1]).color('danger');
+vp.circle('c', [0, 0], 2.5).color('accent').opacity(0.2);
+vp.polygon('tri', [[0,0], [2,0], [1,1.5]]).color('primary');
+
+// 函数曲线 — 在坐标系内绘制
+vp.fn('sin', x => Math.sin(x), { color: 'danger', label: 'sin(x)', strokeW: 2 });
+
+// Basis 向量标记
+vp.basis('B', [0, 0], { iColor: 'danger', jColor: 'accent', scale: 1.5 });
+```
+
+### Basis 变换动画
+
+Grid 基于**数学空间**生成（math-space grid），所有线性变换（scale/rotate/shear）自动通过 basis 映射：
+
+```js
+// 平滑过渡：标准 → 剪切 → 标准 → 旋转 → 标准
+const I = [[1, 0], [0, 1]];
+const shear = [[2, 0], [1, 1]];
+const rot = [[1, 1], [-1, 1]];
+
+s.steps([
+  () => s.math.viewport({ basis: undefined }),  // 标准 basis
+  () => s.math.viewport({ basis: shear }),
+  () => s.math.viewport({ basis: rot }),
+], { controls: {} });
+```
+
+Grid 线身份由 math 坐标决定（`key="X-3"`），跨帧稳定 — scale/rotate/shear 动画零平移。
+
+---
+
+## 2. 基础点与线段
 
 ### point (点)
 绘制表示位置的圆点。
@@ -20,7 +129,7 @@ point('P', [x, y])
   .label('P')
   .size(6);
 ```
-- 链式方法：`.color(c)`、`.label(text)`、`.size(r)`、`.fill(color)`、`.opacity(v)`。
+- 链式方法：`.color(c)`、`.label(text)`、`.size(r)`、`.fill(color)`、`.opacity(v)`、`.translate(dx, dy)`。
 
 ### segment (线段)
 绘制两个点之间的无向线段。
@@ -28,7 +137,7 @@ point('P', [x, y])
 // 声明一条从 (x1, y1) 连到 (x2, y2) 的线段
 segment('AB', [x1, y1], [x2, y2]);
 ```
-- *坐标 Fallback 链*：声明线段坐标时，引擎将按照 `[x1, y1]/[x2, y2] -> from/to -> a/b` 依次寻找有效点坐标。可以直接传入包含 `[x, y]` 格式的对象或数组。
+- *坐标 Fallback 链*：声明线段坐标时，引擎将按照 `[x1, y1]/[x2, y2] -> from/to -> a/b` 依次寻找有效点坐标。
 
 ### polyline (折线)
 绘制一系列连续的点线段。
@@ -40,7 +149,7 @@ polyline('p1', [[x1, y1], [x2, y2], [x3, y3]]);
 
 ---
 
-## 2. 向量与投影
+## 3. 向量与投影
 
 ### vector (向量)
 绘制从起点指向终点、带有实心箭头的有向向量。
@@ -53,7 +162,7 @@ vector('v', [x1, y1], [x2, y2])
   .color('primary')
   .label('v⃗');
 ```
-- 变换支持：向量支持链式调用 `.rotate(angle, cx, cy)` (旋转)、`.scale(f)` (缩放) 与 `.translate(dx, dy)` (平移)。
+- 变换支持：向量支持链式调用 `.rotate(angle, cx, cy)` (旋转)、`.scale(f)` (缩放) 与 `.translate(dx, dy)`。
 
 ### projection (垂足投影)
 自动从一个点向指定线段投影，计算出垂足并绘制虚线辅助线和小圆点。
@@ -64,7 +173,7 @@ projection('proj1', pt, lineFrom, lineTo);
 
 ---
 
-## 3. 圆与多边形
+## 4. 圆与多边形
 
 ### circle (圆)
 绘制指定中心点与半径的圆。
@@ -96,7 +205,7 @@ ellipse('e1', cx, cy, rx, ry);
 
 ---
 
-## 4. 角度与函数区域
+## 5. 角度与函数区域
 
 ### angle (常规角)
 绘制连接两个放射方向的夹角圆弧。
@@ -135,7 +244,7 @@ fn('sin', Math.sin, {
 
 ---
 
-## 5. 链式调用方法支持汇总
+## 6. 链式调用方法支持汇总
 
 在声明几何对象后，**必须**调用与之兼容的链式修饰方法，以定制样式：
 - **封闭图元类**（point, circle, polygon, rect, symbol 等）：
@@ -145,6 +254,10 @@ fn('sin', Math.sin, {
   - `.opacity(opacityValue)`: 修改透明度（0~1）。
   - `.label(text, pos?)`: 挂载文本标签。
   - `.size(sizeVal)`: 设置特定几何大小。
+  - `.translate(dx, dy)`: 平移。
 - **线段图元类**（segment, polyline, vector 等）：
   - `.color(c)`、`.strokeW(w)`、`.opacity(v)`、`.label(text)`。
   - `.dashed(dashPattern)`: 设置虚线点阵间距（如 `'4 3'`）。
+- **坐标系原语**（viewport/coords 返回的 vp.*）：
+  - 以上所有方法，但坐标使用 math 单位（自动映射到屏幕）。
+  - `.rotate(angle, cx, cy)`、`.translate(dx, dy)`：math 坐标变换。

@@ -115,8 +115,13 @@ export type GroupState = {
   type: 'group'; subtype: 'axes' | 'grid' | 'angle' | 'matrix';
   // axes
   ox?: number; oy?: number; xl?: number; yl?: number; xLabel?: string; yLabel?: string;
-  // grid
+  // grid — ox,oy = anchor (scr([0,0])); gx,gy = rect top-left
   w?: number; h?: number; sp?: number;
+  gx?: number; gy?: number;
+  // math-space grid (coords/viewport): constant identity lines across basis changes
+  mx0?: number; mx1?: number; my0?: number; my1?: number; mStep?: number;
+  // basis grid (parallelogram directions in screen coords)
+  ix?: number; iy?: number; jx?: number; jy?: number;
   // angle
   vertex?: Vec2; ray1?: Vec2; ray2?: Vec2; arcR?: number;
   // matrix display

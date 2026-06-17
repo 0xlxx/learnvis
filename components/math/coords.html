@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Coordinate Systems — learnvis</title>
+  <link rel="stylesheet" href="../../theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
+    h1{font-size:1.3rem;margin:0 0 0.3rem}
+    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1.5rem}
+    section{margin-bottom:2rem}
+    section h2{font-size:0.9rem;margin:0 0 6px}
+    .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:10px}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
+    .card .name{font-size:0.72rem;font-weight:600;margin-bottom:4px}
+    .card .stage{display:block}
+  </style>
+</head>
+<body>
+
+<h1>Coordinate Systems</h1>
+<p class="sub">viewport() · coords() · basis · aspect · ticks · grid</p>
+
+<div id="sections"></div>
+
+<script type="module">
+import { stage } from 'learnvis';
+
+const sections = [
+  // ═══════════════════════════════════════════
+  // 1. viewport() — zero config
+  // ═══════════════════════════════════════════
+  {
+    name: 'viewport() — Zero Config',
+    desc: 'One line: auto center origin, axes, grid, O marker. margin=0.15 gives room for transforms.',
+    width: 340, height: 260,
+    setup(s) {
+      s.render(() => {
+        const vp = s.math.viewport({ x: [-5, 5], y: [-4, 4] });
+        vp.vector('v', [0, 0], [3, 1]).color('danger').label('v').strokeW(2);
+        vp.circle('c', [0, 0], 2).color('accent').opacity(0.2);
+        vp.point('P', 3, 1, { color: 'danger', label: 'P', size: 5 });
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 2. aspect: 'equal' — square pixels
+  // ═══════════════════════════════════════════
+  {
+    name: 'aspect: equal — Square Pixels',
+    desc: 'aspect: "equal" forces 1:1 pixel ratio. Circles stay circles, squares stay squares.',
+    width: 340, height: 260,
+    setup(s) {
+      s.render(() => {
+        const vp = s.math.viewport({ x: [-4, 4], y: [-3, 3], aspect: 'equal' });
+        vp.circle('c', [0, 0], 2.5).color('accent').strokeW(1.5).opacity(0.25);
+        vp.point('A', 2, 2, { color: 'danger', label: '(2,2)', size: 4 });
+        vp.point('B', 2, -2, { color: 'info', label: '(2,−2)', size: 4 });
+        vp.vector('v', [0, 0], [2, 2]).color('danger').strokeW(1.4);
+        vp.vector('w', [0, 0], [2, -2]).color('info').strokeW(1.4);
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 3. basis transform — step through multiple bases
+  // ═══════════════════════════════════════════
+  {
+    name: 'basis Transform — Animated',
+    desc: 'Smooth transition: standard → shear → rotate. Grid, axes, basis arrows all follow. Use ← → to step.',
+    width: 340, height: 260,
+    setup(s) {
+      const lerp = (a, b, t) => [
+        [a[0][0] + (b[0][0] - a[0][0]) * t, a[0][1] + (b[0][1] - a[0][1]) * t],
+        [a[1][0] + (b[1][0] - a[1][0]) * t, a[1][1] + (b[1][1] - a[1][1]) * t],
+      ];
+      const I = [[1, 0], [0, 1]];
+      const shear = [[2, 0], [1, 1]];
+      const rot = [[1, 1], [-1, 1]];
+      // Generate interpolated frames: I → shear → I → rot → I
+      const keyframes = [I, shear, I, rot, I];
+      const stepsPerSegment = 8;
+      const frames = [];
+      for (let s = 0; s < keyframes.length - 1; s++) {
+        for (let i = 0; i < stepsPerSegment; i++) {
+          const t = i / stepsPerSegment;
+          frames.push(lerp(keyframes[s], keyframes[s + 1], t));
+        }
+      }
+      frames.push(keyframes[keyframes.length - 1]); // final
+      s.steps(frames.map((basis) => () => {
+        const eq = Math.abs(basis[0][0] - 1) < 0.01 && Math.abs(basis[0][1]) < 0.01 && Math.abs(basis[1][0]) < 0.01 && Math.abs(basis[1][1] - 1) < 0.01;
+        const vp = s.math.viewport({ x: [-3, 3], y: [-3, 3], aspect: 'equal', basis: eq ? undefined : basis });
+        vp.basis('B', [0, 0], { iColor: 'danger', jColor: 'accent', scale: 1.5 });
+        vp.vector('v', [0, 0], [1, 1]).color('primary').strokeW(2).label('(1,1)');
+        vp.point('P', 1, 1, { color: 'primary', size: 5 });
+      }), { controls: {} });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 4. basis — standard vs transformed (side-by-side frames)
+  // ═══════════════════════════════════════════
+  {
+    name: 'basis — Standard → Transformed',
+    desc: 'Same math vector (1,1) in two different bases. Left: [[1,0],[0,1]]. Right: [[2,0],[1,1]].',
+    width: 340, height: 260,
+    setup(s) {
+      s.steps([
+        () => {
+          const vp = s.math.viewport({ x: [-3, 3], y: [-3, 3], aspect: 'equal' });
+          vp.vector('v', [0, 0], [1, 1]).color('danger').strokeW(2.5).label('(1,1)');
+          vp.point('P', 1, 1, { color: 'primary', size: 5 });
+        },
+        () => {
+          const vp = s.math.viewport({ x: [-3, 3], y: [-3, 3], aspect: 'equal', basis: [[2, 0], [1, 1]] });
+          vp.vector('v', [0, 0], [1, 1]).color('danger').strokeW(2.5).label('(1,1)');
+          vp.basis('B', [0, 0], { iColor: 'danger', jColor: 'accent', scale: 1.3 });
+          vp.point('P', 1, 1, { color: 'primary', size: 5 });
+        },
+      ], { controls: {} });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 5. ticks + tickFormat: 'pi'
+  // ═══════════════════════════════════════════
+  {
+    name: 'ticks: π Format',
+    desc: 'xTicks at multiples of π/2, tickFormat: "pi" labels them as π fractions. sin(x) plot.',
+    width: 380, height: 260,
+    setup(s) {
+      s.render(() => {
+        const vp = s.math.viewport({
+          x: [-1, 2 * Math.PI + 1], y: [-2, 2],
+          xTicks: [0, Math.PI / 2, Math.PI, 3 * Math.PI / 2, 2 * Math.PI],
+          tickFormat: 'pi',
+        });
+        vp.fn('sin', x => Math.sin(x), { color: 'danger', label: 'sin(x)', strokeW: 2 });
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 6. axisArrow + grid customization
+  // ═══════════════════════════════════════════
+  {
+    name: 'Arrows & Dashed Grid',
+    desc: 'axisArrow: "positive" puts arrows on + ends. gridDash: "4,4" for dotted grid. Spacing auto-adapts to domain.',
+    width: 340, height: 260,
+    setup(s) {
+      s.render(() => {
+        const vp = s.math.viewport({
+          x: [-4, 4], y: [-3, 3],
+          axisArrow: 'positive',
+          gridSpacing: 'auto',
+          gridDash: '4,4',
+        });
+        vp.vector('v', [0, 0], [3, 2]).color('danger').strokeW(2).label('v');
+        vp.vector('w', [0, 0], [-2, 2]).color('accent').strokeW(2).label('w');
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 7. coords() — bottom-left traditional plot
+  // ═══════════════════════════════════════════
+  {
+    name: 'coords() — Bottom-Left Origin',
+    desc: 'Traditional function-plot: origin at (60,200), x:[0,10], y:[-2,2]. axisArrow + ticks.',
+    width: 380, height: 260,
+    setup(s) {
+      s.render(() => {
+        const c = s.math.coords('c', [60, 200], {
+          x: [0, 10], y: [-2, 2],
+          axisArrow: 'positive',
+          ticks: 5,
+        });
+        c.axes();
+        c.grid({ color: 'dim' });
+        c.fn('sin', x => Math.sin(x), { color: 'danger', label: 'sin(x)', strokeW: 2 });
+        c.point('P', Math.PI / 2, 1, { color: 'accent', label: '(π/2,1)', size: 5 });
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 8. nice domain rounding
+  // ═══════════════════════════════════════════
+  {
+    name: 'nice — Domain Rounding',
+    desc: 'coords with nice:true rounds x:[-4.7,4.3] → [-5,5], y:[-2.8,3.1] → [-3,4]. Cleaner tick labels.',
+    width: 340, height: 260,
+    setup(s) {
+      s.render(() => {
+        // Without nice — awkward domain
+        const vp = s.math.viewport({
+          x: [-4.7, 4.3], y: [-2.8, 3.1],
+          nice: true,
+          ticks: 5,
+        });
+        vp.vector('v', [0, 0], [3, 2]).color('danger').strokeW(2).label('v');
+      });
+    },
+  },
+
+  // ═══════════════════════════════════════════
+  // 9. coords() center — explicit control
+  // ═══════════════════════════════════════════
+  {
+    name: 'coords() — Centered, Explicit',
+    desc: 'coords(id,"center",{...}) with manual axes/grid. Like viewport but you control when axes render.',
+    width: 340, height: 260,
+    setup(s) {
+      s.render(() => {
+        const c = s.math.coords('c', 'center', {
+          x: [-3, 3], y: [-2, 2],
+          margin: 0.1,
+          aspect: 'equal',
+          ticks: 4,
+          tickFormat: 'decimal',
+        });
+        c.axes({ arrow: 'both', color: 'dim' });
+        c.grid({ dash: '2,4', color: 'dim' });
+        c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
+        c.vector('u', [0, 0], [2, 1]).color('danger').strokeW(2).label('u');
+        c.circle('c', [0, 0], 1.5).color('accent').opacity(0.2);
+      });
+    },
+  },
+];
+
+const container = document.getElementById('sections');
+for (const sec of sections) {
+  const el = document.createElement('section');
+  const stageId = 'st' + Math.random().toString(36).slice(2, 8);
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="row"><div class="card"><div class="stage" id="${stageId}" style="width:${sec.width}px;height:${sec.height}px"></div></div></div>`;
+  container.appendChild(el);
+  const s = stage('#' + stageId, { width: sec.width, height: sec.height, theme: 'warm' });
+  sec.setup(s);
+}
+</script>
+</body>
+</html>

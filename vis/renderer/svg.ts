@@ -327,9 +327,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', svgColor(gd.stroke!));
         g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', svgColor('#fff')).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
       } else if (gd.subtype === 'grid') {
-        const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
-        for (let x = ox; x <= ox + w; x += sp) g.append('line').attr('x1', x).attr('y1', oy).attr('x2', x).attr('y2', oy + h).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
-        for (let y = oy; y <= oy + h; y += sp) g.append('line').attr('x1', ox).attr('y1', y).attr('x2', ox + w).attr('y2', y).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', gd.strokeW ?? 0.3);
+        drawGridLines(g, gd);
       } else if (gd.subtype === 'matrix') {
         const data = gd.data ?? [[0]];
         const rows = data.length, cols = data[0]?.length ?? 1;
@@ -370,6 +368,146 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       applyCommon(g, gd.opacity);
       return { group: g, text: null };
     }
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  GridLine — screen-space grid line generation
+//
+//  Core abstraction: a grid is an anchor point (coordinate origin)
+//  + two direction families. Each line is the intersection of a
+//  parametric line through the anchor with the grid's bounding
+//  rectangle (plus a small margin for visual bleed).
+//
+//  Anchor (ox, oy) = scr([0,0]) — the coordinate origin in screen px.
+//  Rectangle (gx, gy, w, h) = domain box in screen px.
+//  Directions (ix,iy) and (jx,jy) = basis vectors in screen px.
+// ══════════════════════════════════════════════════════════════
+
+type GridLine = { x1: number; y1: number; x2: number; y2: number; key: string };
+
+/** Clip a line through point P in direction D to the rectangle [rx, ry, rw, rh].
+ *  Returns the two intersection points, or null if the line misses the rect. */
+function clipLineToRect(
+  px: number, py: number, dx: number, dy: number,
+  rx: number, ry: number, rw: number, rh: number,
+): [number, number, number, number] | null {
+  // Margin so grid lines bleed slightly past the rect boundary
+  const M = 2;
+  const xMin = rx - M, yMin = ry - M;
+  const xMax = rx + rw + M, yMax = ry + rh + M;
+
+  // Compute t range for intersection with the expanded rectangle.
+  // Line: (px + t*dx, py + t*dy). Find t for each of the 4 edges.
+  let tMin = -Infinity, tMax = Infinity;
+
+  if (Math.abs(dx) > 1e-10) {
+    const t1 = (xMin - px) / dx, t2 = (xMax - px) / dx;
+    if (t1 > t2) { tMin = Math.max(tMin, t2); tMax = Math.min(tMax, t1); }
+    else { tMin = Math.max(tMin, t1); tMax = Math.min(tMax, t2); }
+  } else if (px < xMin || px > xMax) return null;
+
+  if (Math.abs(dy) > 1e-10) {
+    const t1 = (yMin - py) / dy, t2 = (yMax - py) / dy;
+    if (t1 > t2) { tMin = Math.max(tMin, t2); tMax = Math.min(tMax, t1); }
+    else { tMin = Math.max(tMin, t1); tMax = Math.min(tMax, t2); }
+  } else if (py < yMin || py > yMax) return null;
+
+  if (tMin > tMax) return null;
+
+  return [px + tMin * dx, py + tMin * dy, px + tMax * dx, py + tMax * dy];
+}
+
+function computeGridLines(gd: import('../../vis/types').GroupState): GridLine[] {
+  const ax = gd.ox ?? 0, ay = gd.oy ?? 0;  // anchor = scr([0,0])
+  const rx = gd.gx ?? 0, ry = gd.gy ?? 0;  // rectangle top-left
+  const rw = gd.w ?? 400, rh = gd.h ?? 300;
+
+  // Math → screen mapping (affine: scr(mx,my) = anchor + mx*i + my*j)
+  const ix = gd.ix ?? 0, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? 0;
+  const scr = (mx: number, my: number): [number, number] =>
+    [ax + mx * ix + my * jx, ay + mx * iy + my * jy];
+
+  // ── math-space mode (coords/viewport) ──
+  // Line endpoints are scr(mx, myMin/Max) → naturally bounded by the math
+  // domain's screen projection. No clipLineToRect needed — that would extend
+  // lines beyond where the crossing family exists, creating naked segments.
+  if (gd.mx0 !== undefined && gd.mx1 !== undefined && gd.my0 !== undefined && gd.my1 !== undefined) {
+    const step = gd.mStep ?? 1;
+    const lines: GridLine[] = [];
+    const toKey = (n: number) => Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(8)).toString();
+
+    for (let mx = gd.mx0; mx <= gd.mx1 + step * 0.5; mx += step) {
+      const [x1, y1] = scr(mx, gd.my0);
+      const [x2, y2] = scr(mx, gd.my1);
+      lines.push({ x1, y1, x2, y2, key: 'X' + toKey(mx) });
+    }
+    for (let my = gd.my0; my <= gd.my1 + step * 0.5; my += step) {
+      const [x1, y1] = scr(gd.mx0, my);
+      const [x2, y2] = scr(gd.mx1, my);
+      lines.push({ x1, y1, x2, y2, key: 'Y' + toKey(my) });
+    }
+    return lines;
+  }
+
+  // ── screen-space mode (standalone grid() API) ──
+  const sp = gd.sp ?? 40;
+  const iux = ix || 1, iuy = iy || 0, jux = jx || 0, juy = jy || -1;
+  const diag = Math.sqrt(rw * rw + rh * rh);
+  const kMax = Math.ceil(diag / sp) + 1;
+
+  function generateFamily(tag: string, lineDx: number, lineDy: number, perpDx: number, perpDy: number): GridLine[] {
+    const lines: GridLine[] = [];
+    const perpLen = Math.sqrt(perpDx * perpDx + perpDy * perpDy) || 1;
+    const pux = perpDx / perpLen, puy = perpDy / perpLen;
+    for (let k = -kMax; k <= kMax; k++) {
+      const s = k * sp;
+      const seg = clipLineToRect(ax + s * pux, ay + s * puy, lineDx, lineDy, rx, ry, rw, rh);
+      if (seg) lines.push({ x1: seg[0], y1: seg[1], x2: seg[2], y2: seg[3], key: tag + k });
+    }
+    return lines;
+  }
+
+  return [...generateFamily('I', iux, iuy, -iuy, iux), ...generateFamily('J', jux, juy, -jy, jux)];
+}
+
+function drawGridLines(g: E, gd: import('../../vis/types').GroupState, transition?: d3.Transition<d3.BaseType, unknown, null, undefined>) {
+  const data = computeGridLines(gd);
+  const stroke = svgColor(gd.stroke!);
+  const sw = gd.strokeW ?? 0.3;
+  const dash = gd.dash ?? null;
+
+  // D3 data join keyed by family:index — prevents cross-family matching
+  // when the number of lines in a family changes between frames.
+  const lines = g.selectAll<SVGLineElement, GridLine>('line').data(data, d => d.key);
+
+  if (transition) {
+    lines.exit().transition(transition).attr('opacity', 0).remove();
+  } else {
+    lines.exit().remove();
+  }
+
+  const enter = lines.enter().append('line')
+    .attr('x1', d => d.x1).attr('y1', d => d.y1)
+    .attr('x2', d => d.x2).attr('y2', d => d.y2)
+    .attr('stroke', stroke).attr('stroke-width', sw)
+    .attr('opacity', transition ? 0 : 1);
+  if (dash) enter.attr('stroke-dasharray', dash);
+
+  const merged = enter.merge(lines);
+  if (transition) {
+    merged.transition(transition)
+      .attr('x1', d => d.x1).attr('y1', d => d.y1)
+      .attr('x2', d => d.x2).attr('y2', d => d.y2)
+      .attr('stroke', stroke).attr('stroke-width', sw)
+      .attr('opacity', 1)
+      .attr('stroke-dasharray', dash ?? null);
+  } else {
+    merged
+      .attr('x1', d => d.x1).attr('y1', d => d.y1)
+      .attr('x2', d => d.x2).attr('y2', d => d.y2)
+      .attr('stroke', stroke).attr('stroke-width', sw)
+      .attr('stroke-dasharray', dash ?? null);
   }
 }
 
@@ -484,6 +622,10 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           }
         } else if (text) { text.text(''); }
         else { svg.select('text').text(''); }
+      } else if (gd.subtype === 'grid') {
+        // Grid: D3 data join with transition for smooth basis morphing
+        svg.interrupt();
+        drawGridLines(svg, gd, tr);
       }
       break;
     }
@@ -557,6 +699,8 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
           }
         } else if (text) { text.text(''); }
         else { svg.select('text').text(''); }
+      } else if (gd.subtype === 'grid') {
+        drawGridLines(svg, gd);
       }
       break;
     }

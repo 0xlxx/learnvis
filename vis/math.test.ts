@@ -495,7 +495,7 @@ describe('math viewport', () => {
 
   it('supports grid:false and axes:false', () => {
     fm.begin();
-    math.viewport({ x: [-3, 3], y: [-2, 2], grid: false, axes: false });
+    math.viewport({ x: [-3, 3], y: [-2, 2], showGrid: false, showAxes: false });
     fm.commit({ animate: false });
     expect(fm.entities.get('grid:vp-g')).toBeFalsy();
     expect(fm.entities.get('segment:vp-xax')).toBeFalsy();
@@ -529,7 +529,7 @@ describe('viewport rendering', () => {
 
   it('maps origin (0,0) to canvas center (≈250,≈200)', () => {
     fm.begin();
-    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], showGrid: false, showAxes: false });
     vp.point('test', 0, 0, { color: 'danger' });
     fm.commit({ animate: false });
     const e = fm.entities.get('point:test');
@@ -540,7 +540,7 @@ describe('viewport rendering', () => {
 
   it('maps (2,0) to the right of origin', () => {
     fm.begin();
-    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], showGrid: false, showAxes: false });
     vp.point('P', 2, 0, { color: 'danger' });
     fm.commit({ animate: false });
     const o = fm.entities.get('point:O');
@@ -550,7 +550,7 @@ describe('viewport rendering', () => {
 
   it('vector rotate(90, 0, 0) rotates around origin', () => {
     fm.begin();
-    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], showGrid: false, showAxes: false });
     const v = vp.vector('v', [0, 0], [2, 0], { color: 'danger' });
     v.rotate(90, 0, 0);
     fm.commit({ animate: false });
@@ -565,7 +565,7 @@ describe('viewport rendering', () => {
 
   it('basis scale maps from math units to pixels', () => {
     fm.begin();
-    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], grid: false, axes: false });
+    const vp = math.viewport({ x: [-5, 5], y: [-4, 4], showGrid: false, showAxes: false });
     vp.basis('B', [0, 0], { scale: 2 });
     fm.commit({ animate: false });
     const i = fm.entities.get('vector:B-i');

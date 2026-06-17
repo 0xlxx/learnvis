@@ -10,7 +10,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "build:cli": "npx tsdown cli.ts --format esm --outDir dist --clean false --minify false",
-    "dev:components": "tsdown && tsdown -w & vite",
+    "dev:components": "vite",
     "setup": "node scripts/postinstall.mjs"
   },
   "devDependencies": {

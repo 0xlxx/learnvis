@@ -4650,13 +4650,16 @@ function createMathRenderer(fm, ctx, palette) {
 	function grid(id, origin, opts = {}) {
 		const eid$14 = eid("grid", id);
 		const { stroke } = resolveColor(p, opts.color);
+		const w = opts.width ?? 400, h = opts.height ?? 300;
 		fm.declare(eid$14, {
 			type: "group",
 			subtype: "grid",
-			ox: origin[0],
-			oy: origin[1],
-			w: opts.width ?? 400,
-			h: opts.height ?? 300,
+			ox: origin[0] + w / 2,
+			oy: origin[1] + h / 2,
+			gx: origin[0],
+			gy: origin[1],
+			w,
+			h,
 			sp: opts.spacing ?? 40,
 			stroke,
 			strokeW: opts.strokeW ?? .3
@@ -4861,42 +4864,129 @@ function createMathRenderer(fm, ctx, palette) {
 			...mixOpacity(eid$19, fm)
 		};
 	}
-	function coords(id, origin, opts = {}) {
+	function autoGridStep(lo, hi, pxSize) {
+		const targetCount = Math.max(5, Math.min(14, Math.round(pxSize / 80)));
+		const raw = (hi - lo) / targetCount;
+		const exp = Math.floor(Math.log10(raw));
+		const f = raw / 10 ** exp;
+		let step = 10 ** exp;
+		if (f >= 5) step *= 5;
+		else if (f >= 2) step *= 2;
+		return step || 1;
+	}
+	function niceDomain(lo, hi) {
+		const span = hi - lo;
+		if (span === 0 || !isFinite(span)) return [lo - 1, hi + 1];
+		let step = 10 ** Math.floor(Math.log10(span / 10));
+		const m = span / 10 / step;
+		if (m > 5) step *= 5;
+		else if (m > 2) step *= 2;
+		if (step < Number.EPSILON) return [lo, hi];
+		return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
+	}
+	function makeTicks(lo, hi, count) {
+		const raw = (hi - lo) / count;
+		const exp = Math.floor(Math.log10(raw));
+		const f = raw / 10 ** exp;
+		let step;
+		if (f < 1.5) step = 10 ** exp;
+		else if (f < 3) step = 2 * 10 ** exp;
+		else if (f < 7) step = 5 * 10 ** exp;
+		else step = 10 * 10 ** exp;
+		const i0 = Math.ceil(lo / step);
+		const i1 = Math.floor(hi / step);
+		const vals = [];
+		for (let i = i0; i <= i1; i++) vals.push(i * step);
+		return vals;
+	}
+	function formatTick(n, fmt) {
+		if (typeof fmt === "function") return fmt(n);
+		if (fmt === "pi") {
+			const r = n / Math.PI;
+			if (Math.abs(r) < 1e-10) return "0";
+			if (Math.abs(r - 1) < 1e-10) return "π";
+			if (Math.abs(r + 1) < 1e-10) return "−π";
+			for (const d of [
+				2,
+				3,
+				4,
+				6
+			]) {
+				const num = Math.round(r * d);
+				if (Math.abs(r - num / d) < 1e-8) {
+					if (num === 1) return `π/${d}`;
+					if (num === -1) return `−π/${d}`;
+					if (d === 1) return `${num}π`;
+					return `${num}π/${d}`;
+				}
+			}
+			return `${r.toFixed(2)}π`;
+		}
+		if (Number.isInteger(n)) return `${n}`;
+		return parseFloat(n.toFixed(4)).toString();
+	}
+	function resolveTicks(axis, cfg, domain) {
+		const raw = axis === "x" ? cfg.xTicks ?? cfg.ticks : cfg.yTicks ?? cfg.ticks;
+		if (raw === void 0 || raw === false || raw === null) return null;
+		if (raw === true) return makeTicks(domain[0], domain[1], 5);
+		if (typeof raw === "number") return makeTicks(domain[0], domain[1], raw);
+		return raw;
+	}
+	function coords(id, origin, config = {}) {
 		const w = ctx.W, h = ctx.H;
 		const ox = origin === "center" ? w / 2 : origin[0] ?? w / 2;
 		const oy = origin === "center" ? h / 2 : origin[1] ?? h / 2;
-		const xLen = opts.xLen ?? w - 100, yLen = opts.yLen ?? h - 100;
-		const margin = opts.margin ?? 0;
-		let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
+		const xLen = w - 100, yLen = h - 100;
+		const margin = config.margin ?? 0;
+		let xd = config.x ?? [-5, 5], yd = config.y ?? [-5, 5];
+		if (config.nice) {
+			xd = niceDomain(xd[0], xd[1]);
+			yd = niceDomain(yd[0], yd[1]);
+		}
 		if (margin > 0) {
 			const xpad = (xd[1] - xd[0]) * margin / 2;
 			const ypad = (yd[1] - yd[0]) * margin / 2;
 			xd = [xd[0] - xpad, xd[1] + xpad];
 			yd = [yd[0] - ypad, yd[1] + ypad];
 		}
-		const scX = xLen / (xd[1] - xd[0]);
-		const scY = yLen / (yd[1] - yd[0]);
-		const sx = (x) => ox + (x - 0) * scX;
-		const sy = (y) => oy - (y - 0) * scY;
+		let scX = xLen / (xd[1] - xd[0]);
+		let scY = yLen / (yd[1] - yd[0]);
+		if (config.aspect === "equal") {
+			const sc = Math.min(scX, scY);
+			scX = sc;
+			scY = sc;
+		} else if (typeof config.aspect === "number") {
+			const avg = Math.sqrt(scX * scY);
+			scX = avg;
+			scY = avg * config.aspect;
+		}
+		const basis = config.basis ?? [[1, 0], [0, 1]];
+		const [ix, iy] = basis[0], [jx, jy] = basis[1];
+		const isx = ix * scX, isy = -iy * scY;
+		const jsx = jx * scX, jsy = -jy * scY;
+		const sx = (mx, my = 0) => ox + mx * isx + my * jsx;
+		const sy = (mx, my = 0) => oy + mx * isy + my * jsy;
 		const _pt = (x, y) => typeof x === "number" ? [x, y] : x;
+		const scr = ([mx, my]) => [sx(mx, my), sy(mx, my)];
 		function _wrap(b) {
 			const w = {};
 			for (const key of Object.keys(b)) {
-				const fn = b[key];
-				if (typeof fn !== "function") {
-					w[key] = fn;
+				const f = b[key];
+				if (typeof f !== "function") {
+					w[key] = f;
 					continue;
 				}
 				switch (key) {
 					case "rotate":
 						w[key] = function(a, cx, cy) {
-							fn.call(w, -a, sx(cx), sy(cy));
+							const [sx2, sy2] = scr([cx, cy]);
+							f.call(w, -a, sx2, sy2);
 							return w;
 						};
 						break;
 					case "translate":
 						w[key] = function(dx, dy) {
-							fn.call(w, dx * scX, -dy * scY);
+							f.call(w, dx * isx + dy * jsx, dx * isy + dy * jsy);
 							return w;
 						};
 						break;
@@ -4908,25 +4998,26 @@ function createMathRenderer(fm, ctx, palette) {
 							const sb = -b * scY / scX;
 							const sd = d;
 							const sty = oy - d * oy + b * ox * scY / scX - (ty ?? 0) * scY;
-							fn.call(w, sa, sb, sc_m, sd, stx, sty);
+							f.call(w, sa, sb, sc_m, sd, stx, sty);
 							return w;
 						};
 						break;
 					case "scale":
 						w[key] = function(sx2, sy2) {
-							fn.call(w, sx2, sy2 ?? sx2);
+							f.call(w, sx2, sy2 ?? sx2);
 							return w;
 						};
 						break;
 					case "moveTo":
-						w[key] = function(x, y) {
-							fn.call(w, sx(x), sy(y));
+						w[key] = function(mx, my) {
+							const [sx2, sy2] = scr([mx, my]);
+							f.call(w, sx2, sy2);
 							return w;
 						};
 						break;
 					default:
 						w[key] = function(...args) {
-							const r = fn.apply(w, args);
+							const r = f.apply(w, args);
 							return r === b ? w : r;
 						};
 						break;
@@ -4934,34 +5025,119 @@ function createMathRenderer(fm, ctx, palette) {
 			}
 			return w;
 		}
+		const cfgAxesDefaults = {
+			color: config.axisColor,
+			strokeW: config.axisStrokeW,
+			arrow: config.axisArrow,
+			ticks: config.ticks,
+			xTicks: config.xTicks,
+			yTicks: config.yTicks,
+			tickFormat: config.tickFormat,
+			tickSize: config.tickSize
+		};
+		const cfgGridDefaults = {
+			color: config.gridColor,
+			spacing: config.gridSpacing,
+			dash: config.gridDash
+		};
 		return {
-			mapX: sx,
-			mapY: sy,
+			mapX: (mx) => sx(mx, 0),
+			mapY: (my) => sy(0, my),
 			mapPt(mx, my) {
 				const [x, y] = _pt(mx, my);
-				return [sx(x), sy(y)];
+				return [sx(x, y), sy(x, y)];
 			},
 			axes(aOpts = {}) {
-				const x0 = sx(xd[0]), x1 = sx(xd[1]), y0 = sy(yd[0]), y1$ = sy(yd[1]);
-				const zx = sx(0), zy = sy(0);
-				const color = aOpts.color ?? "dim";
-				segment(id + "-xax", [x0, zy], [x1, zy]).color(color).strokeW(1.4);
-				segment(id + "-yax", [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
+				const o = {
+					...cfgAxesDefaults,
+					...aOpts
+				};
+				const color = o.color ?? "dim", sw = o.strokeW ?? 1.4;
+				const tickSize = o.tickSize ?? 5;
+				const fmt = o.tickFormat ?? "decimal";
+				const x0s = scr([xd[0], 0]), x1s = scr([xd[1], 0]);
+				const y0s = scr([0, yd[0]]), y1s = scr([0, yd[1]]);
+				segment(id + "-xax", x0s, x1s, {
+					color,
+					strokeW: sw
+				});
+				segment(id + "-yax", y0s, y1s, {
+					color,
+					strokeW: sw
+				});
+				const xTicks = resolveTicks("x", o, xd);
+				const yTicks = resolveTicks("y", o, yd);
+				scr([0, 0]);
+				if (xTicks) for (const v of xTicks) {
+					const ts = scr([v, 0]);
+					segment(id + `-xt${v}`, [ts[0], ts[1] - tickSize], [ts[0], ts[1] + tickSize], {
+						color,
+						strokeW: .8
+					});
+					point(id + `-xtl${v}`, [ts[0], ts[1] + tickSize + 12], {
+						color,
+						label: formatTick(v, fmt),
+						size: 0,
+						fill: "transparent"
+					});
+				}
+				if (yTicks) for (const v of yTicks) {
+					const ts = scr([0, v]);
+					segment(id + `-yt${v}`, [ts[0] - tickSize, ts[1]], [ts[0] + tickSize, ts[1]], {
+						color,
+						strokeW: .8
+					});
+					point(id + `-ytl${v}`, [ts[0] - tickSize - 8, ts[1]], {
+						color,
+						label: formatTick(v, fmt),
+						size: 0,
+						fill: "transparent",
+						labelPlace: "left"
+					});
+				}
 			},
 			grid(gOpts = {}) {
-				grid(id + "-g", [sx(xd[0]), sy(yd[1])], {
-					width: xLen,
-					height: yLen,
-					spacing: gOpts.spacing ?? 40,
-					color: gOpts.color
+				const o = {
+					...cfgGridDefaults,
+					...gOpts
+				};
+				const color = o.color ?? "dim";
+				const gid = eid("grid", id + "-g");
+				const { stroke } = resolveColor(p, color);
+				const step = o.spacing === "auto" || o.spacing === void 0 ? Math.min(autoGridStep(xd[0], xd[1], xLen), autoGridStep(yd[0], yd[1], yLen)) : o.spacing;
+				const anchor = scr([0, 0]);
+				const M = (w - xLen) / 2;
+				const rectX = M, rectY = M;
+				fm.declare(gid, {
+					type: "group",
+					subtype: "grid",
+					ox: anchor[0],
+					oy: anchor[1],
+					gx: rectX,
+					gy: rectY,
+					w: xLen,
+					h: yLen,
+					mx0: xd[0],
+					mx1: xd[1],
+					my0: yd[0],
+					my1: yd[1],
+					mStep: step,
+					stroke,
+					strokeW: o.strokeW ?? .3,
+					dash: o.dash,
+					ix: isx,
+					iy: isy,
+					jx: jsx,
+					jy: jsy
 				});
 			},
 			fn(fid, f, fOpts = {}) {
+				const [px, py] = scr([xd[0], yd[1]]);
 				return fn(fid, f, {
 					domain: fOpts.domain ?? xd,
 					range: fOpts.range ?? yd,
-					x: sx(xd[0]),
-					y: sy(yd[1]),
+					x: px,
+					y: py,
 					width: xLen,
 					height: yLen,
 					color: fOpts.color,
@@ -4973,11 +5149,12 @@ function createMathRenderer(fm, ctx, palette) {
 				});
 			},
 			fillFn(fid, f, fOpts = {}) {
+				const [px, py] = scr([xd[0], yd[1]]);
 				return fillFn(fid, f, {
 					domain: xd,
 					range: fOpts.range ?? yd,
-					x: sx(xd[0]),
-					y: sy(yd[1]),
+					x: px,
+					y: py,
 					width: xLen,
 					height: yLen,
 					color: fOpts.color,
@@ -4987,57 +5164,119 @@ function createMathRenderer(fm, ctx, palette) {
 			},
 			point(pid, x, y, pOpts = {}) {
 				const [mx, my] = _pt(x, y);
-				return point(pid, [sx(mx), sy(my)], pOpts);
+				return point(pid, scr([mx, my]), pOpts);
 			},
 			vector(vid, fx, fy, tx, ty, vOpts = {}) {
 				const from = _pt(fx, typeof fy === "number" ? fy : void 0);
 				const to = _pt(typeof fy === "number" ? tx : fy, typeof tx === "number" ? ty : void 0);
 				const opts = (typeof tx === "object" ? tx : typeof ty === "object" ? ty : vOpts) || {};
-				return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], opts));
+				return _wrap(vector(vid, scr(from), scr(to), opts));
 			},
 			segment(sid, ax, ay, bx, by, sOpts = {}) {
 				const a = _pt(ax, typeof ay === "number" ? ay : void 0);
 				const b = _pt(typeof ay === "number" ? bx : ay, typeof bx === "number" ? by : void 0);
 				const opts = (typeof bx === "object" ? bx : typeof by === "object" ? by : sOpts) || {};
-				return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], opts);
+				return segment(sid, scr(a), scr(b), opts);
 			},
 			polyline(plid, pts, plOpts = {}) {
-				return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)]), plOpts);
+				return polyline(plid, pts.map((p) => scr(p)), plOpts);
 			},
 			circle(cid, center, radius, cOpts = {}) {
 				const c = _pt(center);
-				const cx = sx(c[0]), cy = sy(c[1]);
-				const r = Math.abs(sx(c[0] + radius) - cx);
-				return circle(cid, [cx, cy], r, cOpts);
+				const cs = scr(c);
+				return circle(cid, cs, Math.abs(sx(c[0] + radius, c[1]) - cs[0]), cOpts);
 			},
 			polygon(pgid, vertices, pgOpts = {}) {
-				return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)]), pgOpts));
+				return _wrap(polygon(pgid, vertices.map((p) => scr(p)), pgOpts));
 			},
 			angle(aid, vertex, ray1, ray2, aOpts = {}) {
 				const v = _pt(vertex), r1 = _pt(ray1), r2 = _pt(ray2);
-				const size = aOpts.size !== void 0 ? sx(0) - sx(-aOpts.size) : void 0;
-				return angle(aid, [sx(v[0]), sy(v[1])], [sx(r1[0]), sy(r1[1])], [sx(r2[0]), sy(r2[1])], {
+				const size = aOpts.size !== void 0 ? scr([0, 0])[0] - scr([-aOpts.size, 0])[0] : void 0;
+				return angle(aid, scr(v), scr(r1), scr(r2), {
 					...aOpts,
 					size
 				});
 			},
 			projection(prid, pt, lf, lt, prOpts = {}) {
 				const p = _pt(pt), l = _pt(lf), t = _pt(lt);
-				return projection(prid, [sx(p[0]), sy(p[1])], [sx(l[0]), sy(l[1])], [sx(t[0]), sy(t[1])], prOpts);
+				return projection(prid, scr(p), scr(l), scr(t), prOpts);
 			},
 			basis(bid, borigin, bOpts = {}) {
 				const o = _pt(borigin);
-				const pixelScale = typeof bOpts.scale === "number" ? bOpts.scale * scX : void 0;
-				return basisPrimitive(bid, [sx(o[0]), sy(o[1])], {
-					...bOpts,
-					scale: pixelScale
+				const scale = typeof bOpts.scale === "number" ? bOpts.scale : 1;
+				const os = scr(o);
+				const iEnd = scr([o[0] + scale, o[1]]);
+				const jEnd = scr([o[0], o[1] + scale]);
+				const iStroke = bOpts.iColor ? resolveColor(p, bOpts.iColor).stroke : p.accent.fg;
+				const jStroke = bOpts.jColor ? resolveColor(p, bOpts.jColor).stroke : p.danger.fg;
+				const iLabel = bOpts.iLabel ?? "î";
+				const jLabel = bOpts.jLabel ?? "ĵ";
+				const sw = bOpts.strokeW ?? 2;
+				const iId = eid("vector", bid + "-i");
+				const jId = eid("vector", bid + "-j");
+				fm.declare(iId, {
+					type: "line",
+					marker: "arrow",
+					from: os,
+					to: iEnd,
+					stroke: iStroke,
+					strokeW: sw,
+					label: iLabel,
+					labelPlace: "below",
+					labelGap: 10
 				});
+				fm.declare(jId, {
+					type: "line",
+					marker: "arrow",
+					from: os,
+					to: jEnd,
+					stroke: jStroke,
+					strokeW: sw,
+					label: jLabel,
+					labelPlace: "left",
+					labelGap: 10
+				});
+				return {
+					color(c) {
+						const r = resolveColor(p, c);
+						fm.patch(iId, { stroke: r.stroke });
+						fm.patch(jId, { stroke: r.stroke });
+						return this;
+					},
+					iColor(c) {
+						const r = resolveColor(p, c);
+						fm.patch(iId, { stroke: r.stroke });
+						return this;
+					},
+					jColor(c) {
+						const r = resolveColor(p, c);
+						fm.patch(jId, { stroke: r.stroke });
+						return this;
+					},
+					scale(s) {
+						const ns = scr([o[0] + s, o[1]]);
+						fm.patch(iId, { to: ns });
+						const nj = scr([o[0], o[1] + s]);
+						fm.patch(jId, { to: nj });
+						return this;
+					},
+					strokeW(n) {
+						fm.patch(iId, { strokeW: n });
+						fm.patch(jId, { strokeW: n });
+						return this;
+					},
+					opacity(v) {
+						fm.patch(iId, { opacity: v });
+						fm.patch(jId, { opacity: v });
+						return this;
+					}
+				};
 			},
 			matrix(mid, data, mOpts = {}) {
 				return matrixPrimitive(mid, data, {
 					...mOpts,
-					x: mOpts.x !== void 0 ? sx(mOpts.x) : void 0,
-					y: mOpts.y !== void 0 ? sy(mOpts.y) : void 0
+					x: mOpts.x !== void 0 ? scr([mOpts.x, 0])[0] : void 0,
+					y: mOpts.y !== void 0 ? scr([0, mOpts.y])[1] : void 0
 				});
 			},
 			rect(rid, cx, cy, w, h) {
@@ -5047,35 +5286,38 @@ function createMathRenderer(fm, ctx, palette) {
 					[cx + hw, cy - hh],
 					[cx + hw, cy + hh],
 					[cx - hw, cy + hh]
-				].map(([x, y]) => [sx(x), sy(y)]));
+				].map((p) => scr(p)));
 			},
 			ngon(nid, cx, cy, r, sides) {
-				return _wrap(ngon(nid, sx(cx), sy(cy), r * scX, sides));
+				const c = scr([cx, cy]);
+				return _wrap(ngon(nid, c[0], c[1], r * scX, sides));
 			},
 			ellipse(eid$1, cx, cy, rx, ry, n) {
-				return _wrap(ellipse(eid$1, sx(cx), sy(cy), rx * scX, ry * scY, n));
+				const c = scr([cx, cy]);
+				return _wrap(ellipse(eid$1, c[0], c[1], rx * scX, ry * scY, n));
 			}
 		};
 	}
-	function viewport(opts = {}) {
-		const xDom = opts.x ?? [-6, 6];
-		const yDom = opts.y ?? [-4, 4];
-		const margin = opts.margin ?? .15;
-		const showGrid = opts.grid !== false;
-		const showAxes = opts.axes !== false;
-		const c = coords("vp", "center", {
-			xDomain: xDom,
-			yDomain: yDom,
-			margin,
+	function viewport(config = {}) {
+		const cfg = {
+			x: [-6, 6],
+			y: [-4, 4],
+			margin: .15,
+			nice: true,
+			showAxes: true,
+			showGrid: true,
+			showOrigin: true,
 			xLabel: "x",
-			yLabel: "y"
-		});
-		if (showAxes) c.axes();
-		if (showGrid) c.grid({
-			spacing: 40,
+			yLabel: "y",
+			...config
+		};
+		const c = coords("vp", "center", cfg);
+		if (cfg.showAxes) c.axes();
+		if (cfg.showGrid) c.grid(cfg.gridSpacing !== void 0 || cfg.gridDash !== void 0 || cfg.gridColor !== void 0 ? {} : {
+			spacing: "auto",
 			color: "dim"
 		});
-		c.point("O", 0, 0, {
+		if (cfg.showOrigin) c.point("O", 0, 0, {
 			color: "primary",
 			label: "O",
 			size: 5
@@ -5951,11 +6193,8 @@ function drawEntity(ctx, id, d, markerCache) {
 				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
 				g.append("polygon").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", svgColor(gd.stroke));
 				g.append("circle").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", svgColor("#fff")).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
-			} else if (gd.subtype === "grid") {
-				const ox = gd.ox ?? 0, oy = gd.oy ?? 0, w = gd.w ?? 400, h = gd.h ?? 300, sp = gd.sp ?? 40;
-				for (let x = ox; x <= ox + w; x += sp) g.append("line").attr("x1", x).attr("y1", oy).attr("x2", x).attr("y2", oy + h).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
-				for (let y = oy; y <= oy + h; y += sp) g.append("line").attr("x1", ox).attr("y1", y).attr("x2", ox + w).attr("y2", y).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", gd.strokeW ?? .3);
-			} else if (gd.subtype === "matrix") {
+			} else if (gd.subtype === "grid") drawGridLines(g, gd);
+			else if (gd.subtype === "matrix") {
 				const data = gd.data ?? [[0]];
 				const rows = data.length, cols = data[0]?.length ?? 1;
 				const x = gd.x ?? 0, y = gd.y ?? 0;
@@ -5976,6 +6215,112 @@ function drawEntity(ctx, id, d, markerCache) {
 			};
 		}
 	}
+}
+/** Clip a line through point P in direction D to the rectangle [rx, ry, rw, rh].
+*  Returns the two intersection points, or null if the line misses the rect. */
+function clipLineToRect(px, py, dx, dy, rx, ry, rw, rh) {
+	const M = 2;
+	const xMin = rx - M, yMin = ry - M;
+	const xMax = rx + rw + M, yMax = ry + rh + M;
+	let tMin = -Infinity, tMax = Infinity;
+	if (Math.abs(dx) > 1e-10) {
+		const t1 = (xMin - px) / dx, t2 = (xMax - px) / dx;
+		if (t1 > t2) {
+			tMin = Math.max(tMin, t2);
+			tMax = Math.min(tMax, t1);
+		} else {
+			tMin = Math.max(tMin, t1);
+			tMax = Math.min(tMax, t2);
+		}
+	} else if (px < xMin || px > xMax) return null;
+	if (Math.abs(dy) > 1e-10) {
+		const t1 = (yMin - py) / dy, t2 = (yMax - py) / dy;
+		if (t1 > t2) {
+			tMin = Math.max(tMin, t2);
+			tMax = Math.min(tMax, t1);
+		} else {
+			tMin = Math.max(tMin, t1);
+			tMax = Math.min(tMax, t2);
+		}
+	} else if (py < yMin || py > yMax) return null;
+	if (tMin > tMax) return null;
+	return [
+		px + tMin * dx,
+		py + tMin * dy,
+		px + tMax * dx,
+		py + tMax * dy
+	];
+}
+function computeGridLines(gd) {
+	const ax = gd.ox ?? 0, ay = gd.oy ?? 0;
+	const rx = gd.gx ?? 0, ry = gd.gy ?? 0;
+	const rw = gd.w ?? 400, rh = gd.h ?? 300;
+	const ix = gd.ix ?? 0, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? 0;
+	const scr = (mx, my) => [ax + mx * ix + my * jx, ay + mx * iy + my * jy];
+	if (gd.mx0 !== void 0 && gd.mx1 !== void 0 && gd.my0 !== void 0 && gd.my1 !== void 0) {
+		const step = gd.mStep ?? 1;
+		const lines = [];
+		const toKey = (n) => Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(8)).toString();
+		for (let mx = gd.mx0; mx <= gd.mx1 + step * .5; mx += step) {
+			const [x1, y1] = scr(mx, gd.my0);
+			const [x2, y2] = scr(mx, gd.my1);
+			lines.push({
+				x1,
+				y1,
+				x2,
+				y2,
+				key: "X" + toKey(mx)
+			});
+		}
+		for (let my = gd.my0; my <= gd.my1 + step * .5; my += step) {
+			const [x1, y1] = scr(gd.mx0, my);
+			const [x2, y2] = scr(gd.mx1, my);
+			lines.push({
+				x1,
+				y1,
+				x2,
+				y2,
+				key: "Y" + toKey(my)
+			});
+		}
+		return lines;
+	}
+	const sp = gd.sp ?? 40;
+	const iux = ix || 1, iuy = iy || 0, jux = jx || 0, juy = jy || -1;
+	const diag = Math.sqrt(rw * rw + rh * rh);
+	const kMax = Math.ceil(diag / sp) + 1;
+	function generateFamily(tag, lineDx, lineDy, perpDx, perpDy) {
+		const lines = [];
+		const perpLen = Math.sqrt(perpDx * perpDx + perpDy * perpDy) || 1;
+		const pux = perpDx / perpLen, puy = perpDy / perpLen;
+		for (let k = -kMax; k <= kMax; k++) {
+			const s = k * sp;
+			const seg = clipLineToRect(ax + s * pux, ay + s * puy, lineDx, lineDy, rx, ry, rw, rh);
+			if (seg) lines.push({
+				x1: seg[0],
+				y1: seg[1],
+				x2: seg[2],
+				y2: seg[3],
+				key: tag + k
+			});
+		}
+		return lines;
+	}
+	return [...generateFamily("I", iux, iuy, -iuy, iux), ...generateFamily("J", jux, juy, -jy, jux)];
+}
+function drawGridLines(g, gd, transition) {
+	const data = computeGridLines(gd);
+	const stroke = svgColor(gd.stroke);
+	const sw = gd.strokeW ?? .3;
+	const dash = gd.dash ?? null;
+	const lines = g.selectAll("line").data(data, (d) => d.key);
+	if (transition) lines.exit().transition(transition).attr("opacity", 0).remove();
+	else lines.exit().remove();
+	const enter = lines.enter().append("line").attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", transition ? 0 : 1);
+	if (dash) enter.attr("stroke-dasharray", dash);
+	const merged = enter.merge(lines);
+	if (transition) merged.transition(transition).attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", 1).attr("stroke-dasharray", dash ?? null);
+	else merged.attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("stroke-dasharray", dash ?? null);
 }
 function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoot) {
 	switch (newState.type) {
@@ -6048,6 +6393,9 @@ function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoo
 					}
 				} else if (text) text.text("");
 				else svg.select("text").text("");
+			} else if (gd.subtype === "grid") {
+				svg.interrupt();
+				drawGridLines(svg, gd, tr);
 			}
 			break;
 		}
@@ -6097,7 +6445,7 @@ function updateEntityImmediate(svg, text, d) {
 					}
 				} else if (text) text.text("");
 				else svg.select("text").text("");
-			}
+			} else if (gd.subtype === "grid") drawGridLines(svg, gd);
 			break;
 		}
 	}

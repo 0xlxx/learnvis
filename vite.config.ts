@@ -1,17 +1,21 @@
 import { defineConfig } from 'vite';
+import path from 'node:path';
 
-// Serve project root as static site for component gallery development.
-// dist/learnvis.mjs is pre-built by tsdown — Vite just serves it, no bundling needed.
+// ── learnvis dev workflow ──────────────────────────────────────
+// HTML files import { stage } from 'learnvis'
+// Vite resolves 'learnvis' → vis/index.ts (TypeScript source)
+// → zero pre-build, zero dist cache, true HMR
+//
+// tsdown is only for production (npm publish / CDN / CLI).
+// ───────────────────────────────────────────────────────────────
+
 export default defineConfig({
-  server: {
-    open: '/components/',
-    watch: {
-      // Only reload on component changes, not on dist rebuilds (tsdown handles that)
-      ignored: ['**/dist/**'],
+  resolve: {
+    alias: {
+      learnvis: path.resolve(__dirname, 'vis/index.ts'),
     },
   },
-  // Disable dependency pre-bundling — dist/learnvis.mjs is self-contained
-  optimizeDeps: {
-    exclude: ['learnvis'],
+  server: {
+    open: '/components/',
   },
 });

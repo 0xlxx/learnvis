@@ -83,7 +83,7 @@ npx vite
 
 请在设计不同可视化需求时，加载对应的详细 API 参考文档：
 - **[控制流与动画 (api-controlflow.md)](references/api-controlflow.md)**: 了解 `render` 单帧渲染、`steps` 步骤动画控制、`Card` 容器封装。
-- **[数学几何原语 (api-math.md)](references/api-math.md)**: 了解 `point` 点、`vector` 向量、`circle` 圆、投影、各种多边形、以及 `fn` 连续函数图像的绘制。
+- **[数学几何原语 (api-math.md)](references/api-math.md)**: 了解 `viewport`/`coords` 坐标系、`point` 点、`vector` 向量、`circle` 圆、投影、各种多边形、以及 `fn` 连续函数图像的绘制。Basis 基向量变换（scale/rotate/shear）。
 - **[图论拓扑与结构原语 (api-graph.md)](references/api-graph.md)**: 了解 `vertex` 顶点、`edge` 边、`block` 容器块、`array` 数组序列，以及内置的力导向布局 `force`、环形布局 `circular` 和背景 `layers` 分层声明的使用。
 - **[主题与色彩配置 (theme.md)](references/theme.md)**: 了解内置主题、CSS 变量自定义覆盖、语义色 Token 体系。
 

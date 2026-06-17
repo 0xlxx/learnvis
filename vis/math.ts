@@ -39,8 +39,8 @@ export interface MathAPI {
   projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: { color?: string; dash?: string; pointColor?: string }): MathProjection;
   fill(id: string, pts: Vec2[], opts?: { color?: string; opacity?: number }): MathFill;
   fillFn(id: string, f: (x: number) => number, opts?: { domain?: [number, number]; range?: [number, number]; x?: number; y?: number; width?: number; height?: number; samples?: number; color?: string; opacity?: number; baseline?: number }): MathFill;
-  coords(id: string, origin: Vec2 | 'center', opts?: CoordsOpts): MathCoords;
-  viewport(opts?: ViewportOpts): MathCoords;
+  coords(id: string, origin: Vec2 | 'center', config?: CoordsConfig): MathCoords;
+  viewport(config?: CoordsConfig): MathCoords;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   grid(id: string, origin: Vec2, opts?: GridOpts): void;
   axes(id: string, origin: Vec2, opts?: AxesOpts): void;
@@ -183,27 +183,68 @@ interface FnOpts {
   color?: string; label?: string; strokeW?: number; dash?: string; opacity?: number;
 }
 
-interface GridOpts { width?: number; height?: number; spacing?: number; color?: string; strokeW?: number }
+interface GridOpts { width?: number; height?: number; spacing?: number; color?: string; strokeW?: number; dash?: string }
 interface AxesOpts { xLen?: number; yLen?: number; xLabel?: string; yLabel?: string; color?: string; strokeW?: number }
 
-interface CoordsOpts {
-  xLen?: number; yLen?: number;
-  xDomain?: [number, number]; yDomain?: [number, number];
-  xLabel?: string; yLabel?: string;
+// ── Coordinate system config (shared by coords() and viewport()) ──
+
+interface CoordsConfig {
+  // Domain
+  x?: [number, number]; y?: [number, number];
+  /** Domain expansion ratio. 0.15 = add 7.5% padding on each side. Default: viewport 0.15, coords 0 */
   margin?: number;
+  /** Round domain bounds to nice values. Default: viewport true, coords false */
+  nice?: boolean;
+  /** Pixel ratio y/x. 'auto'=independent scaling | 'equal'=1:1 | number=custom */
+  aspect?: 'auto' | 'equal' | number;
+  /** Basis vectors [i, j]. Default [[1,0],[0,1]]. Sets the coordinate space — grid lines follow basis directions, axes align to basis. */
+  basis?: [Vec2, Vec2];
+  // Labels
+  xLabel?: string; yLabel?: string;
+  // Visibility (viewport defaults all true; coords defaults all false)
+  showAxes?: boolean; showGrid?: boolean; showOrigin?: boolean;
+  // Ticks
+  /** Tick count/values for both axes. true=auto | number=approx count | number[]=exact positions. Default: no ticks. */
+  ticks?: boolean | number | number[];
+  /** Per-axis tick override */
+  xTicks?: number | number[]; yTicks?: number | number[];
+  /** Tick label format. 'decimal'=numbers | 'pi'=π fractions | custom function */
+  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
+  /** Tick mark length in px. Default 5. */
+  tickSize?: number;
+  // Axis appearance
+  /** Axis arrow direction. Default 'none'. */
+  axisArrow?: 'none' | 'positive' | 'both';
+  axisColor?: string;
+  axisStrokeW?: number;
+  // Grid appearance
+  /** Grid line spacing in px, or 'auto' to adapt to domain. Default 40. */
+  gridSpacing?: number | 'auto';
+  /** Dash pattern e.g. '4,4'. Default solid. */
+  gridDash?: string;
+  gridColor?: string;
 }
 
-interface ViewportOpts {
-  x?: [number, number]; y?: [number, number];
-  margin?: number;
-  grid?: boolean;
-  axes?: boolean;
-  theme?: string;
+// ── Per-call render opts for axes() / grid() methods ──
+
+interface AxesRenderOpts {
+  color?: string; strokeW?: number;
+  arrow?: 'none' | 'positive' | 'both';
+  ticks?: boolean | number | number[];
+  xTicks?: number | number[]; yTicks?: number | number[];
+  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
+  tickSize?: number;
+}
+
+interface GridRenderOpts {
+  color?: string; strokeW?: number;
+  spacing?: number | 'auto';
+  dash?: string;
 }
 
 export interface MathCoords {
-  axes(opts?: { color?: string; strokeW?: number }): void;
-  grid(opts?: { spacing?: number; color?: string }): void;
+  axes(opts?: AxesRenderOpts): void;
+  grid(opts?: GridRenderOpts): void;
   fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
   fillFn(id: string, f: (x: number) => number, opts?: { color?: string; opacity?: number; baseline?: number; range?: [number, number] }): MathFill;
   point(id: string, x: number | Vec2, y?: number, opts?: Record<string, any>): MathPoint;
@@ -421,10 +462,12 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
   function grid(id: string, origin: Vec2, opts: GridOpts = {}) {
     const eid = mkId('grid', id);
     const { stroke } = resolveColor(p, opts.color);
+    const w = opts.width ?? 400, h = opts.height ?? 300;
     fm.declare(eid, {
       type: 'group', subtype: 'grid',
-      ox: origin[0], oy: origin[1],
-      w: opts.width ?? 400, h: opts.height ?? 300,
+      ox: origin[0] + w / 2, oy: origin[1] + h / 2,  // anchor = center
+      gx: origin[0], gy: origin[1],                    // rect top-left
+      w, h,
       sp: opts.spacing ?? 40,
       stroke: stroke, strokeW: opts.strokeW ?? 0.3,
     });
@@ -559,170 +602,363 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
     return { ...mixFill(eid, fm, p), ...mixOpacity(eid, fm) } as unknown as MathFill;
   }
 
-  function coords(id: string, origin: Vec2 | 'center', opts: CoordsOpts = {}): MathCoords {
+  // ── auto grid step (math-space) ──
+  // Adapts target line count to canvas pixel size — ~80px between lines
+  function autoGridStep(lo: number, hi: number, pxSize: number): number {
+    const targetCount = Math.max(5, Math.min(14, Math.round(pxSize / 80)));
+    const raw = (hi - lo) / targetCount;
+    const exp = Math.floor(Math.log10(raw));
+    const f = raw / 10 ** exp;
+    let step = 10 ** exp;
+    if (f >= 5) step *= 5;
+    else if (f >= 2) step *= 2;
+    return step || 1;
+  }
+
+  // ── nice rounding helper ──
+  function niceDomain(lo: number, hi: number): [number, number] {
+    const span = hi - lo;
+    if (span === 0 || !isFinite(span)) return [lo - 1, hi + 1];
+    let step = 10 ** Math.floor(Math.log10(span / 10));
+    const m = span / 10 / step;
+    if (m > 5) step *= 5;
+    else if (m > 2) step *= 2;
+    // If step is 0 (very small span), don't divide by zero
+    if (step < Number.EPSILON) return [lo, hi];
+    return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
+  }
+
+  // ── tick value generation ──
+  function makeTicks(lo: number, hi: number, count: number): number[] {
+    const span = hi - lo;
+    // Round step to 1, 2, or 5 in the appropriate decade
+    const raw = span / count;
+    const exp = Math.floor(Math.log10(raw));
+    const f = raw / 10 ** exp;
+    let step: number;
+    if (f < 1.5) step = 10 ** exp;
+    else if (f < 3) step = 2 * 10 ** exp;
+    else if (f < 7) step = 5 * 10 ** exp;
+    else step = 10 * 10 ** exp;
+    const i0 = Math.ceil(lo / step);
+    const i1 = Math.floor(hi / step);
+    const vals: number[] = [];
+    for (let i = i0; i <= i1; i++) vals.push(i * step);
+    return vals;
+  }
+
+  function formatTick(n: number, fmt: 'decimal' | 'pi' | ((n: number) => string)): string {
+    if (typeof fmt === 'function') return fmt(n);
+    if (fmt === 'pi') {
+      const r = n / Math.PI;
+      if (Math.abs(r) < 1e-10) return '0';
+      if (Math.abs(r - 1) < 1e-10) return 'π';
+      if (Math.abs(r + 1) < 1e-10) return '−π';
+      // rational approximation up to denominator 6
+      for (const d of [2, 3, 4, 6]) {
+        const num = Math.round(r * d);
+        if (Math.abs(r - num / d) < 1e-8) {
+          if (num === 1) return `π/${d}`;
+          if (num === -1) return `−π/${d}`;
+          if (d === 1) return `${num}π`;
+          return `${num}π/${d}`;
+        }
+      }
+      return `${r.toFixed(2)}π`;
+    }
+    // decimal
+    if (Number.isInteger(n)) return `${n}`;
+    return parseFloat(n.toFixed(4)).toString();
+  }
+
+  function resolveTicks(
+    axis: 'x' | 'y',
+    cfg: AxesRenderOpts,
+    domain: [number, number],
+  ): number[] | null {
+    // Per-axis override first, then shared ticks
+    const raw = axis === 'x' ? (cfg.xTicks ?? cfg.ticks) : (cfg.yTicks ?? cfg.ticks);
+    if (raw === undefined || raw === false || raw === null) return null;
+    if (raw === true) return makeTicks(domain[0], domain[1], 5);
+    if (typeof raw === 'number') return makeTicks(domain[0], domain[1], raw);
+    return raw; // number[]
+  }
+
+  function coords(id: string, origin: Vec2 | 'center', config: CoordsConfig = {}): MathCoords {
     // Resolve origin: 'center' → canvas center
     const w = ctx.W, h = ctx.H;
     const ox = origin === 'center' ? w / 2 : (origin[0] ?? w / 2);
     const oy = origin === 'center' ? h / 2 : (origin[1] ?? h / 2);
-    const xLen = opts.xLen ?? (w - 100), yLen = opts.yLen ?? (h - 100);
-    const margin = opts.margin ?? 0;
-    let xd = opts.xDomain ?? [-5, 5], yd = opts.yDomain ?? [-5, 5];
+    // Auto-size: use most of the canvas
+    const xLen = w - 100, yLen = h - 100;
+    const margin = config.margin ?? 0;
+    let xd = config.x ?? [-5, 5], yd = config.y ?? [-5, 5];
+    if (config.nice) { xd = niceDomain(xd[0], xd[1]); yd = niceDomain(yd[0], yd[1]); }
     if (margin > 0) {
       const xpad = (xd[1] - xd[0]) * margin / 2;
       const ypad = (yd[1] - yd[0]) * margin / 2;
       xd = [xd[0] - xpad, xd[1] + xpad];
       yd = [yd[0] - ypad, yd[1] + ypad];
     }
-    const scX = xLen / (xd[1] - xd[0]);
-    const scY = yLen / (yd[1] - yd[0]);
-    const sx = (x: number) => ox + (x - 0) * scX;
-    const sy = (y: number) => oy - (y - 0) * scY;
-    const mapPt = (x: number, y: number): Vec2 => [sx(x), sy(y)];
+    // Scales (math-units → pixels)
+    let scX = xLen / (xd[1] - xd[0]);
+    let scY = yLen / (yd[1] - yd[0]);
+    // Aspect ratio
+    if (config.aspect === 'equal') {
+      const sc = Math.min(scX, scY);
+      scX = sc; scY = sc;
+    } else if (typeof config.aspect === 'number') {
+      // aspect = y-pixels-per-unit / x-pixels-per-unit
+      const avg = Math.sqrt(scX * scY);
+      scX = avg; scY = avg * config.aspect;
+    }
+    // Basis: default standard basis [[1,0],[0,1]]
+    const basis = config.basis ?? ([[1, 0], [0, 1]] as [Vec2, Vec2]);
+    const [ix, iy] = basis[0], [jx, jy] = basis[1];
+    // Screen-space basis vectors: i_screen = [ix*scX, -iy*scY], j_screen = [jx*scX, -jy*scY]
+    const isx = ix * scX, isy = -iy * scY;
+    const jsx = jx * scX, jsy = -jy * scY;
+    // Math → screen: screen = origin + mx * i_screen + my * j_screen
+    const sx = (mx: number, my = 0) => ox + mx * isx + my * jsx;
+    const sy = (mx: number, my = 0) => oy + mx * isy + my * jsy;
+    const mapPt = (mx: number, my: number): Vec2 => [sx(mx, my), sy(mx, my)];
     // Normalise position argument: _pt(3, 1) → [3,1], _pt([3,1]) → [3,1]
     const _pt = (x: number | Vec2, y?: number): Vec2 =>
       typeof x === 'number' ? [x, y!] : x;
+    // Map a math point to screen coords (handles basis transform correctly)
+    const scr = ([mx, my]: Vec2): Vec2 => [sx(mx, my), sy(mx, my)];
 
     // Wrap a returned fluent builder so transform methods accept math coords
     function _wrap<T extends Record<string, any>>(b: T): T {
       const w: any = {};
       for (const key of Object.keys(b)) {
-        const fn = (b as any)[key];
-        if (typeof fn !== 'function') { w[key] = fn; continue; }
+        const f = (b as any)[key];
+        if (typeof f !== 'function') { w[key] = f; continue; }
         switch (key) {
-          case 'rotate':
-            w[key] = function(a: number, cx: number, cy: number) { fn.call(w, -a, sx(cx), sy(cy)); return w; };
+          case 'rotate': {
+            w[key] = function(a: number, cx: number, cy: number) { const [sx2, sy2] = scr([cx, cy]); f.call(w, -a, sx2, sy2); return w; };
             break;
-          case 'translate':
-            w[key] = function(dx: number, dy: number) { fn.call(w, dx * scX, -dy * scY); return w; };
+          }
+          case 'translate': {
+            w[key] = function(dx: number, dy: number) { f.call(w, dx * isx + dy * jsx, dx * isy + dy * jsy); return w; };
             break;
-          case 'matrixTransform':
+          }
+          case 'matrixTransform': {
             w[key] = function(a: number, b: number, c: number, d: number, tx?: number, ty?: number) {
-              // Map math-coord matrix to screen-coord affine. Math y points up, SVG y points down.
-              // Math: mx' = a*mx + c*my + tx, my' = b*mx + d*my + ty
-              // Screen: sx = ox + mx*scX, sy = oy - my*scY
-              // → sx' = sa*sx + sc_m*sy + stx, sy' = sb*sx + sd*sy + sty
               const sa = a;
               const sc_m = -c * scX / scY;
               const stx = ox - a * ox + c * oy * scX / scY + (tx ?? 0) * scX;
               const sb = -b * scY / scX;
               const sd = d;
               const sty = oy - d * oy + b * ox * scY / scX - (ty ?? 0) * scY;
-              fn.call(w, sa, sb, sc_m, sd, stx, sty);
+              f.call(w, sa, sb, sc_m, sd, stx, sty);
               return w;
             };
             break;
+          }
           case 'scale':
-            w[key] = function(sx2: number, sy2?: number) { fn.call(w, sx2, sy2 ?? sx2); return w; };
+            w[key] = function(sx2: number, sy2?: number) { f.call(w, sx2, sy2 ?? sx2); return w; };
             break;
-          case 'moveTo':
-            w[key] = function(x: number, y: number) { fn.call(w, sx(x), sy(y)); return w; };
+          case 'moveTo': {
+            w[key] = function(mx: number, my: number) { const [sx2, sy2] = scr([mx, my]); f.call(w, sx2, sy2); return w; };
             break;
+          }
           default:
-            w[key] = function(...args: any[]) { const r = fn.apply(w, args); return r === b ? w : r; };
+            w[key] = function(...args: any[]) { const r = f.apply(w, args); return r === b ? w : r; };
             break;
         }
       }
       return w as T;
     }
 
+    // Merge CoordsConfig into default axes/grid render opts
+    const cfgAxesDefaults: AxesRenderOpts = {
+      color: config.axisColor,
+      strokeW: config.axisStrokeW,
+      arrow: config.axisArrow,
+      ticks: config.ticks as (boolean | number | number[] | undefined),
+      xTicks: config.xTicks, yTicks: config.yTicks,
+      tickFormat: config.tickFormat,
+      tickSize: config.tickSize,
+    };
+    const cfgGridDefaults: GridRenderOpts = {
+      color: config.gridColor,
+      spacing: config.gridSpacing,
+      dash: config.gridDash,
+    };
+
     return {
-      mapX: sx, mapY: sy,
+      mapX: (mx: number) => sx(mx, 0),
+      mapY: (my: number) => sy(0, my),
       mapPt(mx: number | Vec2, my?: number): Vec2 {
         const [x, y] = _pt(mx, my!);
-        return [sx(x), sy(y)];
+        return [sx(x, y), sy(x, y)];
       },
-      axes(aOpts = {}) {
-        // Bidirectional axes through math origin (0,0)
-        const x0 = sx(xd[0]), x1 = sx(xd[1]), y0 = sy(yd[0]), y1$ = sy(yd[1]);
-        const zx = sx(0), zy = sy(0);
-        const color = aOpts.color ?? 'dim';
-        segment(id + '-xax', [x0, zy], [x1, zy]).color(color).strokeW(1.4);
-        segment(id + '-yax', [zx, y0], [zx, y1$]).color(color).strokeW(1.4);
+      axes(aOpts: AxesRenderOpts = {}) {
+        const o = { ...cfgAxesDefaults, ...aOpts };
+        const color = o.color ?? 'dim', sw = o.strokeW ?? 1.4;
+        const tickSize = o.tickSize ?? 5;
+        const fmt = o.tickFormat ?? 'decimal';
+        // Axis endpoints in screen coords (use full basis mapping)
+        const x0s = scr([xd[0], 0]), x1s = scr([xd[1], 0]);
+        const y0s = scr([0, yd[0]]), y1s = scr([0, yd[1]]);
+        // Draw axes through origin along basis directions
+        segment(id + '-xax', x0s, x1s, { color, strokeW: sw });
+        segment(id + '-yax', y0s, y1s, { color, strokeW: sw });
+        // Ticks
+        const xTicks = resolveTicks('x', o, xd);
+        const yTicks = resolveTicks('y', o, yd);
+        const zs = scr([0, 0]);
+        if (xTicks) {
+          for (const v of xTicks) {
+            const ts = scr([v, 0]);
+            // Tick perpendicular to x-axis (i direction). For now, vertical offset.
+            segment(id + `-xt${v}`, [ts[0], ts[1] - tickSize], [ts[0], ts[1] + tickSize], { color, strokeW: 0.8 });
+            point(id + `-xtl${v}`, [ts[0], ts[1] + tickSize + 12], { color, label: formatTick(v, fmt), size: 0, fill: 'transparent' });
+          }
+        }
+        if (yTicks) {
+          for (const v of yTicks) {
+            const ts = scr([0, v]);
+            segment(id + `-yt${v}`, [ts[0] - tickSize, ts[1]], [ts[0] + tickSize, ts[1]], { color, strokeW: 0.8 });
+            point(id + `-ytl${v}`, [ts[0] - tickSize - 8, ts[1]], { color, label: formatTick(v, fmt), size: 0, fill: 'transparent', labelPlace: 'left' });
+          }
+        }
       },
-      grid(gOpts = {}) {
-        grid(id + '-g', [sx(xd[0]), sy(yd[1])], { width: xLen, height: yLen, spacing: gOpts.spacing ?? 40, color: gOpts.color });
+      grid(gOpts: GridRenderOpts = {}) {
+        const o = { ...cfgGridDefaults, ...gOpts };
+        const color = o.color ?? 'dim';
+        const gid = mkId('grid', id + '-g');
+        const { stroke } = resolveColor(p, color);
+        // Math-space grid: lines at constant math-coordinate values,
+        // mapped through scr() → screen space. All basis transforms
+        // (scale/rotate/shear) work automatically.
+        const step = o.spacing === 'auto' || o.spacing === undefined
+          ? Math.min(autoGridStep(xd[0], xd[1], xLen), autoGridStep(yd[0], yd[1], yLen))
+          : o.spacing;
+        const anchor: Vec2 = scr([0, 0]);
+        const M = (w - xLen) / 2;
+        const rectX = M, rectY = M;
+        fm.declare(gid, {
+          type: 'group', subtype: 'grid',
+          ox: anchor[0], oy: anchor[1],
+          gx: rectX, gy: rectY,
+          w: xLen, h: yLen,
+          mx0: xd[0], mx1: xd[1], my0: yd[0], my1: yd[1], mStep: step,
+          stroke, strokeW: o.strokeW ?? 0.3,
+          dash: o.dash,
+          ix: isx, iy: isy, jx: jsx, jy: jsy,
+        });
       },
       fn(fid: string, f: (x: number) => number, fOpts: FnOpts = {}) {
-        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range ?? yd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
+        const [px, py] = scr([xd[0], yd[1]]);
+        return fn(fid, f, { domain: fOpts.domain ?? xd, range: fOpts.range ?? yd, x: px, y: py, width: xLen, height: yLen, color: fOpts.color, label: fOpts.label, samples: fOpts.samples, strokeW: fOpts.strokeW, dash: fOpts.dash, opacity: fOpts.opacity });
       },
       fillFn(fid: string, f: (x: number) => number, fOpts: { color?: string; opacity?: number; baseline?: number; range?: [number, number] } = {}) {
-        return fillFn(fid, f, { domain: xd, range: fOpts.range ?? yd, x: sx(xd[0]), y: sy(yd[1]), width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
+        const [px, py] = scr([xd[0], yd[1]]);
+        return fillFn(fid, f, { domain: xd, range: fOpts.range ?? yd, x: px, y: py, width: xLen, height: yLen, color: fOpts.color, opacity: fOpts.opacity, baseline: fOpts.baseline });
       },
       point(pid: string, x: number | Vec2, y?: number, pOpts: Record<string, any> = {}) {
         const [mx, my] = _pt(x, y!);
-        return point(pid, [sx(mx), sy(my)], pOpts as any);
+        return point(pid, scr([mx, my]), pOpts as any);
       },
       vector(vid: string, fx: number | Vec2, fy: number | Vec2, tx?: number | Vec2 | Record<string, any>, ty?: number | Record<string, any>, vOpts: Record<string, any> = {}) {
         const from = _pt(fx, typeof fy === 'number' ? fy : undefined);
         const t1 = typeof fy === 'number' ? tx : fy;
         const to = _pt(t1 as number | Vec2, typeof tx === 'number' ? ty as number : undefined);
         const opts = (typeof tx === 'object' ? tx : (typeof ty === 'object' ? ty : vOpts)) as Record<string, any> || {};
-        return _wrap(vector(vid, [sx(from[0]), sy(from[1])], [sx(to[0]), sy(to[1])], opts as any));
+        return _wrap(vector(vid, scr(from), scr(to), opts as any));
       },
       segment(sid: string, ax: number | Vec2, ay: number | Vec2, bx?: number | Vec2 | Record<string, any>, by?: number | Record<string, any>, sOpts: Record<string, any> = {}) {
         const a = _pt(ax, typeof ay === 'number' ? ay : undefined);
         const b1 = typeof ay === 'number' ? bx : ay;
         const b = _pt(b1 as number | Vec2, typeof bx === 'number' ? by as number : undefined);
         const opts = (typeof bx === 'object' ? bx : (typeof by === 'object' ? by : sOpts)) as Record<string, any> || {};
-        return segment(sid, [sx(a[0]), sy(a[1])], [sx(b[0]), sy(b[1])], opts as any);
+        return segment(sid, scr(a), scr(b), opts as any);
       },
       polyline(plid: string, pts: Vec2[], plOpts: Record<string, any> = {}) {
-        return polyline(plid, pts.map(([x, y]) => [sx(x), sy(y)] as Vec2), plOpts as any);
+        return polyline(plid, pts.map(p => scr(p)), plOpts as any);
       },
       circle(cid: string, center: number | Vec2, radius: number, cOpts: Record<string, any> = {}) {
         const c = _pt(center);
-        const cx = sx(c[0]), cy = sy(c[1]);
-        const r = Math.abs(sx(c[0] + radius) - cx);
-        return circle(cid, [cx, cy], r, cOpts as any);
+        const cs = scr(c);
+        const r = Math.abs(sx(c[0] + radius, c[1]) - cs[0]);
+        return circle(cid, cs, r, cOpts as any);
       },
       polygon(pgid: string, vertices: Vec2[], pgOpts: Record<string, any> = {}) {
-        return _wrap(polygon(pgid, vertices.map(([x, y]) => [sx(x), sy(y)] as Vec2), pgOpts as any));
+        return _wrap(polygon(pgid, vertices.map(p => scr(p)), pgOpts as any));
       },
       angle(aid: string, vertex: number | Vec2, ray1: number | Vec2, ray2: number | Vec2, aOpts: Record<string, any> = {}) {
         const v = _pt(vertex), r1 = _pt(ray1), r2 = _pt(ray2);
-        const size = aOpts.size !== undefined ? sx(0) - sx(-aOpts.size) : undefined;
-        return angle(aid, [sx(v[0]), sy(v[1])], [sx(r1[0]), sy(r1[1])], [sx(r2[0]), sy(r2[1])], { ...aOpts, size } as any);
+        const size = aOpts.size !== undefined ? (scr([0, 0])[0] - scr([-aOpts.size, 0])[0]) : undefined;
+        return angle(aid, scr(v), scr(r1), scr(r2), { ...aOpts, size } as any);
       },
       projection(prid: string, pt: number | Vec2, lf: number | Vec2, lt: number | Vec2, prOpts: Record<string, any> = {}) {
         const p = _pt(pt), l = _pt(lf), t = _pt(lt);
-        return projection(prid, [sx(p[0]), sy(p[1])], [sx(l[0]), sy(l[1])], [sx(t[0]), sy(t[1])], prOpts as any);
+        return projection(prid, scr(p), scr(l), scr(t), prOpts as any);
       },
       basis(bid: string, borigin: number | Vec2, bOpts: Record<string, any> = {}) {
         const o = _pt(borigin);
-        const pixelScale = typeof bOpts.scale === 'number' ? bOpts.scale * scX : undefined;
-        return basisPrimitive(bid, [sx(o[0]), sy(o[1])], { ...bOpts, scale: pixelScale } as any);
+        const scale = typeof bOpts.scale === 'number' ? bOpts.scale : 1;
+        const os = scr(o);
+        const iEnd = scr([o[0] + scale, o[1]]);
+        const jEnd = scr([o[0], o[1] + scale]);
+        const iStroke = bOpts.iColor ? resolveColor(p, bOpts.iColor).stroke : (p.accent.fg);
+        const jStroke = bOpts.jColor ? resolveColor(p, bOpts.jColor).stroke : (p.danger.fg);
+        const iLabel = bOpts.iLabel ?? 'î';
+        const jLabel = bOpts.jLabel ?? 'ĵ';
+        const sw = bOpts.strokeW ?? 2;
+        const iId = mkId('vector', bid + '-i');
+        const jId = mkId('vector', bid + '-j');
+        fm.declare(iId, {
+          type: 'line', marker: 'arrow' as import('./types').LineMarker,
+          from: os, to: iEnd, stroke: iStroke, strokeW: sw,
+          label: iLabel, labelPlace: 'below' as import('./types').Place, labelGap: 10,
+        } as any);
+        fm.declare(jId, {
+          type: 'line', marker: 'arrow' as import('./types').LineMarker,
+          from: os, to: jEnd, stroke: jStroke, strokeW: sw,
+          label: jLabel, labelPlace: 'left' as import('./types').Place, labelGap: 10,
+        } as any);
+        return {
+          color(c: string) { const r = resolveColor(p, c); fm.patch(iId, { stroke: r.stroke }); fm.patch(jId, { stroke: r.stroke }); return this; },
+          iColor(c: string) { const r = resolveColor(p, c); fm.patch(iId, { stroke: r.stroke }); return this; },
+          jColor(c: string) { const r = resolveColor(p, c); fm.patch(jId, { stroke: r.stroke }); return this; },
+          scale(s: number) { const ns = scr([o[0] + s, o[1]]); fm.patch(iId, { to: ns } as any); const nj = scr([o[0], o[1] + s]); fm.patch(jId, { to: nj } as any); return this; },
+          strokeW(n: number) { fm.patch(iId, { strokeW: n }); fm.patch(jId, { strokeW: n }); return this; },
+          opacity(v: number) { fm.patch(iId, { opacity: v }); fm.patch(jId, { opacity: v }); return this; },
+        } as unknown as MathBasis;
       },
       matrix(mid: string, data: number[][], mOpts = {}) {
-        return matrixPrimitive(mid, data, { ...mOpts, x: mOpts.x !== undefined ? sx(mOpts.x) : undefined, y: mOpts.y !== undefined ? sy(mOpts.y) : undefined });
+        return matrixPrimitive(mid, data, { ...mOpts, x: mOpts.x !== undefined ? scr([mOpts.x, 0])[0] : undefined, y: mOpts.y !== undefined ? scr([0, mOpts.y])[1] : undefined });
       },
       rect(rid: string, cx: number, cy: number, w: number, h: number): MathPolygon {
         const hw = w / 2, hh = h / 2;
-        return polygon(rid, [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]].map(([x, y]) => [sx(x), sy(y)] as Vec2));
+        return polygon(rid, [[cx - hw, cy - hh], [cx + hw, cy - hh], [cx + hw, cy + hh], [cx - hw, cy + hh]].map(p => scr(p as Vec2)));
       },
       ngon(nid: string, cx: number, cy: number, r: number, sides: number): MathPolygon {
-        return _wrap(ngon(nid, sx(cx), sy(cy), r * scX, sides));
+        const c = scr([cx, cy]);
+        return _wrap(ngon(nid, c[0], c[1], r * scX, sides));
       },
       ellipse(eid$1: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon {
-        return _wrap(ellipse(eid$1, sx(cx), sy(cy), rx * scX, ry * scY, n));
+        const c = scr([cx, cy]);
+        return _wrap(ellipse(eid$1, c[0], c[1], rx * scX, ry * scY, n));
       },
     };
   }
 
   // ── viewport: sugar over coords() with auto-axes, grid, origin ──
-  // Declares axes/grid/origin into the current frame (caller must be inside begin/commit).
-  function viewport(opts: ViewportOpts = {}): MathCoords {
-    const xDom = opts.x ?? [-6, 6];
-    const yDom = opts.y ?? [-4, 4];
-    const margin = opts.margin ?? 0.15;
-    const showGrid = opts.grid !== false;
-    const showAxes = opts.axes !== false;
-
-    const c = coords('vp', 'center', { xDomain: xDom, yDomain: yDom, margin, xLabel: 'x', yLabel: 'y' });
-
-    if (showAxes) c.axes();
-    if (showGrid) c.grid({ spacing: 40, color: 'dim' });
-    c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
-
+  function viewport(config: CoordsConfig = {}): MathCoords {
+    const cfg: CoordsConfig = {
+      x: [-6, 6], y: [-4, 4], margin: 0.15, nice: true,
+      showAxes: true, showGrid: true, showOrigin: true,
+      xLabel: 'x', yLabel: 'y',
+      ...config,
+    };
+    const c = coords('vp', 'center', cfg);
+    if (cfg.showAxes) c.axes();
+    if (cfg.showGrid) c.grid(cfg.gridSpacing !== undefined || cfg.gridDash !== undefined || cfg.gridColor !== undefined ? {} : { spacing: 'auto', color: 'dim' });
+    if (cfg.showOrigin) c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
     return c;
   }
 
