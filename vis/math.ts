@@ -799,12 +799,22 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         const color = o.color ?? 'dim', sw = o.strokeW ?? 1.4;
         const tickSize = o.tickSize ?? 5;
         const fmt = o.tickFormat ?? 'decimal';
-        // Axis endpoints in screen coords (use full basis mapping)
+        // Axis endpoints in screen coords, extended 4px past domain for crosshair look
         const x0s = scr([xd[0], 0]), x1s = scr([xd[1], 0]);
         const y0s = scr([0, yd[0]]), y1s = scr([0, yd[1]]);
-        // Draw axes through origin along basis directions
-        segment(id + '-xax', x0s, x1s, { color, strokeW: sw });
-        segment(id + '-yax', y0s, y1s, { color, strokeW: sw });
+        const xdx = x1s[0] - x0s[0], xdy = x1s[1] - x0s[1];
+        const ydx = y1s[0] - y0s[0], ydy = y1s[1] - y0s[1];
+        const xl = Math.sqrt(xdx * xdx + xdy * xdy) || 1;
+        const yl = Math.sqrt(ydx * ydx + ydy * ydy) || 1;
+        const OVER = 4;  // overshoot in px
+        segment(id + '-xax',
+          [x0s[0] - xdx / xl * OVER, x0s[1] - xdy / xl * OVER],
+          [x1s[0] + xdx / xl * OVER, x1s[1] + xdy / xl * OVER],
+          { color, strokeW: sw });
+        segment(id + '-yax',
+          [y0s[0] - ydx / yl * OVER, y0s[1] - ydy / yl * OVER],
+          [y1s[0] + ydx / yl * OVER, y1s[1] + ydy / yl * OVER],
+          { color, strokeW: sw });
         // Ticks
         const xTicks = resolveTicks('x', o, xd);
         const yTicks = resolveTicks('y', o, yd);
@@ -830,20 +840,18 @@ export function createMathRenderer(fm: FrameManager, ctx: import('./types').Stag
         const color = o.color ?? 'dim';
         const gid = mkId('grid', id + '-g');
         const { stroke } = resolveColor(p, color);
-        // Math-space grid: lines at constant math-coordinate values,
-        // mapped through scr() → screen space. All basis transforms
-        // (scale/rotate/shear) work automatically.
         const step = o.spacing === 'auto' || o.spacing === undefined
           ? Math.min(autoGridStep(xd[0], xd[1], xLen), autoGridStep(yd[0], yd[1], yLen))
           : o.spacing;
         const anchor: Vec2 = scr([0, 0]);
-        const M = (w - xLen) / 2;
-        const rectX = M, rectY = M;
+        // Domain corners in screen space — for border rect
+        const [bx1, by1] = scr([xd[0], yd[1]]);  // top-left
+        const [bx2, by2] = scr([xd[1], yd[0]]);  // bottom-right
         fm.declare(gid, {
           type: 'group', subtype: 'grid',
           ox: anchor[0], oy: anchor[1],
-          gx: rectX, gy: rectY,
-          w: xLen, h: yLen,
+          gx: bx1, gy: by1,  // rectangle top-left = domain corner
+          w: bx2 - bx1, h: by2 - by1,  // width/height = domain extent
           mx0: xd[0], mx1: xd[1], my0: yd[0], my1: yd[1], mStep: step,
           stroke, strokeW: o.strokeW ?? 0.3,
           dash: o.dash,

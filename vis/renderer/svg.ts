@@ -328,6 +328,14 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
         g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', svgColor('#fff')).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
       } else if (gd.subtype === 'grid') {
         drawGridLines(g, gd);
+        // Border rect — ties grid edges visually to axes
+        const rx = gd.gx ?? 0, ry = gd.gy ?? 0, rw = gd.w ?? 0, rh = gd.h ?? 0;
+        if (rw > 0 && rh > 0) {
+          g.append('rect')
+            .attr('x', rx).attr('y', ry).attr('width', rw).attr('height', rh)
+            .attr('fill', 'none').attr('stroke', svgColor(gd.stroke!))
+            .attr('stroke-width', (gd.strokeW ?? 0.3) * 1.6);
+        }
       } else if (gd.subtype === 'matrix') {
         const data = gd.data ?? [[0]];
         const rows = data.length, cols = data[0]?.length ?? 1;
@@ -623,9 +631,22 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
         } else if (text) { text.text(''); }
         else { svg.select('text').text(''); }
       } else if (gd.subtype === 'grid') {
-        // Grid: D3 data join with transition for smooth basis morphing
         svg.interrupt();
         drawGridLines(svg, gd, tr);
+        // Border rect transition
+        const rx = gd.gx ?? 0, ry = gd.gy ?? 0, rw = gd.w ?? 0, rh = gd.h ?? 0;
+        const border = svg.select('rect');
+        if (!border.empty()) {
+          border.interrupt().transition(tr)
+            .attr('x', rx).attr('y', ry).attr('width', rw).attr('height', rh)
+            .attr('stroke', svgColor(gd.stroke!))
+            .attr('stroke-width', (gd.strokeW ?? 0.3) * 1.6);
+        } else if (rw > 0 && rh > 0) {
+          svg.append('rect')
+            .attr('x', rx).attr('y', ry).attr('width', rw).attr('height', rh)
+            .attr('fill', 'none').attr('stroke', svgColor(gd.stroke!))
+            .attr('stroke-width', (gd.strokeW ?? 0.3) * 1.6);
+        }
       }
       break;
     }
@@ -701,6 +722,19 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
         else { svg.select('text').text(''); }
       } else if (gd.subtype === 'grid') {
         drawGridLines(svg, gd);
+        // Border rect update
+        const rx = gd.gx ?? 0, ry = gd.gy ?? 0, rw = gd.w ?? 0, rh = gd.h ?? 0;
+        const border = svg.select('rect');
+        if (!border.empty()) {
+          border.attr('x', rx).attr('y', ry).attr('width', rw).attr('height', rh)
+            .attr('stroke', svgColor(gd.stroke!))
+            .attr('stroke-width', (gd.strokeW ?? 0.3) * 1.6);
+        } else if (rw > 0 && rh > 0) {
+          svg.append('rect')
+            .attr('x', rx).attr('y', ry).attr('width', rw).attr('height', rh)
+            .attr('fill', 'none').attr('stroke', svgColor(gd.stroke!))
+            .attr('stroke-width', (gd.strokeW ?? 0.3) * 1.6);
+        }
       }
       break;
     }
