@@ -25,7 +25,7 @@
 <div id="sections"></div>
 
 <script type="module">
-import { stage } from '../../dist/learnvis.mjs?v=5';
+import { stage } from 'learnvis';
 
 const sections = [
   // ── Static: matrix display ──
@@ -155,12 +155,12 @@ const sections = [
   },
   {
     name: 'coords() — Bottom-Left Origin',
-    desc: 'Traditional function-plot style: origin=(60,200), xDomain=[0,10], yDomain=[-2,2].',
+    desc: 'Traditional function-plot style: origin=(60,200), x=[0,10], y=[-2,2].',
     width: 400, height: 260,
     setup(s) {
       const { coords } = s.math;
       s.render(() => {
-        const c = coords('bl', [60, 200], { xDomain: [0, 10], yDomain: [-2, 2], xLabel: 'x', yLabel: 'y' });
+        const c = coords('bl', [60, 200], { x: [0, 10], y: [-2, 2], xLabel: 'x', yLabel: 'y' });
         c.axes({ color: 'dim' });
         c.grid({ spacing: 30, color: 'dim' });
         c.fn('sin', x => Math.sin(x) * 2, { color: 'danger', label: '2sin(x)' });
@@ -176,7 +176,7 @@ const sections = [
     setup(s) {
       const { coords } = s.math;
       s.render(() => {
-        const c = coords('oc', [200, 180], { xDomain: [-3, 3], yDomain: [-2, 2], margin: 0.1 });
+        const c = coords('oc', [200, 180], { x: [-3, 3], y: [-2, 2], margin: 0.1 });
         c.axes({ color: 'dim' });
         c.grid({ spacing: 30, color: 'dim' });
         c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });

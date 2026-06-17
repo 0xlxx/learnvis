@@ -24,7 +24,7 @@
 <div id="sections"></div>
 
 <script type="module">
-import { stage } from '../../dist/learnvis.mjs?v=5';
+import { stage } from 'learnvis';
 
 const sections = [
   {
@@ -134,7 +134,7 @@ for (const sec of sections) {
     card.innerHTML = `<div class="name">${c.label}</div><div class="stage" id="${id}"></div>`;
     row.appendChild(card);
     const s = stage(`#${id}`, { width: 220, height: 180, theme: 'warm' });
-    c.draw(s);
+    s.render(() => c.draw(s));
   });
   stageId++;
 }
