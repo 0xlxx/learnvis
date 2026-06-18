@@ -25,120 +25,101 @@
 <div id="sections"></div>
 
 <script type="module">
-import { stage } from 'learnvis';
+import { canvas } from 'learnvis';
 
 const sections = [
   {
-    name: 'Vector — stroke width',
+    name: 'Vector — stroke weight',
     desc: 'Line weight variants: 1.0 / 1.5 / 2.0 / 3.0',
     candidates: [
-      { label:'1.0', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(1.0); }},
-      { label:'1.5', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(1.5); }},
-      { label:'2.0', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(2.0); }},
-      { label:'3.0', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(3.0); }},
+      { label:'1.0', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(1.0); }},
+      { label:'1.5', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(1.5); }},
+      { label:'2.0', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(2.0); }},
+      { label:'3.0', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(3.0); }},
     ]
   },
   {
     name: 'Vector — arrow tip style',
-    desc: 'Sharp classical / blunt modern / filled triangle',
+    desc: 'Classic / thin / bold / pointed',
     candidates: [
-      { label:'classic', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(1.5); }},
-      { label:'thin', draw(s){ const { vector, point } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(1.0); point('p',[180,40]); }},
-      { label:'bold', draw(s){ const { vector } = s.math; vector('v',[30,100],[180,40]).color('dim').strokeW(2.5); }},
-      { label:'open', draw(s){
-        const g = s.ctx.stage.edges;
-        const fx=30, fy=100, tx=180, ty=40;
-        const dx=tx-fx, dy=ty-fy, len=Math.sqrt(dx*dx+dy*dy);
-        const nx=dx/len, ny=dy/len, siz=10;
-        g.append('line').attr('x1',fx).attr('y1',fy).attr('x2',tx).attr('y2',ty).attr('stroke','#666').attr('stroke-width',1.5);
-        g.append('polygon').attr('points',
-          `${tx},${ty} ${tx-nx*siz+ny*siz*0.4},${ty-ny*siz-nx*siz*0.4} ${tx-nx*siz-ny*siz*0.4},${ty-ny*siz+nx*siz*0.4}`)
-          .attr('fill','none').attr('stroke','#666').attr('stroke-width',1.2);
-      }},
+      { label:'classic', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(1.5); }},
+      { label:'thin', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(1.0); s.point('p',180,40); }},
+      { label:'bold', draw(s){ s.vector('v',[30,100],[180,40]).color('dim').stroke(2.5); }},
+      { label:'colored', draw(s){ s.vector('v',[30,100],[180,40]).color('danger').stroke(2); }},
     ]
   },
   {
     name: 'Point — marker style',
-    desc: 'Filled circle / open circle / cross / diamond',
+    desc: 'Filled circle / open circle / labeled / tiny',
     candidates: [
-      { label:'filled', draw(s){ const { point } = s.math; point('p',[110,70]).color('primary'); }},
-      { label:'open', draw(s){ const { point } = s.math; point('p',[110,70]).fill('#fff').color('primary').size(6); }},
-      { label:'cross', draw(s){
-        const g = s.ctx.stage.bg;
-        g.append('line').attr('x1',102).attr('y1',70).attr('x2',118).attr('y2',70).attr('stroke','#555').attr('stroke-width',1.5);
-        g.append('line').attr('x1',110).attr('y1',62).attr('x2',110).attr('y2',78).attr('stroke','#555').attr('stroke-width',1.5);
-      }},
-      { label:'diamond', draw(s){
-        s.ctx.stage.bg.append('polygon').attr('points','110,60 118,70 110,80 102,70').attr('fill','#fff').attr('stroke','#555').attr('stroke-width',1.5);
-      }},
+      { label:'filled', draw(s){ s.point('p',110,70).color('primary'); }},
+      { label:'open', draw(s){ s.point('p',110,70).fill('#fff').color('primary').size(6); }},
+      { label:'labeled', draw(s){ s.point('p',110,70).color('danger').label('P').size(6); }},
+      { label:'tiny', draw(s){ s.point('p',110,70).color('primary').size(2); }},
     ]
   },
   {
-    name: 'Segment — dash style',
+    name: 'Line — dash style',
     desc: 'Solid / short dash / long dash / dotted',
     candidates: [
-      { label:'solid',  draw(s){ const { segment } = s.math; segment('s',[30,70],[190,70]).color('dim').strokeW(1.5); }},
-      { label:'dashed', draw(s){ const { segment } = s.math; segment('s',[30,70],[190,70]).color('dim').strokeW(1.5).dashed('5 4'); }},
-      { label:'long',   draw(s){ const { segment } = s.math; segment('s',[30,70],[190,70]).color('dim').strokeW(1.5).dashed('12 6'); }},
-      { label:'dotted', draw(s){ const { segment } = s.math; segment('s',[30,70],[190,70]).color('dim').strokeW(1.2).dashed('1 5'); }},
+      { label:'solid',  draw(s){ s.line('s',30,70,190,70).color('dim').stroke(1.5); }},
+      { label:'dashed', draw(s){ s.line('s',30,70,190,70).color('dim').stroke(1.5).dash('5 4'); }},
+      { label:'long',   draw(s){ s.line('s',30,70,190,70).color('dim').stroke(1.5).dash('12 6'); }},
+      { label:'dotted', draw(s){ s.line('s',30,70,190,70).color('dim').stroke(1.2).dash('1 5'); }},
     ]
   },
   {
     name: 'Polyline — multi-segment line',
-    desc: 'Orthogonal / dashed / curved / thick',
+    desc: 'Orthogonal / dashed / thick / long',
     candidates: [
-      { label:'orthogonal', draw(s){ const { polyline } = s.math; polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('primary').strokeW(1.8); }},
-      { label:'dashed', draw(s){ const { polyline } = s.math; polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('dim').dashed('5 3').strokeW(1.5); }},
-      { label:'thick', draw(s){ const { polyline } = s.math; polyline('p',[[30,90],[60,90],[60,50],[100,50],[160,50]]).color('accent').strokeW(2.5); }},
-      { label:'long', draw(s){ const { polyline } = s.math; polyline('p',[[30,100],[80,100],[80,30],[190,30]]).color('warning').strokeW(1.5); }},
+      { label:'orthogonal', draw(s){ s.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('primary').stroke(1.8); }},
+      { label:'dashed', draw(s){ s.polyline('p',[[40,80],[80,80],[80,40],[180,40]]).color('dim').dash('5 3').stroke(1.5); }},
+      { label:'thick', draw(s){ s.polyline('p',[[30,90],[60,90],[60,50],[100,50],[160,50]]).color('accent').stroke(3); }},
+      { label:'long', draw(s){ s.polyline('p',[[30,100],[80,100],[80,30],[190,30]]).color('warning').stroke(1.5); }},
     ]
   },
   {
     name: 'Circle — fill opacity',
     desc: 'None / light / medium / full fill',
     candidates: [
-      { label:'none',   draw(s){ const { circle } = s.math; circle('c',[110,70],45).color('accent').strokeW(1.5); }},
-      { label:'light',  draw(s){ const { circle } = s.math; circle('c',[110,70],45).color('accent').strokeW(1.5).fill(s.palette.accent.a(8)); }},
-      { label:'medium', draw(s){ const { circle } = s.math; circle('c',[110,70],45).color('accent').strokeW(1.5).fill(s.palette.accent.a(20)); }},
-      { label:'full',   draw(s){ const { circle } = s.math; circle('c',[110,70],45).color('accent').strokeW(1.5).fill(s.palette.accent.bg); }},
+      { label:'none',   draw(s){ s.circle('c',110,70,45).color('accent').stroke(1.5); }},
+      { label:'light',  draw(s){ s.circle('c',110,70,45).color('accent').stroke(1.5).opacity(0.15); }},
+      { label:'medium', draw(s){ s.circle('c',110,70,45).color('accent').stroke(1.5).opacity(0.4); }},
+      { label:'full',   draw(s){ s.circle('c',110,70,45).color('accent').stroke(1.5).fill('acc').opacity(0.6); }},
     ]
   },
   {
     name: 'Polygon — fill vs stroke emphasis',
     desc: 'Stroke-only / light fill / bold fill / filled no stroke',
     candidates: [
-      { label:'stroke', draw(s){ const { polygon } = s.math; polygon('pg',[[50,100],[110,30],[170,100]]).fill('none').color('primary').strokeW(2); }},
-      { label:'light',  draw(s){ const { polygon } = s.math; polygon('pg',[[50,100],[110,30],[170,100]]).color('primary'); }},
-      { label:'heavy',  draw(s){ const { polygon } = s.math; polygon('pg',[[50,100],[110,30],[170,100]]).fill(s.palette.primary.bg).color('primary').strokeW(2.5); }},
-      { label:'no strk',draw(s){ const { polygon } = s.math; polygon('pg',[[50,100],[110,30],[170,100]]).fill(s.palette.primary.a(25)).color('none').strokeW(0); }},
+      { label:'stroke', draw(s){ s.polygon('pg',[[50,100],[110,30],[170,100]]).fill('none').color('primary').stroke(2); }},
+      { label:'light',  draw(s){ s.polygon('pg',[[50,100],[110,30],[170,100]]).color('primary').opacity(0.3); }},
+      { label:'heavy',  draw(s){ s.polygon('pg',[[50,100],[110,30],[170,100]]).color('primary').stroke(3); }},
+      { label:'no strk',draw(s){ s.fill('pg',[[50,100],[110,30],[170,100]]).color('primary').opacity(0.3); }},
     ]
   },
   {
     name: 'Angle — arc weight & label',
     desc: 'Thin / medium / thick arc; label vs no label',
     candidates: [
-      { label:'thin',   draw(s){ const { angle } = s.math; angle('a',[110,90],[30,40],[190,60]).color('warning'); }},
-      { label:'medium', draw(s){ const { angle } = s.math; angle('a',[110,90],[30,40],[190,60]).color('warning').strokeW(2).label('θ'); }},
+      { label:'thin',   draw(s){ s.angle('a',[110,90],[30,40],[190,60]).color('warning'); }},
+      { label:'medium', draw(s){ s.angle('a',[110,90],[30,40],[190,60]).color('warning').stroke(2).label('θ'); }},
       { label:'thick',  draw(s){
-        const { angle, segment } = s.math;
-        angle('a',[110,90],[30,40],[190,60]).color('warning').strokeW(2.5).fill(s.palette.warning.a(25)).label('θ');
-        segment('r1',[110,90],[30,40]).color('dim').strokeW(0.8);
-        segment('r2',[110,90],[190,60]).color('dim').strokeW(0.8);
+        s.angle('a',[110,90],[30,40],[190,60]).color('warning').stroke(3).opacity(0.4).label('θ');
+        s.line('r1',110,90,30,40).color('dim').stroke(0.8);
+        s.line('r2',110,90,190,60).color('dim').stroke(0.8);
       }},
-      { label:'minimal',draw(s){
-        const { angle } = s.math;
-        angle('a',[110,90],[30,40],[190,60]).color('dim').strokeW(1.0);
-      }},
+      { label:'minimal',draw(s){ s.angle('a',[110,90],[30,40],[190,60]).color('dim').stroke(1); }},
     ]
   },
   {
     name: 'Grid — density',
     desc: 'Sparse / normal / dense / no grid (axes only)',
     candidates: [
-      { label:'sparse', draw(s){ const { grid } = s.math; grid('g',[30,130],{width:160,height:100,spacing:80,color:'dim'}); }},
-      { label:'normal', draw(s){ const { grid } = s.math; grid('g',[20,120],{width:180,height:100,spacing:40,color:'dim'}); }},
-      { label:'dense',  draw(s){ const { grid } = s.math; grid('g',[20,120],{width:180,height:100,spacing:20,color:'dim'}); }},
-      { label:'none',   draw(s){ const { axes } = s.math; axes('ax',[20,120],{xLen:180,yLen:100}); }},
+      { label:'sparse', draw(s){ s.gridScreen('g',[30,130],{width:160,height:100,spacing:80,color:'dim'}); }},
+      { label:'normal', draw(s){ s.gridScreen('g',[20,120],{width:180,height:100,spacing:40,color:'dim'}); }},
+      { label:'dense',  draw(s){ s.gridScreen('g',[20,120],{width:180,height:100,spacing:20,color:'dim'}); }},
+      { label:'none',   draw(s){ s.axes('ax',[20,120],{xLen:180,yLen:100}); }},
     ]
   },
 ];
@@ -158,7 +139,7 @@ for (const sec of sections) {
     card.innerHTML = `<div class="name">${c.label}</div><div class="stage" id="${id}"></div>`;
     row.appendChild(card);
 
-    const s = stage(`#${id}`, { width: 220, height: 140, theme: 'warm' });
+    const s = canvas(`#${id}`, { width: 220, height: 140, theme: 'warm' });
     s.render(() => c.draw(s));
   });
   stageId++;

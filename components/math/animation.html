@@ -22,7 +22,7 @@
 <p class="sub">Vector addition, rotation, function sampling — smooth frame transitions</p>
 <div class="row" id="sections"></div>
 <script type="module">
-import { stage } from 'learnvis';
+import { canvas, stepper } from 'learnvis';
 
 const sections = [
   {
@@ -30,42 +30,38 @@ const sections = [
     desc: 'ṽ + w̃，平行四边形法则。',
     steps: [
       { label: '向量 ṽ', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        point('O', [60, 220]).color('primary').label('O');
-        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        s.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y' });
+        s.point('O', 60, 220).color('primary').label('O');
+        s.vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
       }},
       { label: '向量 w̃', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        point('O', [60, 220]).color('primary').label('O');
-        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
-        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
+        s.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y' });
+        s.point('O', 60, 220).color('primary').label('O');
+        s.vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        s.vector('w', [60, 220], [140, 200]).color('info').label('w̃');
       }},
       { label: '平行四边形', frame(s) {
-        const { axes, point, vector, segment } = s.math;
-        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        point('O', [60, 220]).color('primary').label('O');
-        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
-        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
+        s.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y' });
+        s.point('O', 60, 220).color('primary').label('O');
+        s.vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        s.vector('w', [60, 220], [140, 200]).color('info').label('w̃');
         const vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
         const wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
         const sum = [300, 80];
-        segment('w-shift', vt, sum).color('dim').dashed('4 3');
-        segment('v-shift', wt, sum).color('dim').dashed('4 3');
+        s.line('w-shift', vt[0], vt[1], sum[0], sum[1]).color('dim').dash('4 3');
+        s.line('v-shift', wt[0], wt[1], sum[0], sum[1]).color('dim').dash('4 3');
       }},
       { label: 'ṽ + w̃', frame(s) {
-        const { axes, point, vector, segment } = s.math;
-        axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y', color: 'dim' });
-        point('O', [60, 220]).color('primary').label('O');
-        vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
-        vector('w', [60, 220], [140, 200]).color('info').label('w̃');
+        s.axes('ax', [60, 220], { xLen: 260, yLen: 180, xLabel: 'x', yLabel: 'y' });
+        s.point('O', 60, 220).color('primary').label('O');
+        s.vector('v', [60, 220], [220, 100]).color('danger').label('ṽ');
+        s.vector('w', [60, 220], [140, 200]).color('info').label('w̃');
         const vt = [60 + (220-60) * (1 - 10/200), 220 + (100-220) * (1 - 10/200)];
         const wt = [60 + (140-60) * (1 - 10/82.46), 220 + (200-220) * (1 - 10/82.46)];
         const sum = [300, 80];
-        segment('w-shift', vt, sum).color('dim').dashed('4 3');
-        segment('v-shift', wt, sum).color('dim').dashed('4 3');
-        vector('sum', [60, 220], sum).color('success').label('ṽ + w̃').strokeW(2.5);
+        s.line('w-shift', vt[0], vt[1], sum[0], sum[1]).color('dim').dash('4 3');
+        s.line('v-shift', wt[0], wt[1], sum[0], sum[1]).color('dim').dash('4 3');
+        s.vector('sum', [60, 220], sum).color('success').label('ṽ + w̃').stroke(3);
       }},
     ]
   },
@@ -77,16 +73,14 @@ const sections = [
       return samples.map(n => ({
         label: `${n} 采样点`,
         frame(s) {
-          const { axes, fn, point } = s.math;
-          axes('ax', [50, 140], { xLen: 280, yLen: 120, xLabel: 'x', yLabel: 'y', color: 'dim' });
-          fn('curve', x => Math.sin(x) * 2, {
-            domain: [0, 2 * Math.PI], x: 50, y: 140, width: 280, height: 120,
-          }).color('primary');
+          const vp = s.coords({ x: [0, 2 * Math.PI], y: [-2.5, 2.5] });
+          vp.axes({ xLabel: 'x', yLabel: 'y' });
+          vp.curve('curve', x => Math.sin(x) * 2).color('primary');
           const step = (2 * Math.PI) / (n - 1);
           for (let i = 0; i < n; i++) {
-            const xv = 50 + (i / (n - 1)) * 280;
-            const yv = 140 - ((Math.sin(i * step) * 2 + 2) / 4) * 120;
-            point(`p${i}`, [xv, yv]).color('danger').size(5);
+            const xv = i * step;
+            const yv = Math.sin(xv) * 2;
+            vp.point(`p${i}`, xv, yv).color('danger').size(5);
           }
         }
       }));
@@ -100,14 +94,13 @@ const sections = [
       return angles.map(a => ({
         label: `${Math.round(a * 180 / Math.PI)}°`,
         frame(s) {
-          const { circle, point, segment } = s.math;
           const cx = 170, cy = 140, r = 80;
-          circle('c', [cx, cy], r).color('dim').strokeW(1);
+          s.circle('c', cx, cy, r).color('dim').stroke(1);
           const px = cx + r * Math.cos(a), py = cy + r * Math.sin(a);
-          point('P', [px, py]).color('danger').label('P').size(6);
-          segment('r', [cx, cy], [px, py]).color('accent').strokeW(1.5).label('r');
+          s.point('P', px, py).color('danger').label('P').size(6);
+          s.line('r', cx, cy, px, py).color('accent').stroke(1.5).label('r');
           const tx = px - r * Math.sin(a), ty = py + r * Math.cos(a);
-          segment('tangent', [px, py], [tx, ty]).color('warning').strokeW(2).dashed('5 3');
+          s.line('tangent', px, py, tx, ty).color('warning').stroke(2).dash('5 3');
         }
       }));
     })(),
@@ -121,12 +114,11 @@ const sections = [
       return angles.map(a => ({
         label: `${a}°`,
         frame(s) {
-          const { axes, point, polygon, vector } = s.math;
-          axes('ax', [cx,cy], { xLen:140, yLen:120, color:'dim' });
-          point('O', [cx,cy]).color('primary').label('O');
+          s.axes('ax', [cx, cy], { xLen: 140, yLen: 120 });
+          s.point('O', cx, cy).color('primary').label('O');
           const baseVerts = [[-hw,-hh],[hw,-hh],[hw,hh],[-hw,hh]].map(v => [cx+v[0],cy+v[1]]);
-          polygon('rect', baseVerts).color('info').opacity(0.6).rotate(a, cx, cy);
-          vector('diag', [cx,cy], [cx+hw,cy+hh]).color('danger').strokeW(1.6).rotate(a, cx, cy);
+          s.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(a, cx, cy);
+          s.vector('diag', [cx, cy], [cx+hw, cy+hh]).color('danger').stroke(1.6).rotate(a, cx, cy);
         }
       }));
     })(),
@@ -136,28 +128,24 @@ const sections = [
     desc: '.rotate().scale(), D3 过渡。',
     steps: [
       { label: '原始', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        point('O', [170,150]).color('primary').label('O');
-        vector('v', [170,150], [250,150]).color('danger').label('v');
+        s.axes('ax', [170, 150], { xLen: 140, yLen: 120 });
+        s.point('O', 170, 150).color('primary').label('O');
+        s.vector('v', [170, 150], [250, 150]).color('danger').label('v');
       }},
       { label: 'rotate 45°', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        point('O', [170,150]).color('primary').label('O');
-        vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150);
+        s.axes('ax', [170, 150], { xLen: 140, yLen: 120 });
+        s.point('O', 170, 150).color('primary').label('O');
+        s.vector('v', [170, 150], [250, 150]).color('danger').label('v').rotate(45, 170, 150);
       }},
       { label: '+ scale 2×', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        point('O', [170,150]).color('primary').label('O');
-        vector('v', [170,150], [250,150]).color('danger').label('v').rotate(45, 170, 150).scale(2);
+        s.axes('ax', [170, 150], { xLen: 140, yLen: 120 });
+        s.point('O', 170, 150).color('primary').label('O');
+        s.vector('v', [170, 150], [250, 150]).color('danger').label('v').rotate(45, 170, 150).scale(2);
       }},
       { label: '→ 原始', frame(s) {
-        const { axes, point, vector } = s.math;
-        axes('ax', [170,150], { xLen:140, yLen:120, color:'dim' });
-        point('O', [170,150]).color('primary').label('O');
-        vector('v', [170,150], [250,150]).color('danger').label('v');
+        s.axes('ax', [170, 150], { xLen: 140, yLen: 120 });
+        s.point('O', 170, 150).color('primary').label('O');
+        s.vector('v', [170, 150], [250, 150]).color('danger').label('v');
       }},
     ]
   },
@@ -172,13 +160,12 @@ const sections = [
           label: `${d}°`,
           frame(s) {
             const w = 80, h = 50, ox = 170, oy = 150;
-            const { axes, point, polygon, angle } = s.math;
-            axes('ax', [ox, oy], { xLen: 130, yLen: 110, color: 'dim' });
-            point('O', [ox, oy]).color('primary').label('O');
+            s.axes('ax', [ox, oy], { xLen: 130, yLen: 110 });
+            s.point('O', ox, oy).color('primary').label('O');
             const baseVerts = [[0,0],[w,0],[w,h],[0,h]].map(v => [ox+v[0],oy+v[1]]);
-            polygon('rect', baseVerts).color('info').opacity(0.6).rotate(d, ox, oy);
+            s.polygon('rect', baseVerts).color('info').opacity(0.6).rotate(d, ox, oy);
             const rotEnd = [ox + w*Math.cos(r), oy + w*Math.sin(r)];
-            angle('a', [ox,oy], [ox+40,oy], rotEnd, { size: 18 }).color('danger').label(`${d}°`);
+            s.angle('a', [ox, oy], [ox+40, oy], rotEnd).color('danger').label(`${d}°`);
           }
         };
       });
@@ -189,11 +176,13 @@ const sections = [
 const container = document.getElementById('sections');
 for (const [si, sec] of sections.entries()) {
   const el = document.createElement('section');
-  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div></div>`;
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div><div class="lv-stepper-host"></div></div>`;
   container.appendChild(el);
 
-  const s = stage(`#st${si}`, { width: 340, height: 260, theme: 'paper' });
-  s.steps(sec.steps, { controls: true });
+  const s = canvas(`#st${si}`, { width: 340, height: 260, theme: 'paper' });
+  const ctrl = s.steps(sec.steps, { controls: false });
+  const host = el.querySelector('.lv-stepper-host');
+  if (host) stepper(host, ctrl);
 }
 </script>
 </body>

@@ -5,7 +5,8 @@ import type { Entity, EntityState, AnimationConfig } from './types';
 import type { Renderer, RenderHandle } from './renderer';
 import { SVGRenderer, type SVGHandle } from './renderer/svg';
 import type { StageCtx } from './types';
-import { resolveGeometry } from './resolver';
+
+export { type SVGHandle };
 
 const defaultAnimation: AnimationConfig = {
   duration: 500,
@@ -41,10 +42,11 @@ export class FrameManager {
     const existing = this.store.get(id);
     if (existing) {
       // Clear stale transform state when re-declaring without transforms —
-      // prevents _tf accumulation across frames which breaks smooth interpolation.
-      if (!('_tf' in (state as Record<string, unknown>))) delete (existing.desired as Record<string, unknown>)._tf;
-      if (!('_base' in (state as Record<string, unknown>))) delete (existing.desired as Record<string, unknown>)._base;
-      Object.assign(existing.desired, state); return existing;
+      // prevents transforms accumulation across frames which breaks smooth interpolation.
+      if (!('transforms' in (state as unknown as Record<string, unknown>)))
+        delete (existing.desired as unknown as Record<string, unknown>).transforms;
+      Object.assign(existing.desired, state);
+      return existing;
     }
     const entity: Entity = { id, desired: { ...state }, svg: null };
     this.store.set(id, entity);
@@ -57,8 +59,7 @@ export class FrameManager {
     Object.assign(entity.desired, partial);
   }
 
-  /** Typed getter: narrows EntityState by its discriminant type field.
-   *  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
+  /** Typed getter: narrows EntityState by its discriminant type field. */
   get<T extends EntityState['type']>(
     id: string,
     _type: T,
@@ -69,10 +70,6 @@ export class FrameManager {
   commit(opts?: { ms?: number; animate?: boolean }) {
     if (!this._uncommitted) throw new Error('begin() required before commit()');
     this._uncommitted = false;
-
-    // --- Geometry Late-Binding ---
-    // Resolve declarative layout logic (like edge coordinates) right before rendering
-    resolveGeometry(this.store);
 
     if (opts?.animate === false || typeof requestAnimationFrame === 'undefined') {
       this._commitStatic();
@@ -104,8 +101,7 @@ export class FrameManager {
         const to = e.desired.opacity ?? 1;
         const svgEl = (h as SVGHandle).svg;
         if (svgEl) {
-          const tr = svgEl.attr('opacity', 0).transition(enterTr);
-          tr.attr('opacity', to);
+          svgEl.attr('opacity', 0).transition(enterTr).attr('opacity', to);
         }
       }
     }
@@ -115,13 +111,6 @@ export class FrameManager {
       if (this.previous.has(id)) {
         const e = this.store.get(id)!;
         this.handles.get(id)?.update(e.desired, { animate: true, transition: updateTr });
-      }
-    }
-
-    // exit animation
-    for (const id of this.previous) {
-      if (!this.current.has(id)) {
-        // already removed above — animation would need pre-remove snapshot
       }
     }
 

@@ -8,7 +8,143 @@ import { svgColor } from '../color';
 
 type E = d3.Selection<any, unknown, null, undefined>;
 
-// ── helpers ──
+// ── Axes geometry (pure computation, shared by draw + update) ──
+
+interface AxesGeometry {
+  xLine:  { x1: number; y1: number; x2: number; y2: number };
+  yLine:  { x1: number; y1: number; x2: number; y2: number };
+  rightArrow: string;   // points attr for right/i-direction arrowhead
+  leftArrow: string;    // points attr for left arrowhead
+  topArrow: string;     // points attr for top/j-direction arrowhead
+  bottomArrow: string;  // points attr for bottom arrowhead
+  stdOpacity: string;   // '1' or '0' for standard-mode visibility
+}
+
+/** Ray-box intersection: how far along direction (dx,dy) from (ox,oy)
+ *  to reach the rectangle [xMin,xMax]×[yMin,yMax].
+ *  Returns [tNeg, tPos] — t-parameters for negative and positive directions. */
+function rayBoxExtent(
+  ox: number, oy: number, dx: number, dy: number,
+  xMin: number, xMax: number, yMin: number, yMax: number,
+): [number, number] {
+  let tPos = Infinity, tNeg = Infinity;
+  if (dx > 0.001)  { tPos = Math.min(tPos, (xMax - ox) / dx); tNeg = Math.min(tNeg, (ox - xMin) / dx); }
+  if (dx < -0.001) { tNeg = Math.min(tNeg, (xMax - ox) / -dx); tPos = Math.min(tPos, (ox - xMin) / -dx); }
+  if (dy > 0.001)  { tPos = Math.min(tPos, (yMax - oy) / dy); tNeg = Math.min(tNeg, (oy - yMin) / dy); }
+  if (dy < -0.001) { tNeg = Math.min(tNeg, (yMax - oy) / -dy); tPos = Math.min(tPos, (oy - yMin) / -dy); }
+  return [tNeg, tPos];
+}
+
+function computeAxesGeometry(gd: GroupState): AxesGeometry {
+  const ox = gd.ox ?? 0, oy = gd.oy ?? 0;
+  const as = gd.arrowSize ?? 8;
+  const ah = as / 2;  // arrow half-height
+  const ix = gd.ix ?? 1, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? -1;
+  const isTransformed = (iy !== 0 || jx !== 0);
+
+  if (isTransformed) {
+    const iLen = Math.sqrt(ix*ix + iy*iy) || 1;
+    const jLen = Math.sqrt(jx*jx + jy*jy) || 1;
+    const iu = ix / iLen, iv = iy / iLen;
+    const ju = jx / jLen, jv = jy / jLen;
+
+    // Canvas-rect bounds from the CoordView layer
+    const xMin = gd.xMin ?? 0, xMax = gd.xMax ?? ox + 300;
+    const yMin = gd.yMin ?? oy - 200, yMax = gd.yMax ?? oy + 200;
+
+    // Compute bidirectional extents: how far along each basis direction
+    // to reach the canvas edge in both + and - directions.
+    const [iNegT, iPosT] = rayBoxExtent(ox, oy, ix, iy, xMin, xMax, yMin, yMax);
+    const [jNegT, jPosT] = rayBoxExtent(ox, oy, jx, jy, xMin, xMax, yMin, yMax);
+
+    // Axis line endpoints — negative → positive, so line spans the full canvas
+    // like standard mode. This ensures smooth D3 transitions between modes.
+    const ixNeg = ox - ix * iNegT, iyNeg = oy - iy * iNegT;
+    const ixPos = ox + ix * iPosT, iyPos = oy + iy * iPosT;
+    const jxNeg = ox - jx * jNegT, jyNeg = oy - jy * jNegT;
+    const jxPos = ox + jx * jPosT, jyPos = oy + jy * jPosT;
+
+    // Arrowheads at the positive-direction endpoints
+    return {
+      xLine: { x1: ixNeg, y1: iyNeg, x2: ixPos, y2: iyPos },
+      yLine: { x1: jxNeg, y1: jyNeg, x2: jxPos, y2: jyPos },
+      rightArrow: `${ixPos},${iyPos} ${ixPos - iu*as + iv*ah},${iyPos - iv*as - iu*ah} ${ixPos - iu*as - iv*ah},${iyPos - iv*as + iu*ah}`,
+      leftArrow:  `${ixNeg},${iyNeg} ${ixNeg + iu*as + iv*ah},${iyNeg + iv*as - iu*ah} ${ixNeg + iu*as - iv*ah},${iyNeg + iv*as + iu*ah}`,
+      topArrow:   `${jxPos},${jyPos} ${jxPos - ju*as + jv*ah},${jyPos - jv*as - ju*ah} ${jxPos - ju*as - jv*ah},${jyPos - jv*as + ju*ah}`,
+      bottomArrow: `${jxNeg},${jyNeg} ${jxNeg + ju*as + jv*ah},${jyNeg + jv*as - ju*ah} ${jxNeg + ju*as - jv*ah},${jyNeg + jv*as + ju*ah}`,
+      stdOpacity: '1',  // show all 4 arrows in tf mode too
+    };
+  }
+
+  // Standard mode
+  const xL = gd.xMin ?? ox;
+  const xR = gd.xMax ?? ox + 300;
+  const yT = gd.yMin ?? oy - 200;
+  const yB = gd.yMax ?? oy + 200;
+
+  return {
+    xLine: { x1: xL, y1: oy, x2: xR, y2: oy },
+    yLine: { x1: ox, y1: yB, x2: ox, y2: yT },
+    rightArrow: `${xR},${oy} ${xR - as},${oy - ah} ${xR - as},${oy + ah}`,
+    leftArrow:  `${xL},${oy} ${xL + as},${oy - ah} ${xL + as},${oy + ah}`,
+    topArrow:   `${ox},${yT} ${ox - ah},${yT + as} ${ox + ah},${yT + as}`,
+    bottomArrow: `${ox},${yB} ${ox - ah},${yB - as} ${ox + ah},${yB - as}`,
+    stdOpacity: '1',
+  };
+}
+
+/** Draw or update axes group. On create, appends all 7 children with data-role
+ *  attributes. On update (when transition is provided), selects by data-role
+ *  and transitions geometry — no fragile DOM-index assumptions. */
+function drawAxesGroup(
+  g: E, gd: GroupState,
+  tr?: d3.Transition<d3.BaseType, unknown, null, undefined>,
+) {
+  const geo = computeAxesGeometry(gd);
+  const sw = gd.strokeW ?? 1.4;
+  const stroke = svgColor(gd.stroke!);
+
+  const children = g.selectAll<d3.BaseType, unknown>('*');
+  const isUpdate = tr && children.size() >= 7;
+
+  if (isUpdate) {
+    // Select by stable data-role attributes
+    const sel = (role: string) => g.select<d3.BaseType>(`[data-role="${role}"]`).interrupt().transition(tr!);
+
+    sel('x-axis').attr('x1', geo.xLine.x1).attr('y1', geo.xLine.y1).attr('x2', geo.xLine.x2).attr('y2', geo.xLine.y2);
+    sel('x-arrow-right').attr('points', geo.rightArrow).attr('opacity', geo.stdOpacity);
+    sel('x-arrow-left').attr('points', geo.leftArrow).attr('opacity', geo.stdOpacity);
+    sel('y-axis').attr('x1', geo.yLine.x1).attr('y1', geo.yLine.y1).attr('x2', geo.yLine.x2).attr('y2', geo.yLine.y2);
+    sel('y-arrow-top').attr('points', geo.topArrow).attr('opacity', geo.stdOpacity);
+    sel('y-arrow-bottom').attr('points', geo.bottomArrow).attr('opacity', geo.stdOpacity);
+    sel('origin').attr('cx', gd.ox ?? 0).attr('cy', gd.oy ?? 0);
+    // Transition stroke too
+    g.selectAll<d3.BaseType, unknown>('[data-role]').attr('stroke', stroke);
+  } else {
+    // Clear and rebuild (handles both initial create and fallback)
+    g.selectAll('*').remove();
+
+    g.append('line').attr('data-role', 'x-axis')
+      .attr('x1', geo.xLine.x1).attr('y1', geo.xLine.y1)
+      .attr('x2', geo.xLine.x2).attr('y2', geo.xLine.y2)
+      .attr('stroke', stroke).attr('stroke-width', sw);
+    g.append('polygon').attr('data-role', 'x-arrow-right')
+      .attr('points', geo.rightArrow).attr('fill', stroke).attr('opacity', geo.stdOpacity);
+    g.append('polygon').attr('data-role', 'x-arrow-left')
+      .attr('points', geo.leftArrow).attr('fill', stroke).attr('opacity', geo.stdOpacity);
+    g.append('line').attr('data-role', 'y-axis')
+      .attr('x1', geo.yLine.x1).attr('y1', geo.yLine.y1)
+      .attr('x2', geo.yLine.x2).attr('y2', geo.yLine.y2)
+      .attr('stroke', stroke).attr('stroke-width', sw);
+    g.append('polygon').attr('data-role', 'y-arrow-top')
+      .attr('points', geo.topArrow).attr('fill', stroke).attr('opacity', geo.stdOpacity);
+    g.append('polygon').attr('data-role', 'y-arrow-bottom')
+      .attr('points', geo.bottomArrow).attr('fill', stroke).attr('opacity', geo.stdOpacity);
+    g.append('circle').attr('data-role', 'origin')
+      .attr('cx', gd.ox ?? 0).attr('cy', gd.oy ?? 0).attr('r', 3)
+      .attr('fill', svgColor('#fff')).attr('stroke', stroke).attr('stroke-width', sw);
+  }
+}
 
 /** Dev-mode NaN guard: warns with entity context before the browser swallows the error.
  *  Called from rendering hot paths — cheap isNaN check, no allocations. */
@@ -81,9 +217,10 @@ function alignPolylines(ptsA: Vec2[], ptsB: Vec2[]): [Vec2[], Vec2[]] {
 function resolveLinePoints(ld: LineState, id?: string): Vec2[] {
   if (ld.points && ld.points.length >= 2) return ld.points;
   let x1: number, y1: number, x2: number, y2: number;
-  if (ld._tf && ld._base) {
-    const b = ld._base as { from: [number, number]; to: [number, number] };
-    const res = applyLine(b.from, b.to, ld._tf);
+  if (ld.transforms && ld.transforms.length > 0) {
+    const from = ld.from ?? [ld.x1 ?? 0, ld.y1 ?? 0] as [number, number];
+    const to = ld.to ?? [ld.x2 ?? 0, ld.y2 ?? 0] as [number, number];
+    const res = applyLine(from, to, ld.transforms);
     x1 = res.from[0]; y1 = res.from[1]; x2 = res.to[0]; y2 = res.to[1];
   } else {
     x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
@@ -96,7 +233,7 @@ function resolveLinePoints(ld: LineState, id?: string): Vec2[] {
 }
 
 /** Construct identity-equivalent transforms matching the structure of the given list.
- *  Used to enable smooth attrTween interpolation when one side lacks _tf. */
+ *  Used to enable smooth attrTween interpolation when one side lacks transforms. */
 function identityTransforms(tf: Transform[]): Transform[] {
   return tf.map(t => {
     switch (t.type) {
@@ -243,8 +380,8 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       }
       // polygon / fill — apply transforms if present
       let pts: Vec2[];
-      if (rd._tf && rd._base && 'vertices' in rd._base) {
-        pts = applyVertices(rd._base.vertices, rd._tf);
+      if (rd.transforms && rd.transforms.length > 0) {
+        pts = applyVertices((rd.vertices ?? rd.pts ?? []) as [number, number][], rd.transforms);
       } else {
         pts = rd.pts ?? rd.vertices ?? [];
       }
@@ -320,12 +457,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
       }
       const g = bg.append('g').attr('data-id', id);
       if (gd.subtype === 'axes') {
-        const ox = gd.ox ?? 0, oy = gd.oy ?? 0, xl = gd.xl ?? 300, yl = gd.yl ?? 200, sw = gd.strokeW ?? 1.4;
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox + xl + 10).attr('y2', oy).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr('fill', svgColor(gd.stroke!));
-        g.append('line').attr('x1', ox).attr('y1', oy).attr('x2', ox).attr('y2', oy - yl - 10).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
-        g.append('polygon').attr('points', `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr('fill', svgColor(gd.stroke!));
-        g.append('circle').attr('cx', ox).attr('cy', oy).attr('r', 3).attr('fill', svgColor('#fff')).attr('stroke', svgColor(gd.stroke!)).attr('stroke-width', sw);
+        drawAxesGroup(g, gd);
       } else if (gd.subtype === 'grid') {
         drawGridLines(g, gd);
       } else if (gd.subtype === 'matrix') {
@@ -567,29 +699,29 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
       } else {
         const oldRd = oldState as RegionState;
 
-        // Normalize: ensure both sides have _tf/_base for smooth attrTween interpolation.
-        let oldTf: Transform[] | undefined = oldRd._tf;
-        let newTf: Transform[] | undefined = rd._tf;
+        // Normalize: ensure both sides have transforms for smooth attrTween interpolation.
+        let oldTf: Transform[] | undefined = oldRd.transforms;
+        let newTf: Transform[] | undefined = rd.transforms;
         let regionBase: [number, number][] | undefined;
 
-        if (rd._tf && rd._base && 'vertices' in rd._base) {
-          regionBase = (rd._base as { vertices: [number, number][] }).vertices;
-          if (!oldRd._tf) oldTf = identityTransforms(rd._tf);
+        if (rd.transforms && rd.transforms.length > 0) {
+          regionBase = (rd.vertices ?? rd.pts ?? []) as [number, number][];
+          if (!oldRd.transforms) oldTf = identityTransforms(rd.transforms);
         }
-        if (oldRd._tf && oldRd._base && 'vertices' in oldRd._base && !regionBase) {
-          regionBase = (oldRd._base as { vertices: [number, number][] }).vertices;
-          if (!rd._tf) newTf = identityTransforms(oldRd._tf);
+        if (oldRd.transforms && oldRd.transforms.length > 0 && !regionBase) {
+          regionBase = (oldRd.vertices ?? oldRd.pts ?? []) as [number, number][];
+          if (!rd.transforms) newTf = identityTransforms(oldRd.transforms);
         }
 
-        if (regionBase && oldTf && newTf) {
+        if (regionBase && regionBase.length > 0 && oldTf && newTf) {
           const norm = normalizeTransforms(oldTf!, newTf!);
           svg.interrupt().transition(tr)
              .attrTween('points', () => t => applyVertices(regionBase!, interpolate(norm.old, norm.new, t)).map(p => p.join(',')).join(' '))
              .attr('fill', svgColor(rd.fill)).attr('stroke', svgColor(rd.stroke ?? 'none'));
         } else {
           let pts: Vec2[];
-          if (rd._tf && rd._base && 'vertices' in rd._base) {
-            pts = applyVertices((rd._base as { vertices: [number, number][] }).vertices, rd._tf);
+          if (rd.transforms && rd.transforms.length > 0) {
+            pts = applyVertices((rd.vertices ?? rd.pts ?? []) as [number, number][], rd.transforms);
           } else {
             pts = rd.pts ?? rd.vertices ?? [];
           }
@@ -626,6 +758,8 @@ function transitionEntity(svg: E, text: E | null, oldState: EntityState, newStat
           }
         } else if (text) { text.text(''); }
         else { svg.select('text').text(''); }
+      } else if (gd.subtype === 'axes') {
+        drawAxesGroup(svg, gd, tr);
       } else if (gd.subtype === 'grid') {
         svg.interrupt();
         drawGridLines(svg, gd, tr);
@@ -667,8 +801,8 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
     case 'region': {
       const rd = d as RegionState;
       let pts: Vec2[];
-      if (rd._tf && rd._base && 'vertices' in rd._base) {
-        pts = applyVertices(rd._base.vertices, rd._tf);
+      if (rd.transforms && rd.transforms.length > 0) {
+        pts = applyVertices((rd.vertices ?? rd.pts ?? []) as [number, number][], rd.transforms);
       } else {
         pts = rd.pts ?? rd.vertices ?? [];
       }
@@ -702,6 +836,8 @@ function updateEntityImmediate(svg: E, text: E | null, d: EntityState) {
           }
         } else if (text) { text.text(''); }
         else { svg.select('text').text(''); }
+      } else if (gd.subtype === 'axes') {
+        drawAxesGroup(svg, gd);
       } else if (gd.subtype === 'grid') {
         drawGridLines(svg, gd);
       }

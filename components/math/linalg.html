@@ -19,65 +19,56 @@
 </head>
 <body>
 
-<h1>Linear Algebra — viewport</h1>
-<p class="sub">Natural math coordinates · auto-axes · margin protection · smooth transforms</p>
+<h1>Linear Algebra — coords()</h1>
+<p class="sub">Natural math coordinates · explicit axes/grid · smooth transforms</p>
 
 <div id="sections"></div>
 
 <script type="module">
-import { stage } from 'learnvis';
+import { canvas, stepper } from 'learnvis';
 
 const sections = [
-  // ── Static: matrix display ──
-  {
-    name: 'Matrix Display',
-    desc: 'matrix() in viewport. Wide spacing — no overlap.',
-    width: 340, height: 200,
-    setup(s) {
-      s.render(() => {
-        const vp = s.math.viewport({ x: [-5, 5], y: [-3, 3], margin: 0.1 });
-        vp.matrix('A', [[1, 2], [3, 4]], { x: -3.5, y: 1 }).color('primary').label('A');
-        vp.matrix('I', [[1, 0], [0, 1]], { x: 3, y: 1 }).color('dim').label('I');
-      });
-    },
-  },
   {
     name: 'Basis Vectors',
-    desc: 'î (accent) + ĵ (danger) at origin. basis() is sugar over vector().',
+    desc: 'î (accent) + ĵ (danger) at origin. Drawn as explicit vectors.',
     width: 340, height: 260,
     setup(s) {
       s.render(() => {
-        const vp = s.math.viewport({ x: [-4, 4], y: [-3, 3] });
-        vp.basis('std', [0, 0], { scale: 2.5 });
+        const vp = s.coords({ x: [-4, 4], y: [-3, 3] });
+        vp.axes();
+        vp.grid();
+        vp.origin();
+        vp.vector('i', [0, 0], [2.5, 0]).color('danger').label('î').stroke(2);
+        vp.vector('j', [0, 0], [0, 2.5]).color('info').label('ĵ').stroke(2);
       });
     },
   },
 
-  // ── Animation: vector × matrix ──
   {
     name: 'Vector × Matrix Transform',
-    desc: 'v = (3,0). Apply 90° rotation → shear → reflect. viewport margin prevents overflow.',
+    desc: 'v = (3,0). Apply 90° rotation → shear → reflect.',
     width: 400, height: 300,
     setup(s) {
-      s.steps([
+      return s.steps([
         { label: 'v = (3,0)', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2);
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').stroke(2);
         }},
         { label: 'rot 90°', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2)
-            .matrixTransform(0, 1, -1, 0);
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').stroke(2).rotate(90, 0, 0);
         }},
         { label: 'shear', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2)
-            .matrixTransform(1, 0.5, 0.5, 1);
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').stroke(2).matrix(1, 0.5, 0.5, 1);
         }},
         { label: 'reflect', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').strokeW(2)
-            .matrixTransform(1, 0, 0, -1);
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('v', [0, 0], [3, 0]).color('danger').label('v').stroke(2).matrix(1, 0, 0, -1);
         }},
       ], { controls: true });
     },
@@ -87,15 +78,17 @@ const sections = [
     desc: '[[2,0.5],[0.5,1.5]]. det≈2.75. Area scales by |det|.',
     width: 400, height: 300,
     setup(s) {
-      s.steps([
+      return s.steps([
         { label: 'Unit square', frame(sv) {
-          const vp = sv.math.viewport({ x: [-4, 4], y: [-3, 3] });
+          const vp = sv.coords({ x: [-4, 4], y: [-3, 3] });
+          vp.axes(); vp.grid(); vp.origin();
           vp.polygon('sq', [[0,0],[1,0],[1,-1],[0,-1]]).color('accent').opacity(0.5).label('det=1');
         }},
         { label: 'T(square)', frame(sv) {
-          const vp = sv.math.viewport({ x: [-4, 4], y: [-3, 3] });
+          const vp = sv.coords({ x: [-4, 4], y: [-3, 3] });
+          vp.axes(); vp.grid(); vp.origin();
           vp.polygon('sq', [[0,0],[1,0],[1,-1],[0,-1]]).color('danger').opacity(0.5).label('det≈2.75')
-            .matrixTransform(2, 0.5, 0.5, 1.5);
+            .matrix(2, 0.5, 0.5, 1.5);
         }},
       ], { controls: true });
     },
@@ -105,48 +98,40 @@ const sections = [
     desc: 'λ₁=3 on (1,1), λ₂=1 on (1,-1). Eigenvectors stay on their span.',
     width: 400, height: 300,
     setup(s) {
-      s.steps([
+      return s.steps([
         { label: 'Basis + evecs', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          // Standard basis
-          vp.vector('e1', [0, 0], [1, 0]).color('accent').label('e₁').strokeW(1.5);
-          vp.vector('e2', [0, 0], [0, 1]).color('info').label('e₂').strokeW(1.5);
-          // Eigenvector (1,1)
-          vp.vector('v1', [0, 0], [0.7, 0.7]).color('warning').label('v₁').strokeW(2.5).dashed('5 3');
-          // Eigenvector (1,-1)
-          vp.vector('v2', [0, 0], [0.7, -0.7]).color('success').label('v₂').strokeW(2.5).dashed('5 3');
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('e1', [0, 0], [1, 0]).color('accent').label('e₁').stroke(1.5);
+          vp.vector('e2', [0, 0], [0, 1]).color('info').label('e₂').stroke(1.5);
+          vp.vector('v1', [0, 0], [0.7, 0.7]).color('warning').label('v₁').stroke(2.5);
+          vp.vector('v2', [0, 0], [0.7, -0.7]).color('success').label('v₂').stroke(2.5);
         }},
         { label: 'T applied', frame(sv) {
-          const vp = sv.math.viewport({ x: [-5, 5], y: [-4, 4] });
-          vp.vector('e1', [0, 0], [1, 0]).color('accent').label('e₁').strokeW(1.5)
-            .matrixTransform(2, 1, 1, 2);
-          vp.vector('e2', [0, 0], [0, 1]).color('info').label('e₂').strokeW(1.5)
-            .matrixTransform(2, 1, 1, 2);
-          // v₁=(1,1) → scaled by λ=3 → (3,3)
-          vp.vector('v1', [0, 0], [0.7, 0.7]).color('warning').label('3·v₁').strokeW(2.5)
-            .matrixTransform(2, 1, 1, 2);
-          // v₂=(1,-1) → scaled by λ=1 → unchanged direction
-          vp.vector('v2', [0, 0], [0.7, -0.7]).color('success').label('1·v₂').strokeW(2.5)
-            .matrixTransform(2, 1, 1, 2);
+          const vp = sv.coords({ x: [-5, 5], y: [-4, 4] });
+          vp.axes(); vp.grid(); vp.origin();
+          vp.vector('e1', [0, 0], [1, 0]).color('accent').label('e₁').stroke(1.5).matrix(2,1,1,2);
+          vp.vector('e2', [0, 0], [0, 1]).color('info').label('e₂').stroke(1.5).matrix(2,1,1,2);
+          vp.vector('v1', [0, 0], [0.7, 0.7]).color('warning').label('3·v₁').stroke(2.5).matrix(2,1,1,2);
+          vp.vector('v2', [0, 0], [0.7, -0.7]).color('success').label('1·v₂').stroke(2.5).matrix(2,1,1,2);
         }},
       ], { controls: true });
     },
   },
   {
     name: 'Basis Rotation 0°→135°',
-    desc: 'î, ĵ rotate via .rotate() (built-in). viewport keeps origin centered.',
+    desc: 'î, ĵ rotate via .rotate() (built-in). coords() keeps origin centered.',
     width: 400, height: 300,
     setup(s) {
       const degs = [0, 30, 60, 90, 135];
-      s.steps(
+      return s.steps(
         degs.map(d => ({
           label: `${d}°`,
           frame(sv) {
-            const vp = sv.math.viewport({ x: [-4, 4], y: [-3, 3] });
-            vp.vector('i', [0, 0], [2.5, 0]).color('danger').label('î').strokeW(2)
-              .rotate(d, 0, 0);
-            vp.vector('j', [0, 0], [0, 2.5]).color('info').label('ĵ').strokeW(2)
-              .rotate(d, 0, 0);
+            const vp = sv.coords({ x: [-4, 4], y: [-3, 3] });
+            vp.axes(); vp.grid(); vp.origin();
+            vp.vector('i', [0, 0], [2.5, 0]).color('danger').label('î').stroke(2).rotate(d, 0, 0);
+            vp.vector('j', [0, 0], [0, 2.5]).color('info').label('ĵ').stroke(2).rotate(d, 0, 0);
           }
         })),
         { controls: true }
@@ -154,34 +139,33 @@ const sections = [
     },
   },
   {
-    name: 'coords() — Bottom-Left Origin',
-    desc: 'Traditional function-plot style: origin=(60,200), x=[0,10], y=[-2,2].',
+    name: 'coords() — Function Plot',
+    desc: 'Centered projection. x:[0,10], y:[-2,2]. Plot sin(x)*2 with point + vector.',
     width: 400, height: 260,
     setup(s) {
-      const { coords } = s.math;
       s.render(() => {
-        const c = coords('bl', [60, 200], { x: [0, 10], y: [-2, 2], xLabel: 'x', yLabel: 'y' });
-        c.axes({ color: 'dim' });
-        c.grid({ spacing: 30, color: 'dim' });
-        c.fn('sin', x => Math.sin(x) * 2, { color: 'danger', label: '2sin(x)' });
-        c.point('P', 3, 1.5, { color: 'accent', label: 'P', size: 5 });
-        c.vector('v', [2, 0], [5, 1.5], { color: 'info', label: 'v' });
+        const vp = s.coords({ x: [0, 10], y: [-2, 2] });
+        vp.axes();
+        vp.grid();
+        vp.origin();
+        vp.curve('sin', x => Math.sin(x) * 2).color('danger').label('2sin(x)');
+        vp.point('P', 3, 1.5).color('accent').label('P').size(5);
+        vp.vector('v', [2, 0], [5, 1.5]).color('info').label('v');
       });
     },
   },
   {
-    name: 'coords() — Offset Center',
-    desc: 'Origin at (200,180) with custom domain [−3,3]. Like a magnified viewport.',
+    name: 'coords() — Centered Square Grid',
+    desc: 'Centered domain [−3,3]×[−2,2] with vector + circle.',
     width: 400, height: 260,
     setup(s) {
-      const { coords } = s.math;
       s.render(() => {
-        const c = coords('oc', [200, 180], { x: [-3, 3], y: [-2, 2], margin: 0.1 });
-        c.axes({ color: 'dim' });
-        c.grid({ spacing: 30, color: 'dim' });
-        c.point('O', 0, 0, { color: 'primary', label: 'O', size: 5 });
-        c.vector('u', [0, 0], [2, 1], { color: 'warning', label: 'u' }).strokeW(2);
-        c.circle('c', [0, 0], 1.5).color('accent').opacity(0.4);
+        const vp = s.coords({ x: [-3, 3], y: [-2, 2], margin: 0.1 });
+        vp.axes();
+        vp.grid();
+        vp.origin({ color: 'primary', label: 'O' });
+        vp.vector('u', [0, 0], [2, 1]).color('warning').label('u').stroke(2);
+        vp.circle('c', 0, 0, 1.5).color('accent').opacity(0.4);
       });
     },
   },
@@ -191,10 +175,15 @@ const container = document.getElementById('sections');
 for (const [si, sec] of sections.entries()) {
   const el = document.createElement('section');
   const sizeAttr = `width:${sec.width}px;height:${sec.height}px`;
-  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}" style="${sizeAttr}"></div></div>`;
+  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}" style="${sizeAttr}"></div><div class="lv-stepper-host"></div></div>`;
   container.appendChild(el);
-  const s = stage(`#st${si}`, { width: sec.width, height: sec.height, theme: 'warm' });
-  sec.setup(s);
+  const s = canvas(`#st${si}`, { width: sec.width, height: sec.height, theme: 'warm' });
+  const result = sec.setup(s);
+  // If setup returns a StepsController, attach stepper
+  if (result && typeof result.go === 'function') {
+    const host = el.querySelector('.lv-stepper-host');
+    if (host) stepper(host, result);
+  }
 }
 </script>
 </body>

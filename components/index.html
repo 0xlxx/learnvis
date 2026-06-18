@@ -33,8 +33,8 @@
   <div class="link-list">
     <a href="math/animation.html"><span class="label">animation</span><span class="desc">逐步构建演示</span></a>
     <a href="math/candidates.html"><span class="label">candidates</span><span class="desc">样式候选 & 对比</span></a>
-    <a href="math/coords.html"><span class="label">coords</span><span class="desc">viewport · basis · aspect · ticks</span></a>
-    <a href="math/linalg.html"><span class="label">linalg</span><span class="desc">matrix · basis · transform</span></a>
+    <a href="math/coords.html"><span class="label">coords</span><span class="desc">coords() 投影 · basis · aspect · ticks</span></a>
+	    <a href="math/linalg.html"><span class="label">linalg</span><span class="desc">matrix · basis · transform</span></a>
   </div>
 </section>
 
@@ -53,11 +53,11 @@
   <dt>candidates.html</dt>
   <dd>并排样式候选。同一原语的多组参数/风格对比，用于快速视觉决策。</dd>
   <dt>coords.html</dt>
-  <dd>坐标系与基向量。通过 viewport()/coords() 展示 domain、aspect、basis 变换、ticks、grid。</dd>
+	  <dd>坐标系与基向量。通过 coords() 展示 domain、aspect、basis 变换、axes、grid。axes() 返回 Gfx 支持链式调用。</dd>
   <dt>linalg.html</dt>
   <dd>线性代数。matrix 渲染、向量旋转/剪切/反射、基向量变换。</dd>
   <dt>新增页面</dt>
-  <dd>按 <code>components/&lt;domain&gt;/&lt;type&gt;.html</code> 放置。ESM 引用：<code>import { stage } from 'learnvis'</code>。</dd>
+	  <dd>按 <code>components/&lt;domain&gt;/&lt;type&gt;.html</code> 放置。ESM 引用：<code>import { canvas } from 'learnvis'</code>。</dd>
 </dl>
 
 </body>

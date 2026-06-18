@@ -1,11 +1,10 @@
-// vis/transform.ts — pure transform functions & composition
-// Each returns a plain descriptor — no mutation, no side effects.
+// vis/transform.ts — pure transform composition & application
+// Each function returns/accepts a plain descriptor — no mutation, no side effects.
 
-export interface TfRotate { type: 'rotate'; angle: number; cx: number; cy: number }
-export interface TfScale { type: 'scale'; sx: number; sy: number }
-export interface TfTranslate { type: 'translate'; dx: number; dy: number }
-export interface TfMatrix { type: 'matrix'; a: number; b: number; c: number; d: number; tx: number; ty: number }
-export type Transform = TfRotate | TfScale | TfTranslate | TfMatrix;
+import type { TfRotate, TfScale, TfTranslate, TfMatrix, Transform } from './types';
+
+// Re-export for convenience
+export type { TfRotate, TfScale, TfTranslate, TfMatrix, Transform };
 
 export function rotate(angle: number, cx: number, cy: number): TfRotate {
   return { type: 'rotate', angle, cx, cy };
@@ -77,9 +76,11 @@ export function applyLine(from: [number, number], to: [number, number], tf: Tran
         break;
       }
       case 'matrix': {
-        const { a, b, c, d, tx, ty } = t;
-        nf = [a * nf[0] + c * nf[1] + tx, b * nf[0] + d * nf[1] + ty] as [number, number];
-        nt = [a * nt[0] + c * nt[1] + tx, b * nt[0] + d * nt[1] + ty] as [number, number];
+        const { a, b, c, d, tx = 0, ty = 0 } = t;
+        // Apply matrix relative to from point (origin of the line/vector)
+        const dx = nt[0] - nf[0], dy = nt[1] - nf[1];
+        nf = [nf[0] + tx, nf[1] + ty] as [number, number];
+        nt = [nf[0] + a * dx + c * dy, nf[1] + b * dx + d * dy] as [number, number];
         break;
       }
     }
@@ -108,8 +109,13 @@ export function applyVertices(vertices: [number, number][], tf: Transform[]): [n
         break;
       }
       case 'matrix': {
-        const { a, b, c, d, tx, ty } = t;
-        nv = nv.map(([px, py]) => [a * px + c * py + tx, b * px + d * py + ty] as [number, number]);
+        const { a, b, c, d, tx = 0, ty = 0 } = t;
+        // Apply matrix relative to first vertex (local origin)
+        const ox = nv[0][0], oy = nv[0][1];
+        nv = nv.map(([px, py]) => {
+          const dx = px - ox, dy = py - oy;
+          return [ox + a * dx + c * dy + tx, oy + b * dx + d * dy + ty] as [number, number];
+        });
         break;
       }
     }

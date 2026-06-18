@@ -1,5 +1,5 @@
 // vis/stepper.ts — standalone UI components, progressively enhancing StepsController
-import type { StepsController, StepLike } from './types';
+import type { StepsController, StepDef } from './types';
 
 // ── Singleton stylesheet injection ──
 
@@ -246,10 +246,10 @@ export function stepper(
 
   // ── Update UI ──
 
-  const _update = (i: number, step: StepLike) => {
+  const _update = (i: number, step: StepDef) => {
     prevBtn.disabled = i <= 0;
     nextBtn.disabled = i >= ctrl.total - 1;
-    const s = step as Record<string, unknown>;
+    const s = step as unknown as Record<string, unknown>;
     labelEl.textContent = (s.title ?? s.label ?? `Step ${i + 1}`) as string;
     counterEl.textContent = `${i + 1} / ${ctrl.total}`;
 
@@ -287,6 +287,9 @@ export function stepper(
     counterEl.textContent = `${i + 1} / ${ctrl.total}`;
   }
   rebuildDots(ctrl.current, ctrl.total);
+
+  // Auto-render step 0 if not yet rendered
+  if (ctrl.current < 0) ctrl.go(0);
 
   return {
     destroy: () => {

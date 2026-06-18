@@ -24,32 +24,28 @@
 <div id="sections"></div>
 
 <script type="module">
-import { stage } from 'learnvis';
+import { canvas } from 'learnvis';
 
 const sections = [
   {
     name: 'Edge style',
-    desc: 'undirected / directed / dashed / weighted',
+    desc: 'directed / dashed / weighted',
     candidates: [
-      { label:'undirected', draw(s){
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,90]); vertex('B',[160,90]);
-        edge('A','B');
-      }},
       { label:'directed', draw(s){
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,90]); vertex('B',[160,90]);
-        edge('A','B',{directed:true});
+        s.vertex('A', 60, 90); s.vertex('B', 160, 90);
+        s.edge('A', 'B');
       }},
       { label:'dashed', draw(s){
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,90]); vertex('B',[160,90]);
-        edge('A','B').dashed('5 4');
+        s.vertex('A', 60, 90); s.vertex('B', 160, 90);
+        s.edge('A', 'B').dash('5 4');
       }},
       { label:'weighted', draw(s){
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,90]); vertex('B',[160,90]);
-        edge('A','B').strokeW(3).label('5');
+        s.vertex('A', 60, 90); s.vertex('B', 160, 90);
+        s.edge('A', 'B').stroke(3).label('5');
+      }},
+      { label:'colored', draw(s){
+        s.vertex('A', 60, 90); s.vertex('B', 160, 90);
+        s.edge('A', 'B').color('danger').stroke(2);
       }},
     ]
   },
@@ -58,22 +54,18 @@ const sections = [
     desc: 'filled / open / numbered / small',
     candidates: [
       { label:'filled', draw(s){
-        const { vertex } = s.graph;
-        vertex('A',[110,90]);
+        s.vertex('A', 110, 90);
       }},
       { label:'open', draw(s){
-        const { vertex } = s.graph;
-        vertex('A',[110,90]).fill('#fff');
+        s.vertex('A', 110, 90).fill('#fff');
       }},
       { label:'numbered', draw(s){
-        const { vertex } = s.graph;
-        vertex('1',[60,90]); vertex('2',[110,90]); vertex('3',[160,90]);
+        s.vertex('1', 60, 90); s.vertex('2', 110, 90); s.vertex('3', 160, 90);
       }},
       { label:'small', draw(s){
-        const { vertex } = s.graph;
-        vertex('a',[70,90]).size(8).label('');
-        vertex('b',[110,90]).size(8).label('');
-        vertex('c',[150,90]).size(8).label('');
+        s.vertex('a', 70, 90).size(8).label('');
+        s.vertex('b', 110, 90).size(8).label('');
+        s.vertex('c', 150, 90).size(8).label('');
       }},
     ]
   },
@@ -82,39 +74,33 @@ const sections = [
     desc: 'circular / force / tree / manual',
     candidates: [
       { label:'circular', draw(s){
-        const { vertex, edge, layout } = s.graph;
-        const v = [0,1,2,3,4,5].map(i => vertex(String(i),[0,0]));
-        layout('circular', v, [], {center:[110,90],radius:60});
-        for (let i = 0; i < 5; i++) edge(v[i], v[i+1]);
-        edge(v[5], v[0]);
+        const v = [0,1,2,3,4,5].map(i => s.vertex(String(i), 0, 0));
+        s.layout('circular', v, [], {center:[110,90],radius:60});
+        for (let i = 0; i < 5; i++) s.edge(v[i], v[i+1]);
+        s.edge(v[5], v[0]);
       }},
       { label:'force', draw(s){
-        const { vertex, edge, layout } = s.graph;
-        const v = [0,1,2,3,4,5].map(i => vertex(String(i),[Math.random()*160+30,Math.random()*120+30]));
+        const v = [0,1,2,3,4,5].map(i => s.vertex(String(i), Math.random()*160+30, Math.random()*120+30));
         const edges = [];
-        for (let i = 0; i < 5; i++) edges.push({from:v[i], to:v[i+1]});
-        edges.push({from:v[5], to:v[0]});
-        edges.push({from:v[1], to:v[4]});
-        layout('force', v, edges, {center:[110,90]});
-        for (const e of edges) edge(e.from, e.to);
+        for (let i = 0; i < 5; i++) edges.push(s.edge(v[i], v[i+1]));
+        edges.push(s.edge(v[5], v[0]));
+        edges.push(s.edge(v[1], v[4]));
+        s.layout('force', v, edges, {center:[110,90]});
       }},
       { label:'force (tree)', draw(s){
-        const { vertex, edge, layout } = s.graph;
-        const r = vertex('R',[0,0]);
-        const kids = [0,1,2].map(i => vertex(String(i),[0,0]));
-        const grand = [0,1].map(i => vertex('g'+i,[0,0]));
+        const r = s.vertex('R', 0, 0);
+        const kids = [0,1,2].map(i => s.vertex(String(i), 0, 0));
+        const grand = [0,1].map(i => s.vertex('g'+i, 0, 0));
         const all = [r, ...kids, ...grand];
         const edges = [
-          {from:r, to:kids[0]}, {from:r, to:kids[1]}, {from:r, to:kids[2]},
-          {from:kids[1], to:grand[0]}, {from:kids[1], to:grand[1]},
+          s.edge(r, kids[0]), s.edge(r, kids[1]), s.edge(r, kids[2]),
+          s.edge(kids[1], grand[0]), s.edge(kids[1], grand[1]),
         ];
-        layout('force', all, edges, {center:[110,90]});
-        for (const e of edges) edge(e.from, e.to);
+        s.layout('force', all, edges, {center:[110,90]});
       }},
       { label:'manual', draw(s){
-        const { vertex, edge } = s.graph;
-        vertex('A',[50,120]); vertex('B',[110,30]); vertex('C',[170,120]);
-        edge('A','B'); edge('B','C'); edge('A','C');
+        s.vertex('A', 50, 120); s.vertex('B', 110, 30); s.vertex('C', 170, 120);
+        s.edge('A', 'B'); s.edge('B', 'C'); s.edge('A', 'C');
       }},
     ]
   },
@@ -133,7 +119,7 @@ for (const sec of sections) {
     card.className = 'card';
     card.innerHTML = `<div class="name">${c.label}</div><div class="stage" id="${id}"></div>`;
     row.appendChild(card);
-    const s = stage(`#${id}`, { width: 220, height: 180, theme: 'warm' });
+    const s = canvas(`#${id}`, { width: 220, height: 180, theme: 'warm' });
     s.render(() => c.draw(s));
   });
   stageId++;

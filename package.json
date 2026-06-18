@@ -1,6 +1,6 @@
 {
   "name": "learnvis",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "description": "D3 visualization primitives + agent-friendly API for algorithm lessons",
   "type": "module",
   "scripts": {

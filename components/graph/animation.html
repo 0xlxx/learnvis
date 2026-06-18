@@ -6,100 +6,100 @@
   <link rel="stylesheet" href="../../theme.css">
   <style>
     *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem;line-height:1.6}
-    h1{font-size:1.3rem;margin:0 0 0.3rem}
-    .sub{color:var(--text-muted);font-size:0.82rem;margin:0 0 1.5rem}
+    h1{font-size:1.3rem;margin:0 0 .3rem}
+    .sub{color:var(--text-muted);font-size:.82rem;margin:0 0 1.5rem}
     section{margin-bottom:2rem}
-    section h2{font-size:0.9rem;margin:0 0 6px}
-    .desc{font-size:0.72rem;color:var(--text-muted);margin-bottom:8px}
+    section h2{font-size:.9rem;margin:0 0 6px}
+    .desc{font-size:.72rem;color:var(--text-muted);margin-bottom:8px}
+    .row{display:flex;gap:16px;flex-wrap:wrap}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px;text-align:center}
-    .card .stage{width:300px;height:220px;display:block}
+    .card .stage{width:340px;height:260px;display:block}
     .lv-stepper-host{margin-top:6px}
   </style>
 </head>
 <body>
-
 <h1>Graph Animation</h1>
-<p class="sub">Insert / delete vertices with smooth transitions</p>
-
-<div id="sections"></div>
-
+<p class="sub">Vertex + Edge + Layout — step-by-step with stepper</p>
+<div class="row" id="sections"></div>
 <script type="module">
-import { stage } from 'learnvis';
+import { canvas } from 'learnvis';
+import { stepper } from 'learnvis';
 
 const sections = [
   {
-    name: 'Insert vertex (grow)',
-    desc: '3→4→5 vertices. Edges persist, new ones fade in.',
+    name: '图构建',
+    desc: '逐帧添加顶点 + 边。',
     steps: [
-      { label: '3 vertices', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,120]); vertex('B',[150,120]); vertex('C',[240,120]);
-        edge('A','B'); edge('B','C');
+      { label: '3 顶点', frame(s) {
+        s.vertex('A', 60, 120).label('A');
+        s.vertex('B', 150, 120).label('B');
+        s.vertex('C', 240, 120).label('C');
+        s.edge('A', 'B');
+        s.edge('B', 'C');
       }},
-      { label: '+ D', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,120]); vertex('B',[150,120]); vertex('C',[240,120]); vertex('D',[120,40]);
-        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C');
+      { label: '添加 D + 边', frame(s) {
+        s.vertex('A', 60, 120).label('A');
+        s.vertex('B', 150, 120).label('B');
+        s.vertex('C', 240, 120).label('C');
+        s.vertex('D', 120, 40).label('D');
+        s.edge('A', 'B');
+        s.edge('B', 'C');
+        s.edge('B', 'D');
+        s.edge('D', 'C');
       }},
-      { label: '+ E', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('D',[110,30]); vertex('E',[150,190]);
-        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C'); edge('B','E');
+      { label: '加权重', frame(s) {
+        s.vertex('A', 60, 120).label('A');
+        s.vertex('B', 150, 120).label('B');
+        s.vertex('C', 240, 120).label('C');
+        s.vertex('D', 120, 40).label('D');
+        s.edge('A', 'B').stroke(4).color('danger');
+        s.edge('B', 'C').stroke(2).color('primary');
+        s.edge('B', 'D');
+        s.edge('D', 'C').color('accent');
       }},
-    ]
+    ],
   },
   {
-    name: 'Delete vertex (fade out)',
-    desc: '5→4→3 vertices. Removed vertices fade out.',
+    name: 'Circular 布局',
+    desc: '4 顶点自动排列为环。',
     steps: [
-      { label: '5 vertices', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('D',[100,40]); vertex('E',[200,190]);
-        edge('A','B'); edge('B','C'); edge('B','D'); edge('D','C'); edge('B','E');
+      { label: '声明顶点', frame(s) {
+        s.vertex('A', 0, 0).label('A');
+        s.vertex('B', 0, 0).label('B');
+        s.vertex('C', 0, 0).label('C');
+        s.vertex('D', 0, 0).label('D');
       }},
-      { label: '− D', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[40,120]); vertex('B',[150,120]); vertex('C',[260,120]); vertex('E',[200,190]);
-        edge('A','B'); edge('B','C'); edge('B','E');
+      { label: '+ layout()', frame(s) {
+        const a = s.vertex('A', 0, 0).label('A');
+        const b = s.vertex('B', 0, 0).label('B');
+        const c = s.vertex('C', 0, 0).label('C');
+        const d = s.vertex('D', 0, 0).label('D');
+        s.layout('circular', [a, b, c, d]);
+        s.edge(a, b);
+        s.edge(b, c);
+        s.edge(c, d);
+        s.edge(d, a);
+        s.edge(a, c).dash('4 3');
       }},
-      { label: '− A', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('B',[150,120]); vertex('C',[260,120]); vertex('E',[200,190]);
-        edge('B','C'); edge('B','E');
-      }},
-    ]
+    ],
   },
-  {
-    name: 'Move vertices (lerp)',
-    desc: 'Same graph, different positions → smooth interpolation.',
-    steps: [
-      { label: 'Start', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[60,60]); vertex('B',[240,60]); vertex('C',[60,180]); vertex('D',[240,180]);
-        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
-      }},
-      { label: 'Shift', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[150,60]); vertex('B',[60,120]); vertex('C',[240,120]); vertex('D',[150,180]);
-        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
-      }},
-      { label: 'Shift more', frame(s) {
-        const { vertex, edge } = s.graph;
-        vertex('A',[240,60]); vertex('B',[150,120]); vertex('C',[60,120]); vertex('D',[240,180]);
-        edge('A','B'); edge('C','D'); edge('A','C',{directed:false}); edge('B','D',{directed:false});
-      }},
-    ]
-  }
 ];
 
-const container = document.getElementById('sections');
-for (const [si, sec] of sections.entries()) {
-  const el = document.createElement('section');
-  el.innerHTML = `<h2>${sec.name}</h2><div class="desc">${sec.desc}</div><div class="card"><div class="stage" id="st${si}"></div></div>`;
-  container.appendChild(el);
+const $s = document.getElementById('sections');
+for (const sec of sections) {
+  const section = document.createElement('section');
+  section.innerHTML = `<h2>${sec.name}</h2><p class="desc">${sec.desc}</p>`;
+  const card = document.createElement('div'); card.className = 'card';
+  const stage = document.createElement('div'); stage.className = 'stage'; stage.id = `g-${sec.name.replace(/\s+/g,'-')}`;
+  card.appendChild(stage);
+  const host = document.createElement('div'); host.className = 'lv-stepper-host';
+  card.appendChild(host);
+  section.appendChild(card);
+  $s.appendChild(section);
 
-  const s = stage(`#st${si}`, { width: 300, height: 220, theme: 'warm' });
-  s.steps(sec.steps, { controls: true });
+  const s = canvas(`#${stage.id}`, { width: 340, height: 260 });
+  const ctrl = s.steps(sec.steps, { controls: false });
+  stepper(host, ctrl);
 }
 </script>
 </body>

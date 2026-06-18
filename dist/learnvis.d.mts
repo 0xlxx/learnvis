@@ -1,6 +1,528 @@
 import * as d3 from "d3";
 import { BaseType, Selection } from "d3";
 
+//#region vis/renderer/index.d.ts
+interface RenderHandle {
+  /** Update visual to match new state (may animate) */
+  update(state: EntityState, opts?: {
+    animate?: boolean;
+    transition?: any;
+  }): void;
+  /** Remove visual from scene */
+  remove(): void;
+}
+interface Renderer {
+  /** Create visual object for an entity */
+  create(id: string, state: EntityState): RenderHandle;
+  /** Called before frame rendering */
+  beginFrame(): void;
+  /** Called after all entities are processed */
+  commitFrame(opts?: {
+    animate?: boolean;
+    ms?: number;
+  }): void;
+  /** Release resources */
+  dispose(): void;
+}
+//#endregion
+//#region vis/types.d.ts
+type Vec2 = [number, number];
+type Place = 'above' | 'below' | 'left' | 'right';
+type SemColor = {
+  fg: string;
+  bg: string;
+  a(pct: number): string;
+};
+type S = Selection<BaseType, unknown, null, undefined>;
+interface Palette {
+  primary: SemColor;
+  danger: SemColor;
+  warning: SemColor;
+  success: SemColor;
+  info: SemColor;
+  accent: SemColor;
+  dim: SemColor;
+}
+interface MarkerConfig {
+  size?: number;
+  width?: number;
+  height?: number;
+  offset?: number;
+  open?: boolean;
+}
+interface AnimationConfig {
+  duration: number;
+  enter: {
+    ratio: number;
+    easing: (t: number) => number;
+  };
+  update: {
+    ratio: number;
+    easing: (t: number) => number;
+  };
+  exit: {
+    ratio: number;
+    easing: (t: number) => number;
+  };
+}
+interface TfRotate {
+  type: 'rotate';
+  angle: number;
+  cx: number;
+  cy: number;
+}
+interface TfScale {
+  type: 'scale';
+  sx: number;
+  sy: number;
+}
+interface TfTranslate {
+  type: 'translate';
+  dx: number;
+  dy: number;
+}
+interface TfMatrix {
+  type: 'matrix';
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+  tx: number;
+  ty: number;
+}
+type Transform = TfRotate | TfScale | TfTranslate | TfMatrix;
+type NodeShape = 'circle' | 'rect' | 'symbol';
+interface NodeState {
+  type: 'node';
+  shape: NodeShape;
+  x: number;
+  y: number;
+  r?: number;
+  w?: number;
+  h?: number;
+  rx?: number;
+  fill: string;
+  stroke: string;
+  strokeW?: number;
+  opacity?: number;
+  label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
+  symType?: string;
+  _blockW?: number;
+  _blockH?: number;
+}
+type LineMarker = 'arrow' | 'none';
+interface LineState {
+  type: 'line';
+  from?: Vec2;
+  to?: Vec2;
+  x1?: number;
+  y1?: number;
+  x2?: number;
+  y2?: number;
+  a?: Vec2;
+  b?: Vec2;
+  points?: Vec2[];
+  stroke: string;
+  strokeW: number;
+  dash?: string;
+  opacity?: number;
+  label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
+  marker?: LineMarker;
+  directed?: boolean;
+  bend?: boolean;
+  transforms?: Transform[];
+  _markerCfg?: MarkerConfig | null;
+  _fromPort?: string;
+  _toPort?: string;
+}
+type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
+interface RegionState {
+  type: 'region';
+  shape: RegionShape;
+  cx?: number;
+  cy?: number;
+  r?: number;
+  pts?: Vec2[];
+  vertices?: Vec2[];
+  fill: string;
+  stroke?: string;
+  strokeW?: number;
+  dash?: string;
+  opacity?: number;
+  innerR?: number;
+  outerR?: number;
+  startAngle?: number;
+  endAngle?: number;
+  d?: string;
+  x?: number;
+  y?: number;
+  w?: number;
+  h?: number;
+  label?: string;
+  labelPlace?: Place;
+  labelGap?: number;
+  _rx?: number;
+  transforms?: Transform[];
+}
+interface CurveState {
+  type: 'curve';
+  f: string;
+  domain: [number, number];
+  range?: [number, number];
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  samples: number;
+  stroke: string;
+  strokeW: number;
+  dash?: string;
+  opacity?: number;
+  label?: string;
+}
+interface GroupState {
+  type: 'group';
+  subtype: 'axes' | 'grid' | 'angle' | 'matrix';
+  ox?: number;
+  oy?: number;
+  xMin?: number;
+  xMax?: number;
+  yMin?: number;
+  yMax?: number;
+  xLabel?: string;
+  yLabel?: string;
+  arrowSize?: number;
+  w?: number;
+  h?: number;
+  sp?: number;
+  gx?: number;
+  gy?: number;
+  mx0?: number;
+  mx1?: number;
+  my0?: number;
+  my1?: number;
+  mStep?: number;
+  ix?: number;
+  iy?: number;
+  jx?: number;
+  jy?: number;
+  vertex?: Vec2;
+  ray1?: Vec2;
+  ray2?: Vec2;
+  arcR?: number;
+  data?: number[][];
+  x?: number;
+  y?: number;
+  cellW?: number;
+  cellH?: number;
+  fill?: string;
+  stroke?: string;
+  strokeW?: number;
+  opacity?: number;
+  dash?: string;
+  label?: string;
+}
+type EntityState = NodeState | LineState | RegionState | CurveState | GroupState;
+interface Entity {
+  id: string;
+  desired: EntityState;
+  svg?: any;
+}
+interface StageCtx {
+  svg: S;
+  W: number;
+  H: number;
+  M: number;
+  stage: {
+    bg: S;
+    nodes: S;
+    edges: S;
+    overlay: S;
+  };
+  root: S;
+  palette: Palette;
+  geom: {
+    nW: number;
+    nH: number;
+    dR: number;
+    rx: number;
+    gap: number;
+  };
+  markerFor: (c: string) => string;
+}
+/** Options for creating a Scene via canvas(). */
+interface CanvasOpts {
+  theme?: string;
+  width?: number;
+  height?: number;
+  margin?: number;
+  container?: string | HTMLElement;
+  geom?: {
+    nW?: number;
+    nH?: number;
+    dR?: number;
+    rx?: number;
+    gap?: number;
+  };
+  ms?: number;
+  animation?: Partial<AnimationConfig>;
+  renderer?: Renderer;
+}
+/** Options for coordinate axes visual elements. */
+interface AxesOpts {
+  /** Axis line lengths in screen pixels (Scene.axes() only). */
+  xLen?: number;
+  yLen?: number;
+  xLabel?: string;
+  yLabel?: string;
+  /** Arrowhead size in pixels (default 8). */
+  arrowSize?: number;
+}
+/** Configuration for a coordinate projection. */
+interface CoordsConfig {
+  x?: [number, number];
+  y?: [number, number];
+  margin?: number;
+  nice?: boolean;
+  aspect?: 'auto' | 'equal' | number;
+  basis?: [[number, number], [number, number]];
+}
+/** A single step in a multi-step animation. Frame function receives a fresh Scene. */
+interface StepDef {
+  frame(s: Scene): void;
+  label?: string;
+  title?: string;
+  desc?: string;
+}
+/** Options for the steps() controller. */
+interface StepsOptions {
+  start?: number;
+  mode?: 'full' | 'update';
+  controls?: boolean;
+}
+/** Controls for navigating between steps. */
+interface StepsController {
+  go(i: number): void;
+  next(): void;
+  prev(): void;
+  reset(): void;
+  get current(): number;
+  get total(): number;
+  get currentStepDef(): StepDef | null;
+  onChange(fn: (i: number, step: StepDef) => void): () => void;
+  destroy(): void;
+}
+interface CoordView {
+  point(id: string, x: number, y: number): Gfx;
+  vector(id: string, from: Vec2, to: Vec2): Gfx;
+  line(id: string, from: Vec2, to: Vec2): Gfx;
+  circle(id: string, cx: number, cy: number, r: number): Gfx;
+  polygon(id: string, vertices: Vec2[]): Gfx;
+  curve(id: string, fn: (x: number) => number, domain?: [number, number]): Gfx;
+  fill(id: string, vertices: Vec2[]): Gfx;
+  rect(id: string, cx: number, cy: number, w: number, h: number): Gfx;
+  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2): Gfx;
+  axes(opts?: AxesOpts): Gfx;
+  grid(opts?: {
+    spacing?: number;
+    dash?: string;
+    color?: string;
+  }): void;
+  origin(opts?: {
+    color?: string;
+    label?: string;
+  }): void;
+  project(v: Vec2): Vec2;
+  x(v: number): number;
+  y(v: number): number;
+}
+interface Gfx {
+  color(c: string): Gfx;
+  stroke(w: number): Gfx;
+  fill(c: string): Gfx;
+  opacity(v: number): Gfx;
+  dash(pattern?: string): Gfx;
+  label(t: string, place?: Place, gap?: number): Gfx;
+  size(r: number): Gfx;
+  move(x: number, y: number): Gfx;
+  rotate(deg: number, cx: number, cy: number): Gfx;
+  scale(sx: number, sy?: number): Gfx;
+  translate(dx: number, dy: number): Gfx;
+  matrix(a: number, b: number, c: number, d: number, tx?: number, ty?: number): Gfx;
+  pos(): [number, number];
+}
+interface Scene extends Disposable {
+  point(id: string, x: number, y: number): Gfx;
+  vertex(id: string, x: number, y: number): Gfx;
+  edge(a: string | Gfx, b: string | Gfx): Gfx;
+  line(id: string, x1: number, y1: number, x2: number, y2: number): Gfx;
+  vector(id: string, from: Vec2, to: Vec2): Gfx;
+  polyline(id: string, pts: Vec2[]): Gfx;
+  circle(id: string, cx: number, cy: number, r: number): Gfx;
+  polygon(id: string, vertices: Vec2[]): Gfx;
+  rect(id: string, x: number, y: number, w: number, h: number): Gfx;
+  curve(id: string, fn: (x: number) => number, domain: [number, number]): Gfx;
+  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2): Gfx;
+  fill(id: string, vertices: Vec2[]): Gfx;
+  block(id: string, x: number, y: number, w: number, h: number): Gfx;
+  label(id: string, text: string, x: number, y: number): Gfx;
+  layout(type: 'circular' | 'force', vertices: Gfx[], edges?: Gfx[], opts?: any): void;
+  axes(id: string, origin: Vec2, opts?: AxesOpts): Gfx;
+  gridScreen(id: string, origin: Vec2, opts?: {
+    width?: number;
+    height?: number;
+    spacing?: number;
+    color?: string;
+  }): Gfx;
+  coords(config?: CoordsConfig): CoordView;
+  /** Single-frame render (synchronous). begin → fn → commit. */
+  render(fn: (s: Scene) => void, opts?: {
+    animate?: boolean;
+  }): void;
+  /** Multi-step animation with navigation controls. */
+  steps(defs: StepDef[], opts?: StepsOptions): StepsController;
+  readonly svg: SVGSVGElement;
+  readonly width: number;
+  readonly height: number;
+}
+//#endregion
+//#region vis/scene.d.ts
+declare class SceneImpl implements Scene {
+  readonly svg: SVGSVGElement;
+  readonly width: number;
+  readonly height: number;
+  private _fm;
+  private _palette;
+  private _ctx;
+  private _geom;
+  constructor(selector: string, opts?: CanvasOpts);
+  private _injectTheme;
+  point(id: string, x: number, y: number): Gfx;
+  vertex(id: string, x: number, y: number): Gfx;
+  edge(a: string | Gfx, b: string | Gfx): Gfx;
+  line(id: string, x1: number, y1: number, x2: number, y2: number): Gfx;
+  vector(id: string, from: Vec2, to: Vec2): Gfx;
+  polyline(id: string, pts: Vec2[]): Gfx;
+  circle(id: string, cx: number, cy: number, r: number): Gfx;
+  polygon(id: string, vertices: Vec2[]): Gfx;
+  rect(id: string, x: number, y: number, w: number, h: number): Gfx;
+  curve(id: string, fn: (x: number) => number, domain: [number, number]): Gfx;
+  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2): Gfx;
+  fill(id: string, vertices: Vec2[]): Gfx;
+  block(id: string, x: number, y: number, w: number, h: number): Gfx;
+  label(id: string, text: string, x: number, y: number): Gfx;
+  layout(type: 'circular' | 'force', vertices: Gfx[], edges?: Gfx[], opts?: any): void;
+  axes(id: string, origin: Vec2, opts?: AxesOpts): Gfx;
+  gridScreen(id: string, origin: Vec2, opts?: {
+    width?: number;
+    height?: number;
+    spacing?: number;
+    color?: string;
+  }): Gfx;
+  coords(config?: CoordsConfig): CoordView;
+  render(fn: (s: Scene) => void, opts?: {
+    animate?: boolean;
+  }): void;
+  steps(defs: StepDef[], opts?: StepsOptions): StepsController;
+  [Symbol.dispose](): void;
+  dispose(): void;
+}
+declare function canvas(selector: string, opts?: CanvasOpts): SceneImpl;
+//#endregion
+//#region vis/stepper.d.ts
+/**
+ * Creates a step control bar with prev/next buttons, step dots, and label.
+ * Keyboard: ← → to navigate, Home/End for first/last.
+ */
+declare function stepper(container: string | HTMLElement, ctrlOrLabels: StepsController | string[], onChangeOrOpts?: ((i: number) => void) | {
+  start?: number;
+}, legacyOpts?: {
+  start?: number;
+}): {
+  go?(i: number): void;
+  destroy(): void;
+};
+/**
+ * Creates a description box bound to a StepsController.
+ */
+declare function descBox(container: string | HTMLElement, ctrl: StepsController, opts?: {
+  minHeight?: string;
+}): {
+  destroy(): void;
+};
+//#endregion
+//#region vis/katex.d.ts
+declare global {
+  interface Window {
+    katex?: {
+      renderToString(src: string, opts?: Record<string, unknown>): string;
+    };
+  }
+}
+declare const katexify: (html: string) => string;
+//#endregion
+//#region vis/renderer/svg.d.ts
+declare class SVGRenderer implements Renderer {
+  private ctx;
+  private handles;
+  private _markerCache;
+  constructor(ctx: StageCtx);
+  beginFrame(): void;
+  commitFrame(opts?: {
+    animate?: boolean;
+    ms?: number;
+  }): void;
+  create(id: string, state: EntityState): RenderHandle;
+  dispose(): void;
+  private _repositionLabels;
+}
+//#endregion
+//#region vis/frame.d.ts
+declare class FrameManager {
+  private store;
+  private handles;
+  private current;
+  private previous;
+  private _uncommitted;
+  private animation;
+  private renderer;
+  constructor(ctx: StageCtx, animation?: Partial<AnimationConfig>, renderer?: Renderer);
+  begin(): void;
+  declare(id: string, state: EntityState): Entity;
+  patch(id: string, partial: Partial<EntityState>): void;
+  /** Typed getter: narrows EntityState by its discriminant type field. */
+  get<T extends EntityState['type']>(id: string, _type: T): (Entity & {
+    desired: Extract<EntityState, {
+      type: T;
+    }>;
+  }) | undefined;
+  commit(opts?: {
+    ms?: number;
+    animate?: boolean;
+  }): void;
+  private _commitStatic;
+  get entities(): ReadonlyMap<string, Entity>;
+  get frameIds(): ReadonlySet<string>;
+}
+//#endregion
+//#region vis/bootstrap.d.ts
+declare function bootstrap(selector: string | BaseType, opts?: {
+  width?: number;
+  height?: number;
+  margin?: number;
+  geom?: {
+    nW?: number;
+    nH?: number;
+    dR?: number;
+    rx?: number;
+    gap?: number;
+  };
+}): StageCtx;
+//#endregion
 //#region vis/tokens.d.ts
 interface TokensType {
   primary: string;
@@ -170,874 +692,6 @@ declare const createCanvas: (selector: string | BaseType, width?: number, height
   H: number;
   M: number;
 };
-//#endregion
-//#region vis/renderer/index.d.ts
-interface RenderHandle {
-  /** Update visual to match new state (may animate) */
-  update(state: EntityState, opts?: {
-    animate?: boolean;
-    transition?: any;
-  }): void;
-  /** Remove visual from scene */
-  remove(): void;
-}
-interface Renderer {
-  /** Create visual object for an entity */
-  create(id: string, state: EntityState): RenderHandle;
-  /** Called before frame rendering */
-  beginFrame(): void;
-  /** Called after all entities are processed */
-  commitFrame(opts?: {
-    animate?: boolean;
-    ms?: number;
-  }): void;
-  /** Release resources */
-  dispose(): void;
-}
-//#endregion
-//#region vis/frame.d.ts
-declare class FrameManager {
-  private store;
-  private handles;
-  private current;
-  private previous;
-  private _uncommitted;
-  private animation;
-  private renderer;
-  constructor(ctx: StageCtx, animation?: Partial<AnimationConfig>, renderer?: Renderer);
-  begin(): void;
-  declare(id: string, state: EntityState): Entity;
-  patch(id: string, partial: Partial<EntityState>): void;
-  /** Typed getter: narrows EntityState by its discriminant type field.
-   *  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
-  get<T extends EntityState['type']>(id: string, _type: T): (Entity & {
-    desired: Extract<EntityState, {
-      type: T;
-    }>;
-  }) | undefined;
-  commit(opts?: {
-    ms?: number;
-    animate?: boolean;
-  }): void;
-  private _commitStatic;
-  get entities(): ReadonlyMap<string, Entity>;
-  get frameIds(): ReadonlySet<string>;
-}
-//#endregion
-//#region vis/math.d.ts
-interface MathAPI {
-  point(id: string, pos: Vec2, opts?: {
-    color?: string;
-    label?: string;
-    size?: number;
-    fill?: string;
-    labelPlace?: Place;
-    labelGap?: number;
-  }): MathPoint;
-  vector(id: string, from: Vec2, to: Vec2, opts?: {
-    color?: string;
-    label?: string;
-    strokeW?: number;
-    dash?: string;
-    labelPlace?: Place;
-    labelGap?: number;
-    marker?: MarkerConfig;
-  }): MathVector;
-  segment(id: string, a: Vec2, b: Vec2, opts?: {
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    label?: string;
-    labelGap?: number;
-  }): MathSegment;
-  polyline(id: string, pts: Vec2[], opts?: {
-    color?: string;
-    strokeW?: number;
-    dash?: string;
-    opacity?: number;
-  }): MathPolyline;
-  circle(id: string, center: Vec2, radius: number, opts?: {
-    color?: string;
-    fill?: string;
-    strokeW?: number;
-    dash?: string;
-    opacity?: number;
-  }): MathCircle;
-  polygon(id: string, vertices: Vec2[], opts?: {
-    color?: string;
-    fill?: string;
-    strokeW?: number;
-    opacity?: number;
-  }): MathPolygon;
-  angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: {
-    color?: string;
-    fill?: string;
-    label?: string;
-    size?: number;
-  }): MathAngle;
-  rightAngle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2, opts?: {
-    color?: string;
-    size?: number;
-  }): MathRightAngle;
-  projection(id: string, point: Vec2, lineFrom: Vec2, lineTo: Vec2, opts?: {
-    color?: string;
-    dash?: string;
-    pointColor?: string;
-  }): MathProjection;
-  fill(id: string, pts: Vec2[], opts?: {
-    color?: string;
-    opacity?: number;
-  }): MathFill;
-  fillFn(id: string, f: (x: number) => number, opts?: {
-    domain?: [number, number];
-    range?: [number, number];
-    x?: number;
-    y?: number;
-    width?: number;
-    height?: number;
-    samples?: number;
-    color?: string;
-    opacity?: number;
-    baseline?: number;
-  }): MathFill;
-  coords(id: string, origin: Vec2 | 'center', config?: CoordsConfig): MathCoords;
-  viewport(config?: CoordsConfig): MathCoords;
-  fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
-  grid(id: string, origin: Vec2, opts?: GridOpts): void;
-  axes(id: string, origin: Vec2, opts?: AxesOpts): void;
-  rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
-  ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
-  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
-  symbol(id: string, pos: Vec2, opts?: {
-    type?: 'circle' | 'cross' | 'diamond' | 'square' | 'star' | 'triangle' | 'wye';
-    size?: number;
-    color?: string;
-    fill?: string;
-  }): MathShape;
-  arc(id: string, center: Vec2, opts: {
-    innerR?: number;
-    outerR: number;
-    startAngle: number;
-    endAngle: number;
-    color?: string;
-    fill?: string;
-    strokeW?: number;
-  }): MathShape;
-  matrix(id: string, data: number[][], opts?: {
-    x?: number;
-    y?: number;
-    color?: string;
-    label?: string;
-    cellW?: number;
-    cellH?: number;
-  }): MathMatrix;
-  basis(id: string, origin: Vec2, opts?: {
-    iColor?: string;
-    jColor?: string;
-    scale?: number;
-    iLabel?: string;
-    jLabel?: string;
-    color?: string;
-    strokeW?: number;
-  }): MathBasis;
-}
-interface MathPoint {
-  pos(): Vec2;
-  color(c: string): MathPoint;
-  label(t: string, place?: Place, gap?: number): MathPoint;
-  size(r: number): MathPoint;
-  fill(c: string): MathPoint;
-  opacity(v: number): MathPoint;
-  translate(dx: number, dy: number): MathPoint;
-}
-interface MathVector {
-  color(c: string): MathVector;
-  label(t: string, place?: Place, gap?: number): MathVector;
-  strokeW(n: number): MathVector;
-  dashed(d?: string): MathVector;
-  opacity(v: number): MathVector;
-  rotate(a: number, cx: number, cy: number): MathVector;
-  translate(dx: number, dy: number): MathVector;
-  scale(sx: number, sy?: number): MathVector;
-  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathVector;
-}
-interface MathSegment {
-  color(c: string): MathSegment;
-  strokeW(n: number): MathSegment;
-  dashed(d?: string): MathSegment;
-  label(t: string): MathSegment;
-  opacity(v: number): MathSegment;
-}
-interface MathPolyline {
-  color(c: string): MathPolyline;
-  strokeW(n: number): MathPolyline;
-  dashed(d?: string): MathPolyline;
-  opacity(v: number): MathPolyline;
-}
-interface MathCircle {
-  color(c: string): MathCircle;
-  strokeW(n: number): MathCircle;
-  fill(c: string): MathCircle;
-  dashed(d?: string): MathCircle;
-  opacity(v: number): MathCircle;
-  translate(dx: number, dy: number): MathCircle;
-}
-interface MathPolygon {
-  color(c: string): MathPolygon;
-  strokeW(n: number): MathPolygon;
-  fill(c: string): MathPolygon;
-  dashed(d?: string): MathPolygon;
-  opacity(v: number): MathPolygon;
-  label(t: string): MathPolygon;
-  rotate(a: number, cx: number, cy: number): MathPolygon;
-  translate(dx: number, dy: number): MathPolygon;
-  scale(sx: number, sy?: number): MathPolygon;
-  matrixTransform(a: number, b: number, c: number, d: number, tx?: number, ty?: number): MathPolygon;
-}
-interface MathAngle {
-  color(c: string): MathAngle;
-  strokeW(n: number): MathAngle;
-  fill(c: string): MathAngle;
-  dashed(d?: string): MathAngle;
-  opacity(v: number): MathAngle;
-  label(t: string): MathAngle;
-}
-interface MathRightAngle {
-  color(c: string): MathRightAngle;
-  size(n: number): MathRightAngle;
-  strokeW(n: number): MathRightAngle;
-  opacity(v: number): MathRightAngle;
-}
-interface MathProjection {
-  color(c: string): MathProjection;
-  dash(d: string): MathProjection;
-  strokeW(n: number): MathProjection;
-}
-interface MathFill {
-  color(c: string): MathFill;
-  opacity(v: number): MathFill;
-}
-interface MathFn {
-  color(c: string): MathFn;
-  strokeW(n: number): MathFn;
-  dashed(d?: string): MathFn;
-  opacity(v: number): MathFn;
-  label(t: string): MathFn;
-}
-interface MathShape {
-  color(c: string): MathShape;
-  size(n: number): MathShape;
-  fill(c: string): MathShape;
-  strokeW(n: number): MathShape;
-  dashed(d?: string): MathShape;
-  opacity(v: number): MathShape;
-  translate(dx: number, dy: number): MathShape;
-}
-interface MathMatrix {
-  set(data: number[][]): MathMatrix;
-  color(c: string): MathMatrix;
-  label(t: string): MathMatrix;
-  moveTo(x: number, y: number): MathMatrix;
-  opacity(v: number): MathMatrix;
-}
-interface MathBasis {
-  color(c: string): MathBasis;
-  iColor(c: string): MathBasis;
-  jColor(c: string): MathBasis;
-  scale(s: number): MathBasis;
-  strokeW(n: number): MathBasis;
-  opacity(v: number): MathBasis;
-}
-interface FnOpts {
-  domain?: [number, number];
-  range?: [number, number];
-  x?: number;
-  y?: number;
-  width?: number;
-  height?: number;
-  samples?: number;
-  color?: string;
-  label?: string;
-  strokeW?: number;
-  dash?: string;
-  opacity?: number;
-}
-interface GridOpts {
-  width?: number;
-  height?: number;
-  spacing?: number;
-  color?: string;
-  strokeW?: number;
-  dash?: string;
-}
-interface AxesOpts {
-  xLen?: number;
-  yLen?: number;
-  xLabel?: string;
-  yLabel?: string;
-  color?: string;
-  strokeW?: number;
-}
-interface CoordsConfig {
-  x?: [number, number];
-  y?: [number, number];
-  /** Domain expansion ratio. 0.15 = add 7.5% padding on each side. Default: viewport 0.15, coords 0 */
-  margin?: number;
-  /** Round domain bounds to nice values. Default: viewport true, coords false */
-  nice?: boolean;
-  /** Pixel ratio y/x. 'auto'=independent scaling | 'equal'=1:1 | number=custom */
-  aspect?: 'auto' | 'equal' | number;
-  /** Basis vectors [i, j]. Default [[1,0],[0,1]]. Sets the coordinate space — grid lines follow basis directions, axes align to basis. */
-  basis?: [Vec2, Vec2];
-  xLabel?: string;
-  yLabel?: string;
-  showAxes?: boolean;
-  showGrid?: boolean;
-  showOrigin?: boolean;
-  /** Tick count/values for both axes. true=auto | number=approx count | number[]=exact positions. Default: no ticks. */
-  ticks?: boolean | number | number[];
-  /** Per-axis tick override */
-  xTicks?: number | number[];
-  yTicks?: number | number[];
-  /** Tick label format. 'decimal'=numbers | 'pi'=π fractions | custom function */
-  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
-  /** Tick mark length in px. Default 5. */
-  tickSize?: number;
-  /** Axis arrow direction. Default 'none'. */
-  axisArrow?: 'none' | 'positive' | 'both';
-  axisColor?: string;
-  axisStrokeW?: number;
-  /** Grid line spacing in px, or 'auto' to adapt to domain. Default 40. */
-  gridSpacing?: number | 'auto';
-  /** Dash pattern e.g. '4,4'. Default solid. */
-  gridDash?: string;
-  gridColor?: string;
-}
-interface AxesRenderOpts {
-  color?: string;
-  strokeW?: number;
-  arrow?: 'none' | 'positive' | 'both';
-  ticks?: boolean | number | number[];
-  xTicks?: number | number[];
-  yTicks?: number | number[];
-  tickFormat?: 'decimal' | 'pi' | ((n: number) => string);
-  tickSize?: number;
-}
-interface GridRenderOpts {
-  color?: string;
-  strokeW?: number;
-  spacing?: number | 'auto';
-  dash?: string;
-}
-interface MathCoords {
-  axes(opts?: AxesRenderOpts): void;
-  grid(opts?: GridRenderOpts): void;
-  fn(id: string, f: (x: number) => number, opts?: FnOpts): MathFn;
-  fillFn(id: string, f: (x: number) => number, opts?: {
-    color?: string;
-    opacity?: number;
-    baseline?: number;
-    range?: [number, number];
-  }): MathFill;
-  point(id: string, x: number | Vec2, y?: number, opts?: Record<string, any>): MathPoint;
-  vector(id: string, fx: number | Vec2, fy: number | Vec2, tx?: number | Vec2, ty?: number | Record<string, any>, opts?: Record<string, any>): MathVector;
-  segment(id: string, ax: number | Vec2, ay: number | Vec2, bx?: number | Vec2, by?: number | Record<string, any>, opts?: Record<string, any>): MathSegment;
-  polyline(id: string, pts: Vec2[], opts?: Record<string, any>): MathPolyline;
-  circle(id: string, center: number | Vec2, radius: number, opts?: Record<string, any>): MathCircle;
-  polygon(id: string, vertices: Vec2[], opts?: Record<string, any>): MathPolygon;
-  angle(id: string, vertex: number | Vec2, ray1: number | Vec2, ray2: number | Vec2, opts?: Record<string, any>): MathAngle;
-  projection(id: string, pt: number | Vec2, lf: number | Vec2, lt: number | Vec2, opts?: Record<string, any>): MathProjection;
-  basis(id: string, origin: number | Vec2, opts?: Record<string, any>): MathBasis;
-  matrix(id: string, data: number[][], opts?: Record<string, any>): MathMatrix;
-  rect(id: string, cx: number, cy: number, w: number, h: number): MathPolygon;
-  ngon(id: string, cx: number, cy: number, r: number, sides: number): MathPolygon;
-  ellipse(id: string, cx: number, cy: number, rx: number, ry: number, n?: number): MathPolygon;
-  mapX(x: number): number;
-  mapY(y: number): number;
-  mapPt(x: number | Vec2, y?: number): Vec2;
-}
-//#endregion
-//#region vis/graph.d.ts
-interface Vertex {
-  id: string;
-  x: number;
-  y: number;
-  _r: number;
-  _stroke: string;
-  _fill: string;
-  pos(): Vec2;
-  color(c: string): Vertex;
-  label(t: string): Vertex;
-  size(r: number): Vertex;
-  fill(c: string): Vertex;
-}
-interface Edge {
-  color(c: string): Edge;
-  strokeW(n: number): Edge;
-  dashed(d?: string): Edge;
-  label(t: string): Edge;
-  weight(n: number): Edge;
-}
-interface Block {
-  id: string;
-  x: number;
-  y: number;
-  pos(): Vec2;
-  color(c: string): Block;
-  label(t: string, place?: Place): Block;
-  size(w: number, h?: number): Block;
-  fill(c: string): Block;
-  opacity(v: number): Block;
-}
-interface LayoutLayer {
-  color(c: string): LayoutLayer;
-  opacity(v: number): LayoutLayer;
-  label(t: string): LayoutLayer;
-  dash(d: string): LayoutLayer;
-  strokeW(n: number): LayoutLayer;
-}
-interface NodeOpts {
-  w?: number;
-  h?: number;
-  r?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  opacity?: number;
-  rx?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  shape?: 'rect' | 'circle';
-}
-interface LayerOpts {
-  totalRanks?: number;
-  layerGap?: number;
-  startY?: number;
-  endY?: number;
-  y?: number;
-  h?: number;
-  color?: string;
-  opacity?: number;
-  x?: number;
-  w?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  style?: 'band' | 'swimlane';
-  dash?: string;
-  rx?: number;
-  strokeW?: number;
-}
-interface LayersOpts extends LayerOpts {
-  labels?: string[];
-}
-interface ArrayOpts {
-  itemW?: number;
-  itemH?: number;
-  gap?: number;
-  label?: string;
-  dir?: 'x' | 'y';
-  color?: string;
-  bg?: string;
-  padding?: number;
-}
-interface GraphAPI {
-  vertex(id: string, pos: Vec2): Vertex;
-  edge(a: Vertex | string, b: Vertex | string, opts?: {
-    directed?: boolean;
-    gap?: number;
-  }): Edge;
-  layout(type: 'force' | 'circular', vertices: Vertex[], edges?: {
-    from: Vertex;
-    to: Vertex;
-  }[], opts?: {
-    center?: Vec2;
-    radius?: number;
-  }): void;
-  block(id: string, x?: number, y?: number, w?: number, h?: number, opts?: NodeOpts & {
-    style?: 'muted' | 'normal' | 'active';
-  }): Block;
-  array(id: string, x: number, y: number, items: string[], opts?: ArrayOpts): Block[];
-  layer(id: string, rank: number, opts?: LayerOpts): LayoutLayer;
-  layers(count: number, opts?: LayersOpts): LayoutLayer[];
-}
-//#endregion
-//#region vis/types.d.ts
-type Vec2 = [number, number];
-type Place = 'above' | 'below' | 'left' | 'right';
-type SemColor = {
-  fg: string;
-  bg: string;
-  a(pct: number): string;
-};
-type S = Selection<BaseType, unknown, null, undefined>;
-interface Palette {
-  primary: SemColor;
-  danger: SemColor;
-  warning: SemColor;
-  success: SemColor;
-  info: SemColor;
-  accent: SemColor;
-  dim: SemColor;
-}
-interface MarkerConfig {
-  size?: number;
-  width?: number;
-  height?: number;
-  offset?: number;
-  open?: boolean;
-}
-interface AnimationConfig {
-  duration: number;
-  enter: {
-    ratio: number;
-    easing: (t: number) => number;
-  };
-  update: {
-    ratio: number;
-    easing: (t: number) => number;
-  };
-  exit: {
-    ratio: number;
-    easing: (t: number) => number;
-  };
-}
-type NodeShape = 'circle' | 'rect' | 'symbol';
-type NodeState = {
-  type: 'node';
-  shape: NodeShape;
-  x: number;
-  y: number;
-  r?: number;
-  w?: number;
-  h?: number;
-  rx?: number;
-  fill: string;
-  stroke: string;
-  strokeW?: number;
-  opacity?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  symType?: string;
-  _shape?: string;
-  _blockW?: number;
-  _blockH?: number;
-};
-type LineMarker = 'arrow' | 'none';
-type TfRotate = {
-  type: 'rotate';
-  angle: number;
-  cx: number;
-  cy: number;
-};
-type TfScale = {
-  type: 'scale';
-  sx: number;
-  sy: number;
-};
-type TfTranslate = {
-  type: 'translate';
-  dx: number;
-  dy: number;
-};
-type TfMatrix = {
-  type: 'matrix';
-  a: number;
-  b: number;
-  c: number;
-  d: number;
-  tx: number;
-  ty: number;
-};
-type Transform = TfRotate | TfScale | TfTranslate | TfMatrix;
-type TfBase = {
-  from: Vec2;
-  to: Vec2;
-} | {
-  vertices: Vec2[];
-};
-type WithTransform<T> = T & {
-  _base?: TfBase;
-  _tf?: Transform[];
-};
-type LineState = WithTransform<{
-  type: 'line';
-  from?: Vec2;
-  to?: Vec2;
-  x1?: number;
-  y1?: number;
-  x2?: number;
-  y2?: number;
-  a?: Vec2;
-  b?: Vec2;
-  stroke: string;
-  strokeW: number;
-  dash?: string;
-  opacity?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  points?: Vec2[];
-  marker?: LineMarker;
-  directed?: boolean;
-  bend?: boolean;
-  _bend?: boolean;
-  _markerCfg?: MarkerConfig | null;
-  _fromPort?: string;
-  _toPort?: string;
-}>;
-type RegionShape = 'polygon' | 'circle' | 'arc' | 'fill';
-type RegionState = WithTransform<{
-  type: 'region';
-  shape: RegionShape;
-  cx?: number;
-  cy?: number;
-  r?: number;
-  pts?: Vec2[];
-  vertices?: Vec2[];
-  fill: string;
-  stroke?: string;
-  strokeW?: number;
-  dash?: string;
-  opacity?: number;
-  innerR?: number;
-  outerR?: number;
-  startAngle?: number;
-  endAngle?: number;
-  d?: string;
-  x?: number;
-  y?: number;
-  w?: number;
-  h?: number;
-  label?: string;
-  labelPlace?: Place;
-  labelGap?: number;
-  _rx?: number;
-}>;
-type CurveState = {
-  type: 'curve';
-  f: string;
-  domain: [number, number];
-  range?: [number, number];
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  samples: number;
-  stroke: string;
-  strokeW: number;
-  dash?: string;
-  opacity?: number;
-  label?: string;
-};
-type GroupState = {
-  type: 'group';
-  subtype: 'axes' | 'grid' | 'angle' | 'matrix';
-  ox?: number;
-  oy?: number;
-  xl?: number;
-  yl?: number;
-  xLabel?: string;
-  yLabel?: string;
-  w?: number;
-  h?: number;
-  sp?: number;
-  gx?: number;
-  gy?: number;
-  mx0?: number;
-  mx1?: number;
-  my0?: number;
-  my1?: number;
-  mStep?: number;
-  ix?: number;
-  iy?: number;
-  jx?: number;
-  jy?: number;
-  vertex?: Vec2;
-  ray1?: Vec2;
-  ray2?: Vec2;
-  arcR?: number;
-  data?: number[][];
-  x?: number;
-  y?: number;
-  cellW?: number;
-  cellH?: number;
-  fill?: string;
-  stroke?: string;
-  strokeW?: number;
-  opacity?: number;
-  dash?: string;
-  label?: string;
-};
-type EntityState = NodeState | LineState | RegionState | CurveState | GroupState;
-interface Entity {
-  id: string;
-  desired: EntityState;
-  svg?: any;
-}
-interface StageCtx {
-  svg: S;
-  W: number;
-  H: number;
-  M: number;
-  stage: {
-    bg: S;
-    nodes: S;
-    edges: S;
-    overlay: S;
-  };
-  root: S;
-  palette: Palette;
-  geom: {
-    nW: number;
-    nH: number;
-    dR: number;
-    rx: number;
-    gap: number;
-  };
-  markerFor: (c: string) => string;
-}
-interface StageOptions {
-  theme?: string;
-  width?: number;
-  height?: number;
-  margin?: number;
-  container?: string | HTMLElement;
-  geom?: {
-    nW?: number;
-    nH?: number;
-    dR?: number;
-    rx?: number;
-    gap?: number;
-  };
-  ms?: number;
-  animation?: Partial<AnimationConfig>;
-  renderer?: Renderer;
-}
-type StageAPI = AgentStage;
-type StepLike = {
-  label?: string;
-  title?: string;
-  desc?: string;
-  frame(s: StageAPI): void;
-} | ((s: StageAPI) => void);
-interface StepsOptions {
-  start?: number;
-  mode?: 'full' | 'update';
-  controls?: boolean;
-}
-interface StepsController {
-  go(i: number): void;
-  next(): void;
-  prev(): void;
-  reset(): void;
-  get current(): number;
-  get total(): number;
-  get currentStepDef(): StepLike | null;
-  onChange(fn: (i: number, step: StepLike) => void): () => void;
-  destroy(): void;
-}
-interface AgentStage extends Disposable {
-  ctx: StageCtx;
-  palette: Palette;
-  stage: {
-    bg: S;
-    nodes: S;
-    edges: S;
-    overlay: S;
-  };
-  root: S;
-  math: MathAPI;
-  graph: GraphAPI;
-  steps(defs: StepLike[], opts?: StepsOptions): StepsController;
-  frame(frameFn: (s: AgentStage) => void, opts?: {
-    ms?: number;
-  }): Promise<void>;
-  play(frames: ((s: AgentStage) => void)[], opts?: {
-    ms?: number;
-  }): Promise<void>;
-  /** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
-  render(frameFn: (s: AgentStage) => void, opts?: {
-    animate?: boolean;
-  }): void;
-  frames: Record<string, EntityState[]>;
-  theme?: Record<string, unknown>;
-}
-//#endregion
-//#region vis/stepper.d.ts
-/**
- * Creates a step control bar with prev/next buttons, step dots, and label.
- * Keyboard: ← → to navigate, Home/End for first/last.
- */
-declare function stepper(container: string | HTMLElement, ctrlOrLabels: StepsController | string[], onChangeOrOpts?: ((i: number) => void) | {
-  start?: number;
-}, legacyOpts?: {
-  start?: number;
-}): {
-  go?(i: number): void;
-  destroy(): void;
-};
-/**
- * Creates a description box bound to a StepsController.
- */
-declare function descBox(container: string | HTMLElement, ctrl: StepsController, opts?: {
-  minHeight?: string;
-}): {
-  destroy(): void;
-};
-//#endregion
-//#region vis/katex.d.ts
-declare global {
-  interface Window {
-    katex?: {
-      renderToString(src: string, opts?: Record<string, unknown>): string;
-    };
-  }
-}
-declare const katexify: (html: string) => string;
-//#endregion
-//#region vis/bootstrap.d.ts
-declare function bootstrap(selector: string | BaseType, opts?: {
-  width?: number;
-  height?: number;
-  margin?: number;
-  geom?: {
-    nW?: number;
-    nH?: number;
-    dR?: number;
-    rx?: number;
-    gap?: number;
-  };
-}): StageCtx;
-//#endregion
-//#region vis/stage.d.ts
-declare function stage(selector: string, opts?: StageOptions): AgentStage;
-/** 3D stage (placeholder — requires three.js renderer) */
-declare function stage3D(selector: string, opts: StageOptions & {
-  renderer: Renderer;
-  camera?: {
-    position: [number, number, number];
-    lookAt: [number, number, number];
-  };
-}): AgentStage;
-//#endregion
-//#region vis/renderer/svg.d.ts
-declare class SVGRenderer implements Renderer {
-  private ctx;
-  private handles;
-  private _markerCache;
-  constructor(ctx: StageCtx);
-  beginFrame(): void;
-  commitFrame(opts?: {
-    animate?: boolean;
-    ms?: number;
-  }): void;
-  create(id: string, state: EntityState): RenderHandle;
-  dispose(): void;
-  private _repositionLabels;
-}
 //#endregion
 //#region vis/themes.d.ts
 declare const themes: {
@@ -1348,4 +1002,4 @@ declare function mat2Eigen(a: number, b: number, c: number, d: number): {
 /** Format a number for matrix cell display. */
 declare function fmtCell(v: number): string;
 //#endregion
-export { type Affine2, FrameManager, MARKER, type Mat2, type RenderHandle, type Renderer, SVGRenderer, TOKENS, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { type Affine2, type AnimationConfig, type CanvasOpts, type CoordView as CoordSystem, type CoordView, type CoordsConfig, FrameManager, type Gfx, MARKER, type Mat2, type Palette, type Place, type RenderHandle, type Renderer, SVGRenderer, type Scene, type StepDef, type StepsController, type StepsOptions, TOKENS, type Vec2, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, canvas, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stepper, svgLabel, themes };

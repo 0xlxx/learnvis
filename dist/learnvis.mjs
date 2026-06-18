@@ -1,163 +1,124 @@
-//#region vis/tokens.ts
-/** 7 语义色 + 7 填充变体，全部使用 OKLCH 色彩空间 */
-const TOKENS = {
-	primary: "oklch(0.52 0.18 68)",
-	accent: "oklch(0.62 0.15 155)",
-	danger: "oklch(0.48 0.18 22)",
-	warning: "oklch(0.58 0.20 85)",
-	info: "oklch(0.50 0.12 240)",
-	muted: "oklch(0.55 0.02 65)",
-	success: "oklch(0.48 0.18 150)",
-	fills: {
-		primary: "oklch(0.88 0.06 68)",
-		accent: "oklch(0.88 0.06 155)",
-		danger: "oklch(0.88 0.04 22)",
-		warning: "oklch(0.90 0.08 85)",
-		info: "oklch(0.88 0.04 240)",
-		muted: "oklch(0.92 0.01 75)",
-		success: "oklch(0.88 0.06 150)"
-	}
-};
-TOKENS.primary, TOKENS.accent, TOKENS.danger, TOKENS.warning, TOKENS.info, TOKENS.muted, TOKENS.success;
-const SEMANTIC_COLORS = [
-	"primary",
-	"accent",
-	"danger",
-	"warning",
-	"info",
-	"muted",
-	"success",
-	"dim"
-];
-/** 
-* Resolves a color string. 
-* If it's a semantic name (e.g. 'primary'), returns the corresponding CSS variable var(--lv-primary).
-* Otherwise returns the raw value (e.g. '#e07745').
-*/
-function resolveColor$1(val) {
-	if (SEMANTIC_COLORS.includes(val)) return `var(--lv-${val === "dim" ? "muted" : val})`;
-	return val;
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ascending.js
+function ascending$1(a, b) {
+	return a == null || b == null ? NaN : a < b ? -1 : a > b ? 1 : a >= b ? 0 : NaN;
 }
-/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
-const alpha = (c, pct = 15) => {
-	return `color-mix(in oklab, ${resolveColor$1(c)} ${pct}%, transparent)`;
-};
-/** 
-* 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
-* 每个语义色返回 { fg, bg, a(pct) }
-*/
-const palette = () => {
-	const p = {};
-	for (const c of SEMANTIC_COLORS) {
-		const varName = c === "dim" ? "--lv-muted" : `--lv-${c}`;
-		p[c] = {
-			fg: `var(${varName})`,
-			bg: `var(${varName}-bg, color-mix(in oklab, var(${varName}) 12%, var(--lv-mix-bg, white)))`,
-			a: (pct) => `color-mix(in oklab, var(${varName}) ${pct}%, transparent)`
-		};
-	}
-	return p;
-};
 
 //#endregion
-//#region vis/geometry.ts
-const len = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
-const exitPt = (n, tx, ty, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
-	if (n.t === "dummy") {
-		const dx = tx - n.x, dy = ty - n.y, l = len(dx, dy);
-		return {
-			x: n.x + dx / l * dR,
-			y: n.y + dy / l * dR
-		};
-	}
-	const dy = ty - n.y;
-	if (Math.abs(dy) > 10) return {
-		x: n.x,
-		y: n.y + Math.sign(dy) * (nH / 2)
-	};
-	return {
-		x: n.x + Math.sign(tx - n.x) * (nW / 2),
-		y: n.y
-	};
-};
-const entryPt = (n, fx, fy, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
-	if (n.t === "dummy") {
-		const dx = n.x - fx, dy = n.y - fy, l = len(dx, dy);
-		return {
-			x: n.x - dx / l * (dR + gap),
-			y: n.y - dy / l * (dR + gap)
-		};
-	}
-	const dy = n.y - fy;
-	if (Math.abs(dy) > 10) return {
-		x: n.x,
-		y: n.y - Math.sign(dy) * (nH / 2 + gap)
-	};
-	return {
-		x: n.x - Math.sign(n.x - fx) * (nW / 2 + gap),
-		y: n.y
-	};
-};
-const getBounds = (nodes, { nW = 34, nH = 26, dR = 8, pad = 8 } = {}) => {
-	if (!nodes.length) return null;
-	const xs = nodes.map((n) => n.x - (n.t === "dummy" ? dR : nW / 2));
-	const xe = nodes.map((n) => n.x + (n.t === "dummy" ? dR : nW / 2));
-	const ys = nodes.map((n) => n.y - (n.t === "dummy" ? dR : nH / 2));
-	const ye = nodes.map((n) => n.y + (n.t === "dummy" ? dR : nH / 2));
-	return {
-		mx: Math.min(...xs) - pad,
-		Mx: Math.max(...xe) + pad,
-		my: Math.min(...ys) - pad,
-		My: Math.max(...ye) + pad
-	};
-};
-const centerIn = (rect) => ({
-	x: rect.x + rect.w / 2,
-	y: rect.y + rect.h / 2
-});
-const distribute = (count, container, { dir = "v", gap = 16, itemW, itemH, align = "center" } = {}) => {
-	const iw = itemW || 40, ih = itemH || 30;
-	const out = [];
-	if (dir === "v") {
-		const totalH = count * ih + (count - 1) * gap;
-		const sy = container.y + (container.h - totalH) / 2;
-		const cx = align === "center" ? container.x + container.w / 2 : align === "start" ? container.x + iw / 2 : container.x + container.w - iw / 2;
-		for (let i = 0; i < count; i++) out.push({
-			x: cx,
-			y: sy + i * (ih + gap) + ih / 2
-		});
-	} else {
-		const totalW = count * iw + (count - 1) * gap;
-		const sx = container.x + (container.w - totalW) / 2;
-		const cy = container.y + container.h / 2;
-		for (let i = 0; i < count; i++) out.push({
-			x: sx + i * (iw + gap) + iw / 2,
-			y: cy
-		});
-	}
-	return out;
-};
-/** Half-width of a marker arrow tip, including offset. Used for edge endpoint adjustment. */
-function markerHalf(config) {
-	return ((config?.width ?? config?.size ?? 10) + (config?.offset ?? 0) + 2) / 2;
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/descending.js
+function descending(a, b) {
+	return a == null || b == null ? NaN : b < a ? -1 : b > a ? 1 : b >= a ? 0 : NaN;
 }
-/** Offset line endpoints by given radii. Marker tip extends outward from line end. */
-function offsetLine(from, to, fromR, toR, _directed = true) {
-	const dx = to[0] - from[0], dy = to[1] - from[1];
-	const l = len(dx, dy);
-	if (l < 1e-9) return {
-		x1: from[0],
-		y1: from[1],
-		x2: to[0],
-		y2: to[1]
-	};
-	const ux = dx / l, uy = dy / l;
+
+//#endregion
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/bisector.js
+function bisector(f) {
+	let compare1, compare2, delta;
+	if (f.length !== 2) {
+		compare1 = ascending$1;
+		compare2 = (d, x) => ascending$1(f(d), x);
+		delta = (d, x) => f(d) - x;
+	} else {
+		compare1 = f === ascending$1 || f === descending ? f : zero$1;
+		compare2 = f;
+		delta = f;
+	}
+	function left(a, x, lo = 0, hi = a.length) {
+		if (lo < hi) {
+			if (compare1(x, x) !== 0) return hi;
+			do {
+				const mid = lo + hi >>> 1;
+				if (compare2(a[mid], x) < 0) lo = mid + 1;
+				else hi = mid;
+			} while (lo < hi);
+		}
+		return lo;
+	}
+	function right(a, x, lo = 0, hi = a.length) {
+		if (lo < hi) {
+			if (compare1(x, x) !== 0) return hi;
+			do {
+				const mid = lo + hi >>> 1;
+				if (compare2(a[mid], x) <= 0) lo = mid + 1;
+				else hi = mid;
+			} while (lo < hi);
+		}
+		return lo;
+	}
+	function center(a, x, lo = 0, hi = a.length) {
+		const i = left(a, x, lo, hi - 1);
+		return i > lo && delta(a[i - 1], x) > -delta(a[i], x) ? i - 1 : i;
+	}
 	return {
-		x1: from[0] + ux * fromR,
-		y1: from[1] + uy * fromR,
-		x2: to[0] - ux * toR,
-		y2: to[1] - uy * toR
+		left,
+		center,
+		right
 	};
+}
+function zero$1() {
+	return 0;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/number.js
+function number$1(x) {
+	return x === null ? NaN : +x;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/bisect.js
+const ascendingBisect = bisector(ascending$1);
+const bisectRight = ascendingBisect.right;
+const bisectLeft = ascendingBisect.left;
+const bisectCenter = bisector(number$1).center;
+
+//#endregion
+//#region node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/src/ticks.js
+const e10 = Math.sqrt(50), e5 = Math.sqrt(10), e2 = Math.sqrt(2);
+function tickSpec(start, stop, count) {
+	const step = (stop - start) / Math.max(0, count), power = Math.floor(Math.log10(step)), error = step / Math.pow(10, power), factor = error >= e10 ? 10 : error >= e5 ? 5 : error >= e2 ? 2 : 1;
+	let i1, i2, inc;
+	if (power < 0) {
+		inc = Math.pow(10, -power) / factor;
+		i1 = Math.round(start * inc);
+		i2 = Math.round(stop * inc);
+		if (i1 / inc < start) ++i1;
+		if (i2 / inc > stop) --i2;
+		inc = -inc;
+	} else {
+		inc = Math.pow(10, power) * factor;
+		i1 = Math.round(start / inc);
+		i2 = Math.round(stop / inc);
+		if (i1 * inc < start) ++i1;
+		if (i2 * inc > stop) --i2;
+	}
+	if (i2 < i1 && .5 <= count && count < 2) return tickSpec(start, stop, count * 2);
+	return [
+		i1,
+		i2,
+		inc
+	];
+}
+function ticks(start, stop, count) {
+	stop = +stop, start = +start, count = +count;
+	if (!(count > 0)) return [];
+	if (start === stop) return [start];
+	const reverse = stop < start, [i1, i2, inc] = reverse ? tickSpec(stop, start, count) : tickSpec(start, stop, count);
+	if (!(i2 >= i1)) return [];
+	const n = i2 - i1 + 1, ticks = new Array(n);
+	if (reverse) if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) / -inc;
+	else for (let i = 0; i < n; ++i) ticks[i] = (i2 - i) * inc;
+	else if (inc < 0) for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) / -inc;
+	else for (let i = 0; i < n; ++i) ticks[i] = (i1 + i) * inc;
+	return ticks;
+}
+function tickIncrement(start, stop, count) {
+	stop = +stop, start = +start, count = +count;
+	return tickSpec(start, stop, count)[2];
+}
+function tickStep(start, stop, count) {
+	stop = +stop, start = +start, count = +count;
+	const reverse = stop < start, inc = reverse ? tickIncrement(stop, start, count) : tickIncrement(start, stop, count);
+	return (reverse ? -1 : 1) * (inc < 0 ? 1 / -inc : inc);
 }
 
 //#endregion
@@ -408,7 +369,7 @@ EnterNode.prototype = {
 
 //#endregion
 //#region node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/src/constant.js
-function constant_default$3(x) {
+function constant_default$2(x) {
 	return function() {
 		return x;
 	};
@@ -447,7 +408,7 @@ function datum(node) {
 function data_default$1(value, key) {
 	if (!arguments.length) return Array.from(this, datum);
 	var bind = key ? bindKey : bindIndex, parents = this._parents, groups = this._groups;
-	if (typeof value !== "function") value = constant_default$3(value);
+	if (typeof value !== "function") value = constant_default$2(value);
 	for (var m = groups.length, update = new Array(m), enter = new Array(m), exit = new Array(m), j = 0; j < m; ++j) {
 		var parent = parents[j], group = groups[j], groupLength = group.length, data = arraylike(value.call(parent, parent && parent.__data__, j, parents)), dataLength = data.length, enterGroup = enter[j] = new Array(dataLength), updateGroup = update[j] = new Array(dataLength);
 		bind(parent, group, enterGroup, updateGroup, exit[j] = new Array(groupLength), data, key);
@@ -1354,11 +1315,11 @@ function basisClosed_default(values) {
 
 //#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/constant.js
-var constant_default$2 = (x) => () => x;
+var constant_default$1 = (x) => () => x;
 
 //#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/color.js
-function linear(a, d) {
+function linear$1(a, d) {
 	return function(t) {
 		return a + t * d;
 	};
@@ -1370,12 +1331,12 @@ function exponential(a, b, y) {
 }
 function gamma(y) {
 	return (y = +y) === 1 ? nogamma : function(a, b) {
-		return b - a ? exponential(a, b, y) : constant_default$2(isNaN(a) ? b : a);
+		return b - a ? exponential(a, b, y) : constant_default$1(isNaN(a) ? b : a);
 	};
 }
 function nogamma(a, b) {
 	var d = b - a;
-	return d ? linear(a, d) : constant_default$2(isNaN(a) ? b : a);
+	return d ? linear$1(a, d) : constant_default$1(isNaN(a) ? b : a);
 }
 
 //#endregion
@@ -1420,10 +1381,59 @@ var rgbBasis = rgbSpline(basis_default);
 var rgbBasisClosed = rgbSpline(basisClosed_default);
 
 //#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/numberArray.js
+function numberArray_default(a, b) {
+	if (!b) b = [];
+	var n = a ? Math.min(b.length, a.length) : 0, c = b.slice(), i;
+	return function(t) {
+		for (i = 0; i < n; ++i) c[i] = a[i] * (1 - t) + b[i] * t;
+		return c;
+	};
+}
+function isNumberArray(x) {
+	return ArrayBuffer.isView(x) && !(x instanceof DataView);
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/array.js
+function genericArray(a, b) {
+	var nb = b ? b.length : 0, na = a ? Math.min(nb, a.length) : 0, x = new Array(na), c = new Array(nb), i;
+	for (i = 0; i < na; ++i) x[i] = value_default(a[i], b[i]);
+	for (; i < nb; ++i) c[i] = b[i];
+	return function(t) {
+		for (i = 0; i < na; ++i) c[i] = x[i](t);
+		return c;
+	};
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/date.js
+function date_default(a, b) {
+	var d = /* @__PURE__ */ new Date();
+	return a = +a, b = +b, function(t) {
+		return d.setTime(a * (1 - t) + b * t), d;
+	};
+}
+
+//#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/number.js
 function number_default(a, b) {
 	return a = +a, b = +b, function(t) {
 		return a * (1 - t) + b * t;
+	};
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/object.js
+function object_default(a, b) {
+	var i = {}, c = {}, k;
+	if (a === null || typeof a !== "object") a = {};
+	if (b === null || typeof b !== "object") b = {};
+	for (k in b) if (k in a) i[k] = value_default(a[k], b[k]);
+	else c[k] = b[k];
+	return function(t) {
+		for (k in i) c[k] = i[k](t);
+		return c;
 	};
 }
 
@@ -1472,9 +1482,24 @@ function string_default(a, b) {
 }
 
 //#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/value.js
+function value_default(a, b) {
+	var t = typeof b, c;
+	return b == null || t === "boolean" ? constant_default$1(b) : (t === "number" ? number_default : t === "string" ? (c = color(b)) ? (b = c, rgb_default) : string_default : b instanceof color ? rgb_default : b instanceof Date ? date_default : isNumberArray(b) ? numberArray_default : Array.isArray(b) ? genericArray : typeof b.valueOf !== "function" && typeof b.toString !== "function" || isNaN(b) ? object_default : number_default)(a, b);
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/round.js
+function round_default(a, b) {
+	return a = +a, b = +b, function(t) {
+		return Math.round(a * (1 - t) + b * t);
+	};
+}
+
+//#endregion
 //#region node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/src/transform/decompose.js
 var degrees = 180 / Math.PI;
-var identity$1 = {
+var identity$2 = {
 	translateX: 0,
 	translateY: 0,
 	rotate: 0,
@@ -1503,13 +1528,13 @@ function decompose_default(a, b, c, d, e, f) {
 var svgNode;
 function parseCss(value) {
 	const m = new (typeof DOMMatrix === "function" ? DOMMatrix : WebKitCSSMatrix)(value + "");
-	return m.isIdentity ? identity$1 : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
+	return m.isIdentity ? identity$2 : decompose_default(m.a, m.b, m.c, m.d, m.e, m.f);
 }
 function parseSvg(value) {
-	if (value == null) return identity$1;
+	if (value == null) return identity$2;
 	if (!svgNode) svgNode = document.createElementNS("http://www.w3.org/2000/svg", "g");
 	svgNode.setAttribute("transform", value);
-	if (!(value = svgNode.transform.baseVal.consolidate())) return identity$1;
+	if (!(value = svgNode.transform.baseVal.consolidate())) return identity$2;
 	value = value.matrix;
 	return decompose_default(value.a, value.b, value.c, value.d, value.e, value.f);
 }
@@ -2351,7 +2376,7 @@ selection.prototype.transition = transition_default;
 
 //#endregion
 //#region node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/src/brush.js
-const { abs: abs$1, max: max$1, min: min$1 } = Math;
+const { abs, max, min } = Math;
 function number1(e) {
 	return [+e[0], +e[1]];
 }
@@ -2400,83 +2425,6 @@ var XY = {
 function type(t) {
 	return { type: t };
 }
-
-//#endregion
-//#region node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/path.js
-const pi$1 = Math.PI, tau$1 = 2 * pi$1, epsilon$1 = 1e-6, tauEpsilon = tau$1 - epsilon$1;
-function append(strings) {
-	this._ += strings[0];
-	for (let i = 1, n = strings.length; i < n; ++i) this._ += arguments[i] + strings[i];
-}
-function appendRound(digits) {
-	let d = Math.floor(digits);
-	if (!(d >= 0)) throw new Error(`invalid digits: ${digits}`);
-	if (d > 15) return append;
-	const k = 10 ** d;
-	return function(strings) {
-		this._ += strings[0];
-		for (let i = 1, n = strings.length; i < n; ++i) this._ += Math.round(arguments[i] * k) / k + strings[i];
-	};
-}
-var Path = class {
-	constructor(digits) {
-		this._x0 = this._y0 = this._x1 = this._y1 = null;
-		this._ = "";
-		this._append = digits == null ? append : appendRound(digits);
-	}
-	moveTo(x, y) {
-		this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}`;
-	}
-	closePath() {
-		if (this._x1 !== null) {
-			this._x1 = this._x0, this._y1 = this._y0;
-			this._append`Z`;
-		}
-	}
-	lineTo(x, y) {
-		this._append`L${this._x1 = +x},${this._y1 = +y}`;
-	}
-	quadraticCurveTo(x1, y1, x, y) {
-		this._append`Q${+x1},${+y1},${this._x1 = +x},${this._y1 = +y}`;
-	}
-	bezierCurveTo(x1, y1, x2, y2, x, y) {
-		this._append`C${+x1},${+y1},${+x2},${+y2},${this._x1 = +x},${this._y1 = +y}`;
-	}
-	arcTo(x1, y1, x2, y2, r) {
-		x1 = +x1, y1 = +y1, x2 = +x2, y2 = +y2, r = +r;
-		if (r < 0) throw new Error(`negative radius: ${r}`);
-		let x0 = this._x1, y0 = this._y1, x21 = x2 - x1, y21 = y2 - y1, x01 = x0 - x1, y01 = y0 - y1, l01_2 = x01 * x01 + y01 * y01;
-		if (this._x1 === null) this._append`M${this._x1 = x1},${this._y1 = y1}`;
-		else if (!(l01_2 > epsilon$1));
-		else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon$1) || !r) this._append`L${this._x1 = x1},${this._y1 = y1}`;
-		else {
-			let x20 = x2 - x0, y20 = y2 - y0, l21_2 = x21 * x21 + y21 * y21, l20_2 = x20 * x20 + y20 * y20, l21 = Math.sqrt(l21_2), l01 = Math.sqrt(l01_2), l = r * Math.tan((pi$1 - Math.acos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2), t01 = l / l01, t21 = l / l21;
-			if (Math.abs(t01 - 1) > epsilon$1) this._append`L${x1 + t01 * x01},${y1 + t01 * y01}`;
-			this._append`A${r},${r},0,0,${+(y01 * x20 > x01 * y20)},${this._x1 = x1 + t21 * x21},${this._y1 = y1 + t21 * y21}`;
-		}
-	}
-	arc(x, y, r, a0, a1, ccw) {
-		x = +x, y = +y, r = +r, ccw = !!ccw;
-		if (r < 0) throw new Error(`negative radius: ${r}`);
-		let dx = r * Math.cos(a0), dy = r * Math.sin(a0), x0 = x + dx, y0 = y + dy, cw = 1 ^ ccw, da = ccw ? a0 - a1 : a1 - a0;
-		if (this._x1 === null) this._append`M${x0},${y0}`;
-		else if (Math.abs(this._x1 - x0) > epsilon$1 || Math.abs(this._y1 - y0) > epsilon$1) this._append`L${x0},${y0}`;
-		if (!r) return;
-		if (da < 0) da = da % tau$1 + tau$1;
-		if (da > tauEpsilon) this._append`A${r},${r},0,1,${cw},${x - dx},${y - dy}A${r},${r},0,1,${cw},${this._x1 = x0},${this._y1 = y0}`;
-		else if (da > epsilon$1) this._append`A${r},${r},0,${+(da >= pi$1)},${cw},${this._x1 = x + r * Math.cos(a1)},${this._y1 = y + r * Math.sin(a1)}`;
-	}
-	rect(x, y, w, h) {
-		this._append`M${this._x0 = this._x1 = +x},${this._y0 = this._y1 = +y}h${w = +w}v${+h}h${-w}Z`;
-	}
-	toString() {
-		return this._;
-	}
-};
-function path() {
-	return new Path();
-}
-path.prototype = Path.prototype;
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/center.js
@@ -2802,7 +2750,7 @@ treeProto.y = y_default;
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/constant.js
-function constant_default$1(x) {
+function constant_default(x) {
 	return function() {
 		return x;
 	};
@@ -2824,7 +2772,7 @@ function y$1(d) {
 }
 function collide_default(radius) {
 	var nodes, radii, random, strength = 1, iterations = 1;
-	if (typeof radius !== "function") radius = constant_default$1(radius == null ? 1 : +radius);
+	if (typeof radius !== "function") radius = constant_default(radius == null ? 1 : +radius);
 	function force() {
 		var i, n = nodes.length, tree, node, xi, yi, ri, ri2;
 		for (var k = 0; k < iterations; ++k) {
@@ -2879,7 +2827,7 @@ function collide_default(radius) {
 		return arguments.length ? (strength = +_, force) : strength;
 	};
 	force.radius = function(_) {
-		return arguments.length ? (radius = typeof _ === "function" ? _ : constant_default$1(+_), initialize(), force) : radius;
+		return arguments.length ? (radius = typeof _ === "function" ? _ : constant_default(+_), initialize(), force) : radius;
 	};
 	return force;
 }
@@ -2895,7 +2843,7 @@ function find(nodeById, nodeId) {
 	return node;
 }
 function link_default(links) {
-	var id = index, strength = defaultStrength, strengths, distance = constant_default$1(30), distances, nodes, count, bias, random, iterations = 1;
+	var id = index, strength = defaultStrength, strengths, distance = constant_default(30), distances, nodes, count, bias, random, iterations = 1;
 	if (links == null) links = [];
 	function defaultStrength(link) {
 		return 1 / Math.min(count[link.source.index], count[link.target.index]);
@@ -2951,22 +2899,22 @@ function link_default(links) {
 		return arguments.length ? (iterations = +_, force) : iterations;
 	};
 	force.strength = function(_) {
-		return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default$1(+_), initializeStrength(), force) : strength;
+		return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default(+_), initializeStrength(), force) : strength;
 	};
 	force.distance = function(_) {
-		return arguments.length ? (distance = typeof _ === "function" ? _ : constant_default$1(+_), initializeDistance(), force) : distance;
+		return arguments.length ? (distance = typeof _ === "function" ? _ : constant_default(+_), initializeDistance(), force) : distance;
 	};
 	return force;
 }
 
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/lcg.js
-const a$1 = 1664525;
-const c$1 = 1013904223;
+const a = 1664525;
+const c = 1013904223;
 const m = 4294967296;
 function lcg_default() {
 	let s = 1;
-	return () => (s = (a$1 * s + c$1) % m) / m;
+	return () => (s = (a * s + c) % m) / m;
 }
 
 //#endregion
@@ -3079,7 +3027,7 @@ function simulation_default(nodes) {
 //#endregion
 //#region node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/src/manyBody.js
 function manyBody_default() {
-	var nodes, node, random, alpha, strength = constant_default$1(-30), strengths, distanceMin2 = 1, distanceMax2 = Infinity, theta2 = .81;
+	var nodes, node, random, alpha, strength = constant_default(-30), strengths, distanceMin2 = 1, distanceMax2 = Infinity, theta2 = .81;
 	function force(_) {
 		var i, n = nodes.length, tree = quadtree(nodes, x, y).visitAfter(accumulate);
 		for (alpha = _, i = 0; i < n; ++i) node = nodes[i], tree.visit(apply);
@@ -3138,7 +3086,7 @@ function manyBody_default() {
 		initialize();
 	};
 	force.strength = function(_) {
-		return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default$1(+_), initialize(), force) : strength;
+		return arguments.length ? (strength = typeof _ === "function" ? _ : constant_default(+_), initialize(), force) : strength;
 	};
 	force.distanceMin = function(_) {
 		return arguments.length ? (distanceMin2 = _ * _, force) : Math.sqrt(distanceMin2);
@@ -3153,303 +3101,463 @@ function manyBody_default() {
 }
 
 //#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/constant.js
-function constant_default(x) {
-	return function constant() {
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatDecimal.js
+function formatDecimal_default(x) {
+	return Math.abs(x = Math.round(x)) >= 1e21 ? x.toLocaleString("en").replace(/,/g, "") : x.toString(10);
+}
+function formatDecimalParts(x, p) {
+	if (!isFinite(x) || x === 0) return null;
+	var i = (x = p ? x.toExponential(p - 1) : x.toExponential()).indexOf("e"), coefficient = x.slice(0, i);
+	return [coefficient.length > 1 ? coefficient[0] + coefficient.slice(2) : coefficient, +x.slice(i + 1)];
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/exponent.js
+function exponent_default(x) {
+	return x = formatDecimalParts(Math.abs(x)), x ? x[1] : NaN;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatGroup.js
+function formatGroup_default(grouping, thousands) {
+	return function(value, width) {
+		var i = value.length, t = [], j = 0, g = grouping[0], length = 0;
+		while (i > 0 && g > 0) {
+			if (length + g + 1 > width) g = Math.max(1, width - length);
+			t.push(value.substring(i -= g, i + g));
+			if ((length += g + 1) > width) break;
+			g = grouping[j = (j + 1) % grouping.length];
+		}
+		return t.reverse().join(thousands);
+	};
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatNumerals.js
+function formatNumerals_default(numerals) {
+	return function(value) {
+		return value.replace(/[0-9]/g, function(i) {
+			return numerals[+i];
+		});
+	};
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatSpecifier.js
+var re = /^(?:(.)?([<>=^]))?([+\-( ])?([$#])?(0)?(\d+)?(,)?(\.\d+)?(~)?([a-z%])?$/i;
+function formatSpecifier(specifier) {
+	if (!(match = re.exec(specifier))) throw new Error("invalid format: " + specifier);
+	var match;
+	return new FormatSpecifier({
+		fill: match[1],
+		align: match[2],
+		sign: match[3],
+		symbol: match[4],
+		zero: match[5],
+		width: match[6],
+		comma: match[7],
+		precision: match[8] && match[8].slice(1),
+		trim: match[9],
+		type: match[10]
+	});
+}
+formatSpecifier.prototype = FormatSpecifier.prototype;
+function FormatSpecifier(specifier) {
+	this.fill = specifier.fill === void 0 ? " " : specifier.fill + "";
+	this.align = specifier.align === void 0 ? ">" : specifier.align + "";
+	this.sign = specifier.sign === void 0 ? "-" : specifier.sign + "";
+	this.symbol = specifier.symbol === void 0 ? "" : specifier.symbol + "";
+	this.zero = !!specifier.zero;
+	this.width = specifier.width === void 0 ? void 0 : +specifier.width;
+	this.comma = !!specifier.comma;
+	this.precision = specifier.precision === void 0 ? void 0 : +specifier.precision;
+	this.trim = !!specifier.trim;
+	this.type = specifier.type === void 0 ? "" : specifier.type + "";
+}
+FormatSpecifier.prototype.toString = function() {
+	return this.fill + this.align + this.sign + this.symbol + (this.zero ? "0" : "") + (this.width === void 0 ? "" : Math.max(1, this.width | 0)) + (this.comma ? "," : "") + (this.precision === void 0 ? "" : "." + Math.max(0, this.precision | 0)) + (this.trim ? "~" : "") + this.type;
+};
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTrim.js
+function formatTrim_default(s) {
+	out: for (var n = s.length, i = 1, i0 = -1, i1; i < n; ++i) switch (s[i]) {
+		case ".":
+			i0 = i1 = i;
+			break;
+		case "0":
+			if (i0 === 0) i0 = i;
+			i1 = i;
+			break;
+		default:
+			if (!+s[i]) break out;
+			if (i0 > 0) i0 = 0;
+			break;
+	}
+	return i0 > 0 ? s.slice(0, i0) + s.slice(i1 + 1) : s;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatPrefixAuto.js
+var prefixExponent;
+function formatPrefixAuto_default(x, p) {
+	var d = formatDecimalParts(x, p);
+	if (!d) return prefixExponent = void 0, x.toPrecision(p);
+	var coefficient = d[0], exponent = d[1], i = exponent - (prefixExponent = Math.max(-8, Math.min(8, Math.floor(exponent / 3))) * 3) + 1, n = coefficient.length;
+	return i === n ? coefficient : i > n ? coefficient + new Array(i - n + 1).join("0") : i > 0 ? coefficient.slice(0, i) + "." + coefficient.slice(i) : "0." + new Array(1 - i).join("0") + formatDecimalParts(x, Math.max(0, p + i - 1))[0];
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatRounded.js
+function formatRounded_default(x, p) {
+	var d = formatDecimalParts(x, p);
+	if (!d) return x + "";
+	var coefficient = d[0], exponent = d[1];
+	return exponent < 0 ? "0." + new Array(-exponent).join("0") + coefficient : coefficient.length > exponent + 1 ? coefficient.slice(0, exponent + 1) + "." + coefficient.slice(exponent + 1) : coefficient + new Array(exponent - coefficient.length + 2).join("0");
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/formatTypes.js
+var formatTypes_default = {
+	"%": (x, p) => (x * 100).toFixed(p),
+	"b": (x) => Math.round(x).toString(2),
+	"c": (x) => x + "",
+	"d": formatDecimal_default,
+	"e": (x, p) => x.toExponential(p),
+	"f": (x, p) => x.toFixed(p),
+	"g": (x, p) => x.toPrecision(p),
+	"o": (x) => Math.round(x).toString(8),
+	"p": (x, p) => formatRounded_default(x * 100, p),
+	"r": formatRounded_default,
+	"s": formatPrefixAuto_default,
+	"X": (x) => Math.round(x).toString(16).toUpperCase(),
+	"x": (x) => Math.round(x).toString(16)
+};
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/identity.js
+function identity_default(x) {
+	return x;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/locale.js
+var map = Array.prototype.map, prefixes = [
+	"y",
+	"z",
+	"a",
+	"f",
+	"p",
+	"n",
+	"µ",
+	"m",
+	"",
+	"k",
+	"M",
+	"G",
+	"T",
+	"P",
+	"E",
+	"Z",
+	"Y"
+];
+function locale_default(locale) {
+	var group = locale.grouping === void 0 || locale.thousands === void 0 ? identity_default : formatGroup_default(map.call(locale.grouping, Number), locale.thousands + ""), currencyPrefix = locale.currency === void 0 ? "" : locale.currency[0] + "", currencySuffix = locale.currency === void 0 ? "" : locale.currency[1] + "", decimal = locale.decimal === void 0 ? "." : locale.decimal + "", numerals = locale.numerals === void 0 ? identity_default : formatNumerals_default(map.call(locale.numerals, String)), percent = locale.percent === void 0 ? "%" : locale.percent + "", minus = locale.minus === void 0 ? "−" : locale.minus + "", nan = locale.nan === void 0 ? "NaN" : locale.nan + "";
+	function newFormat(specifier, options) {
+		specifier = formatSpecifier(specifier);
+		var fill = specifier.fill, align = specifier.align, sign = specifier.sign, symbol = specifier.symbol, zero = specifier.zero, width = specifier.width, comma = specifier.comma, precision = specifier.precision, trim = specifier.trim, type = specifier.type;
+		if (type === "n") comma = true, type = "g";
+		else if (!formatTypes_default[type]) precision === void 0 && (precision = 12), trim = true, type = "g";
+		if (zero || fill === "0" && align === "=") zero = true, fill = "0", align = "=";
+		var prefix = (options && options.prefix !== void 0 ? options.prefix : "") + (symbol === "$" ? currencyPrefix : symbol === "#" && /[boxX]/.test(type) ? "0" + type.toLowerCase() : ""), suffix = (symbol === "$" ? currencySuffix : /[%p]/.test(type) ? percent : "") + (options && options.suffix !== void 0 ? options.suffix : "");
+		var formatType = formatTypes_default[type], maybeSuffix = /[defgprs%]/.test(type);
+		precision = precision === void 0 ? 6 : /[gprs]/.test(type) ? Math.max(1, Math.min(21, precision)) : Math.max(0, Math.min(20, precision));
+		function format(value) {
+			var valuePrefix = prefix, valueSuffix = suffix, i, n, c;
+			if (type === "c") {
+				valueSuffix = formatType(value) + valueSuffix;
+				value = "";
+			} else {
+				value = +value;
+				var valueNegative = value < 0 || 1 / value < 0;
+				value = isNaN(value) ? nan : formatType(Math.abs(value), precision);
+				if (trim) value = formatTrim_default(value);
+				if (valueNegative && +value === 0 && sign !== "+") valueNegative = false;
+				valuePrefix = (valueNegative ? sign === "(" ? sign : minus : sign === "-" || sign === "(" ? "" : sign) + valuePrefix;
+				valueSuffix = (type === "s" && !isNaN(value) && prefixExponent !== void 0 ? prefixes[8 + prefixExponent / 3] : "") + valueSuffix + (valueNegative && sign === "(" ? ")" : "");
+				if (maybeSuffix) {
+					i = -1, n = value.length;
+					while (++i < n) if (c = value.charCodeAt(i), 48 > c || c > 57) {
+						valueSuffix = (c === 46 ? decimal + value.slice(i + 1) : value.slice(i)) + valueSuffix;
+						value = value.slice(0, i);
+						break;
+					}
+				}
+			}
+			if (comma && !zero) value = group(value, Infinity);
+			var length = valuePrefix.length + value.length + valueSuffix.length, padding = length < width ? new Array(width - length + 1).join(fill) : "";
+			if (comma && zero) value = group(padding + value, padding.length ? width - valueSuffix.length : Infinity), padding = "";
+			switch (align) {
+				case "<":
+					value = valuePrefix + value + valueSuffix + padding;
+					break;
+				case "=":
+					value = valuePrefix + padding + value + valueSuffix;
+					break;
+				case "^":
+					value = padding.slice(0, length = padding.length >> 1) + valuePrefix + value + valueSuffix + padding.slice(length);
+					break;
+				default:
+					value = padding + valuePrefix + value + valueSuffix;
+					break;
+			}
+			return numerals(value);
+		}
+		format.toString = function() {
+			return specifier + "";
+		};
+		return format;
+	}
+	function formatPrefix(specifier, value) {
+		var e = Math.max(-8, Math.min(8, Math.floor(exponent_default(value) / 3))) * 3, k = Math.pow(10, -e), f = newFormat((specifier = formatSpecifier(specifier), specifier.type = "f", specifier), { suffix: prefixes[8 + e / 3] });
+		return function(value) {
+			return f(k * value);
+		};
+	}
+	return {
+		format: newFormat,
+		formatPrefix
+	};
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/defaultLocale.js
+var locale;
+var format;
+var formatPrefix;
+defaultLocale({
+	thousands: ",",
+	grouping: [3],
+	currency: ["$", ""]
+});
+function defaultLocale(definition) {
+	locale = locale_default(definition);
+	format = locale.format;
+	formatPrefix = locale.formatPrefix;
+	return locale;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionFixed.js
+function precisionFixed_default(step) {
+	return Math.max(0, -exponent_default(Math.abs(step)));
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionPrefix.js
+function precisionPrefix_default(step, value) {
+	return Math.max(0, Math.max(-8, Math.min(8, Math.floor(exponent_default(value) / 3))) * 3 - exponent_default(Math.abs(step)));
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/src/precisionRound.js
+function precisionRound_default(step, max) {
+	step = Math.abs(step), max = Math.abs(max) - step;
+	return Math.max(0, exponent_default(max) - exponent_default(step)) + 1;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/init.js
+function initRange(domain, range) {
+	switch (arguments.length) {
+		case 0: break;
+		case 1:
+			this.range(domain);
+			break;
+		default:
+			this.range(range).domain(domain);
+			break;
+	}
+	return this;
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/constant.js
+function constants(x) {
+	return function() {
 		return x;
 	};
 }
 
 //#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/math.js
-const abs = Math.abs;
-const atan2 = Math.atan2;
-const cos = Math.cos;
-const max = Math.max;
-const min = Math.min;
-const sin = Math.sin;
-const sqrt = Math.sqrt;
-const epsilon = 1e-12;
-const pi = Math.PI;
-const halfPi = pi / 2;
-const tau = 2 * pi;
-function acos(x) {
-	return x > 1 ? 0 : x < -1 ? pi : Math.acos(x);
-}
-function asin(x) {
-	return x >= 1 ? halfPi : x <= -1 ? -halfPi : Math.asin(x);
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/number.js
+function number(x) {
+	return +x;
 }
 
 //#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/path.js
-function withPath(shape) {
-	let digits = 3;
-	shape.digits = function(_) {
-		if (!arguments.length) return digits;
-		if (_ == null) digits = null;
-		else {
-			const d = Math.floor(_);
-			if (!(d >= 0)) throw new RangeError(`invalid digits: ${_}`);
-			digits = d;
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/continuous.js
+var unit = [0, 1];
+function identity$1(x) {
+	return x;
+}
+function normalize(a, b) {
+	return (b -= a = +a) ? function(x) {
+		return (x - a) / b;
+	} : constants(isNaN(b) ? NaN : .5);
+}
+function clamper(a, b) {
+	var t;
+	if (a > b) t = a, a = b, b = t;
+	return function(x) {
+		return Math.max(a, Math.min(b, x));
+	};
+}
+function bimap(domain, range, interpolate) {
+	var d0 = domain[0], d1 = domain[1], r0 = range[0], r1 = range[1];
+	if (d1 < d0) d0 = normalize(d1, d0), r0 = interpolate(r1, r0);
+	else d0 = normalize(d0, d1), r0 = interpolate(r0, r1);
+	return function(x) {
+		return r0(d0(x));
+	};
+}
+function polymap(domain, range, interpolate) {
+	var j = Math.min(domain.length, range.length) - 1, d = new Array(j), r = new Array(j), i = -1;
+	if (domain[j] < domain[0]) {
+		domain = domain.slice().reverse();
+		range = range.slice().reverse();
+	}
+	while (++i < j) {
+		d[i] = normalize(domain[i], domain[i + 1]);
+		r[i] = interpolate(range[i], range[i + 1]);
+	}
+	return function(x) {
+		var i = bisectRight(domain, x, 1, j) - 1;
+		return r[i](d[i](x));
+	};
+}
+function copy(source, target) {
+	return target.domain(source.domain()).range(source.range()).interpolate(source.interpolate()).clamp(source.clamp()).unknown(source.unknown());
+}
+function transformer() {
+	var domain = unit, range = unit, interpolate = value_default, transform, untransform, unknown, clamp = identity$1, piecewise, output, input;
+	function rescale() {
+		var n = Math.min(domain.length, range.length);
+		if (clamp !== identity$1) clamp = clamper(domain[0], domain[n - 1]);
+		piecewise = n > 2 ? polymap : bimap;
+		output = input = null;
+		return scale;
+	}
+	function scale(x) {
+		return x == null || isNaN(x = +x) ? unknown : (output || (output = piecewise(domain.map(transform), range, interpolate)))(transform(clamp(x)));
+	}
+	scale.invert = function(y) {
+		return clamp(untransform((input || (input = piecewise(range, domain.map(transform), number_default)))(y)));
+	};
+	scale.domain = function(_) {
+		return arguments.length ? (domain = Array.from(_, number), rescale()) : domain.slice();
+	};
+	scale.range = function(_) {
+		return arguments.length ? (range = Array.from(_), rescale()) : range.slice();
+	};
+	scale.rangeRound = function(_) {
+		return range = Array.from(_), interpolate = round_default, rescale();
+	};
+	scale.clamp = function(_) {
+		return arguments.length ? (clamp = _ ? true : identity$1, rescale()) : clamp !== identity$1;
+	};
+	scale.interpolate = function(_) {
+		return arguments.length ? (interpolate = _, rescale()) : interpolate;
+	};
+	scale.unknown = function(_) {
+		return arguments.length ? (unknown = _, scale) : unknown;
+	};
+	return function(t, u) {
+		transform = t, untransform = u;
+		return rescale();
+	};
+}
+function continuous() {
+	return transformer()(identity$1, identity$1);
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/tickFormat.js
+function tickFormat(start, stop, count, specifier) {
+	var step = tickStep(start, stop, count), precision;
+	specifier = formatSpecifier(specifier == null ? ",f" : specifier);
+	switch (specifier.type) {
+		case "s":
+			var value = Math.max(Math.abs(start), Math.abs(stop));
+			if (specifier.precision == null && !isNaN(precision = precisionPrefix_default(step, value))) specifier.precision = precision;
+			return formatPrefix(specifier, value);
+		case "":
+		case "e":
+		case "g":
+		case "p":
+		case "r":
+			if (specifier.precision == null && !isNaN(precision = precisionRound_default(step, Math.max(Math.abs(start), Math.abs(stop))))) specifier.precision = precision - (specifier.type === "e");
+			break;
+		case "f":
+		case "%":
+			if (specifier.precision == null && !isNaN(precision = precisionFixed_default(step))) specifier.precision = precision - (specifier.type === "%") * 2;
+			break;
+	}
+	return format(specifier);
+}
+
+//#endregion
+//#region node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/src/linear.js
+function linearish(scale) {
+	var domain = scale.domain;
+	scale.ticks = function(count) {
+		var d = domain();
+		return ticks(d[0], d[d.length - 1], count == null ? 10 : count);
+	};
+	scale.tickFormat = function(count, specifier) {
+		var d = domain();
+		return tickFormat(d[0], d[d.length - 1], count == null ? 10 : count, specifier);
+	};
+	scale.nice = function(count) {
+		if (count == null) count = 10;
+		var d = domain();
+		var i0 = 0;
+		var i1 = d.length - 1;
+		var start = d[i0];
+		var stop = d[i1];
+		var prestep;
+		var step;
+		var maxIter = 10;
+		if (stop < start) {
+			step = start, start = stop, stop = step;
+			step = i0, i0 = i1, i1 = step;
 		}
-		return shape;
-	};
-	return () => new Path(digits);
-}
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/arc.js
-function arcInnerRadius(d) {
-	return d.innerRadius;
-}
-function arcOuterRadius(d) {
-	return d.outerRadius;
-}
-function arcStartAngle(d) {
-	return d.startAngle;
-}
-function arcEndAngle(d) {
-	return d.endAngle;
-}
-function arcPadAngle(d) {
-	return d && d.padAngle;
-}
-function intersect(x0, y0, x1, y1, x2, y2, x3, y3) {
-	var x10 = x1 - x0, y10 = y1 - y0, x32 = x3 - x2, y32 = y3 - y2, t = y32 * x10 - x32 * y10;
-	if (t * t < 1e-12) return;
-	t = (x32 * (y0 - y2) - y32 * (x0 - x2)) / t;
-	return [x0 + t * x10, y0 + t * y10];
-}
-function cornerTangents(x0, y0, x1, y1, r1, rc, cw) {
-	var x01 = x0 - x1, y01 = y0 - y1, lo = (cw ? rc : -rc) / sqrt(x01 * x01 + y01 * y01), ox = lo * y01, oy = -lo * x01, x11 = x0 + ox, y11 = y0 + oy, x10 = x1 + ox, y10 = y1 + oy, x00 = (x11 + x10) / 2, y00 = (y11 + y10) / 2, dx = x10 - x11, dy = y10 - y11, d2 = dx * dx + dy * dy, r = r1 - rc, D = x11 * y10 - x10 * y11, d = (dy < 0 ? -1 : 1) * sqrt(max(0, r * r * d2 - D * D)), cx0 = (D * dy - dx * d) / d2, cy0 = (-D * dx - dy * d) / d2, cx1 = (D * dy + dx * d) / d2, cy1 = (-D * dx + dy * d) / d2, dx0 = cx0 - x00, dy0 = cy0 - y00, dx1 = cx1 - x00, dy1 = cy1 - y00;
-	if (dx0 * dx0 + dy0 * dy0 > dx1 * dx1 + dy1 * dy1) cx0 = cx1, cy0 = cy1;
-	return {
-		cx: cx0,
-		cy: cy0,
-		x01: -ox,
-		y01: -oy,
-		x11: cx0 * (r1 / r - 1),
-		y11: cy0 * (r1 / r - 1)
-	};
-}
-function arc_default() {
-	var innerRadius = arcInnerRadius, outerRadius = arcOuterRadius, cornerRadius = constant_default(0), padRadius = null, startAngle = arcStartAngle, endAngle = arcEndAngle, padAngle = arcPadAngle, context = null, path = withPath(arc);
-	function arc() {
-		var buffer, r, r0 = +innerRadius.apply(this, arguments), r1 = +outerRadius.apply(this, arguments), a0 = startAngle.apply(this, arguments) - halfPi, a1 = endAngle.apply(this, arguments) - halfPi, da = abs(a1 - a0), cw = a1 > a0;
-		if (!context) context = buffer = path();
-		if (r1 < r0) r = r1, r1 = r0, r0 = r;
-		if (!(r1 > 1e-12)) context.moveTo(0, 0);
-		else if (da > tau - 1e-12) {
-			context.moveTo(r1 * cos(a0), r1 * sin(a0));
-			context.arc(0, 0, r1, a0, a1, !cw);
-			if (r0 > 1e-12) {
-				context.moveTo(r0 * cos(a1), r0 * sin(a1));
-				context.arc(0, 0, r0, a1, a0, cw);
-			}
-		} else {
-			var a01 = a0, a11 = a1, a00 = a0, a10 = a1, da0 = da, da1 = da, ap = padAngle.apply(this, arguments) / 2, rp = ap > 1e-12 && (padRadius ? +padRadius.apply(this, arguments) : sqrt(r0 * r0 + r1 * r1)), rc = min(abs(r1 - r0) / 2, +cornerRadius.apply(this, arguments)), rc0 = rc, rc1 = rc, t0, t1;
-			if (rp > 1e-12) {
-				var p0 = asin(rp / r0 * sin(ap)), p1 = asin(rp / r1 * sin(ap));
-				if ((da0 -= p0 * 2) > 1e-12) p0 *= cw ? 1 : -1, a00 += p0, a10 -= p0;
-				else da0 = 0, a00 = a10 = (a0 + a1) / 2;
-				if ((da1 -= p1 * 2) > 1e-12) p1 *= cw ? 1 : -1, a01 += p1, a11 -= p1;
-				else da1 = 0, a01 = a11 = (a0 + a1) / 2;
-			}
-			var x01 = r1 * cos(a01), y01 = r1 * sin(a01), x10 = r0 * cos(a10), y10 = r0 * sin(a10);
-			if (rc > 1e-12) {
-				var x11 = r1 * cos(a11), y11 = r1 * sin(a11), x00 = r0 * cos(a00), y00 = r0 * sin(a00), oc;
-				if (da < pi) if (oc = intersect(x01, y01, x00, y00, x11, y11, x10, y10)) {
-					var ax = x01 - oc[0], ay = y01 - oc[1], bx = x11 - oc[0], by = y11 - oc[1], kc = 1 / sin(acos((ax * bx + ay * by) / (sqrt(ax * ax + ay * ay) * sqrt(bx * bx + by * by))) / 2), lc = sqrt(oc[0] * oc[0] + oc[1] * oc[1]);
-					rc0 = min(rc, (r0 - lc) / (kc - 1));
-					rc1 = min(rc, (r1 - lc) / (kc + 1));
-				} else rc0 = rc1 = 0;
-			}
-			if (!(da1 > 1e-12)) context.moveTo(x01, y01);
-			else if (rc1 > 1e-12) {
-				t0 = cornerTangents(x00, y00, x01, y01, r1, rc1, cw);
-				t1 = cornerTangents(x11, y11, x10, y10, r1, rc1, cw);
-				context.moveTo(t0.cx + t0.x01, t0.cy + t0.y01);
-				if (rc1 < rc) context.arc(t0.cx, t0.cy, rc1, atan2(t0.y01, t0.x01), atan2(t1.y01, t1.x01), !cw);
-				else {
-					context.arc(t0.cx, t0.cy, rc1, atan2(t0.y01, t0.x01), atan2(t0.y11, t0.x11), !cw);
-					context.arc(0, 0, r1, atan2(t0.cy + t0.y11, t0.cx + t0.x11), atan2(t1.cy + t1.y11, t1.cx + t1.x11), !cw);
-					context.arc(t1.cx, t1.cy, rc1, atan2(t1.y11, t1.x11), atan2(t1.y01, t1.x01), !cw);
-				}
-			} else context.moveTo(x01, y01), context.arc(0, 0, r1, a01, a11, !cw);
-			if (!(r0 > 1e-12) || !(da0 > 1e-12)) context.lineTo(x10, y10);
-			else if (rc0 > 1e-12) {
-				t0 = cornerTangents(x10, y10, x11, y11, r0, -rc0, cw);
-				t1 = cornerTangents(x01, y01, x00, y00, r0, -rc0, cw);
-				context.lineTo(t0.cx + t0.x01, t0.cy + t0.y01);
-				if (rc0 < rc) context.arc(t0.cx, t0.cy, rc0, atan2(t0.y01, t0.x01), atan2(t1.y01, t1.x01), !cw);
-				else {
-					context.arc(t0.cx, t0.cy, rc0, atan2(t0.y01, t0.x01), atan2(t0.y11, t0.x11), !cw);
-					context.arc(0, 0, r0, atan2(t0.cy + t0.y11, t0.cx + t0.x11), atan2(t1.cy + t1.y11, t1.cx + t1.x11), cw);
-					context.arc(t1.cx, t1.cy, rc0, atan2(t1.y11, t1.x11), atan2(t1.y01, t1.x01), !cw);
-				}
-			} else context.arc(0, 0, r0, a10, a00, cw);
+		while (maxIter-- > 0) {
+			step = tickIncrement(start, stop, count);
+			if (step === prestep) {
+				d[i0] = start;
+				d[i1] = stop;
+				return domain(d);
+			} else if (step > 0) {
+				start = Math.floor(start / step) * step;
+				stop = Math.ceil(stop / step) * step;
+			} else if (step < 0) {
+				start = Math.ceil(start * step) / step;
+				stop = Math.floor(stop * step) / step;
+			} else break;
+			prestep = step;
 		}
-		context.closePath();
-		if (buffer) return context = null, buffer + "" || null;
-	}
-	arc.centroid = function() {
-		var r = (+innerRadius.apply(this, arguments) + +outerRadius.apply(this, arguments)) / 2, a = (+startAngle.apply(this, arguments) + +endAngle.apply(this, arguments)) / 2 - pi / 2;
-		return [cos(a) * r, sin(a) * r];
+		return scale;
 	};
-	arc.innerRadius = function(_) {
-		return arguments.length ? (innerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : innerRadius;
-	};
-	arc.outerRadius = function(_) {
-		return arguments.length ? (outerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : outerRadius;
-	};
-	arc.cornerRadius = function(_) {
-		return arguments.length ? (cornerRadius = typeof _ === "function" ? _ : constant_default(+_), arc) : cornerRadius;
-	};
-	arc.padRadius = function(_) {
-		return arguments.length ? (padRadius = _ == null ? null : typeof _ === "function" ? _ : constant_default(+_), arc) : padRadius;
-	};
-	arc.startAngle = function(_) {
-		return arguments.length ? (startAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : startAngle;
-	};
-	arc.endAngle = function(_) {
-		return arguments.length ? (endAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : endAngle;
-	};
-	arc.padAngle = function(_) {
-		return arguments.length ? (padAngle = typeof _ === "function" ? _ : constant_default(+_), arc) : padAngle;
-	};
-	arc.context = function(_) {
-		return arguments.length ? (context = _ == null ? null : _, arc) : context;
-	};
-	return arc;
+	return scale;
 }
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/circle.js
-var circle_default = { draw(context, size) {
-	const r = sqrt(size / pi);
-	context.moveTo(r, 0);
-	context.arc(0, 0, r, 0, tau);
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/cross.js
-var cross_default = { draw(context, size) {
-	const r = sqrt(size / 5) / 2;
-	context.moveTo(-3 * r, -r);
-	context.lineTo(-r, -r);
-	context.lineTo(-r, -3 * r);
-	context.lineTo(r, -3 * r);
-	context.lineTo(r, -r);
-	context.lineTo(3 * r, -r);
-	context.lineTo(3 * r, r);
-	context.lineTo(r, r);
-	context.lineTo(r, 3 * r);
-	context.lineTo(-r, 3 * r);
-	context.lineTo(-r, r);
-	context.lineTo(-3 * r, r);
-	context.closePath();
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/diamond.js
-const tan30 = sqrt(1 / 3);
-const tan30_2 = tan30 * 2;
-var diamond_default = { draw(context, size) {
-	const y = sqrt(size / tan30_2);
-	const x = y * tan30;
-	context.moveTo(0, -y);
-	context.lineTo(x, 0);
-	context.lineTo(0, y);
-	context.lineTo(-x, 0);
-	context.closePath();
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/square.js
-var square_default = { draw(context, size) {
-	const w = sqrt(size);
-	const x = -w / 2;
-	context.rect(x, x, w, w);
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/star.js
-const ka = .8908130915292852;
-const kr = sin(pi / 10) / sin(7 * pi / 10);
-const kx = sin(tau / 10) * kr;
-const ky = -cos(tau / 10) * kr;
-var star_default = { draw(context, size) {
-	const r = sqrt(size * ka);
-	const x = kx * r;
-	const y = ky * r;
-	context.moveTo(0, -r);
-	context.lineTo(x, y);
-	for (let i = 1; i < 5; ++i) {
-		const a = tau * i / 5;
-		const c = cos(a);
-		const s = sin(a);
-		context.lineTo(s * r, -c * r);
-		context.lineTo(c * x - s * y, s * x + c * y);
-	}
-	context.closePath();
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/triangle.js
-const sqrt3 = sqrt(3);
-var triangle_default = { draw(context, size) {
-	const y = -sqrt(size / (sqrt3 * 3));
-	context.moveTo(0, y * 2);
-	context.lineTo(-sqrt3 * y, -y);
-	context.lineTo(sqrt3 * y, -y);
-	context.closePath();
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol/wye.js
-const c = -.5;
-const s = sqrt(3) / 2;
-const k = 1 / sqrt(12);
-const a = (k / 2 + 1) * 3;
-var wye_default = { draw(context, size) {
-	const r = sqrt(size / a);
-	const x0 = r / 2, y0 = r * k;
-	const x1 = x0, y1 = r * k + r;
-	const x2 = -x1, y2 = y1;
-	context.moveTo(x0, y0);
-	context.lineTo(x1, y1);
-	context.lineTo(x2, y2);
-	context.lineTo(c * x0 - s * y0, s * x0 + c * y0);
-	context.lineTo(c * x1 - s * y1, s * x1 + c * y1);
-	context.lineTo(c * x2 - s * y2, s * x2 + c * y2);
-	context.lineTo(c * x0 + s * y0, c * y0 - s * x0);
-	context.lineTo(c * x1 + s * y1, c * y1 - s * x1);
-	context.lineTo(c * x2 + s * y2, c * y2 - s * x2);
-	context.closePath();
-} };
-
-//#endregion
-//#region node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/symbol.js
-function Symbol$1(type, size) {
-	let context = null, path = withPath(symbol);
-	type = typeof type === "function" ? type : constant_default(type || circle_default);
-	size = typeof size === "function" ? size : constant_default(size === void 0 ? 64 : +size);
-	function symbol() {
-		let buffer;
-		if (!context) context = buffer = path();
-		type.apply(this, arguments).draw(context, +size.apply(this, arguments));
-		if (buffer) return context = null, buffer + "" || null;
-	}
-	symbol.type = function(_) {
-		return arguments.length ? (type = typeof _ === "function" ? _ : constant_default(_), symbol) : type;
+function linear() {
+	var scale = continuous();
+	scale.copy = function() {
+		return copy(scale, linear());
 	};
-	symbol.size = function(_) {
-		return arguments.length ? (size = typeof _ === "function" ? _ : constant_default(+_), symbol) : size;
-	};
-	symbol.context = function(_) {
-		return arguments.length ? (context = _ == null ? null : _, symbol) : context;
-	};
-	return symbol;
+	initRange.apply(scale, arguments);
+	return linearish(scale);
 }
 
 //#endregion
@@ -3500,6 +3608,111 @@ transform.prototype = Transform.prototype;
 function transform(node) {
 	while (!node.__zoom) if (!(node = node.parentNode)) return identity;
 	return node.__zoom;
+}
+
+//#endregion
+//#region vis/types.ts
+/** Construct a typed EntityId from a prefix and name. Internal use. */
+function eid(prefix, id) {
+	if (!id) id = "_";
+	return `${prefix}:${id}`;
+}
+
+//#endregion
+//#region vis/transform.ts
+function lerp(a, b, t) {
+	return a + (b - a) * t;
+}
+/** Interpolate between two transform arrays (must be same structure) */
+function interpolate(a, b, t) {
+	return a.map((tf, i) => {
+		const bt = b[i] ?? tf;
+		switch (tf.type) {
+			case "rotate": return {
+				...tf,
+				angle: lerp(tf.angle, bt.angle, t)
+			};
+			case "scale": return {
+				...tf,
+				sx: lerp(tf.sx, bt.sx, t),
+				sy: lerp(tf.sy, bt.sy, t)
+			};
+			case "translate": return {
+				...tf,
+				dx: lerp(tf.dx, bt.dx, t),
+				dy: lerp(tf.dy, bt.dy, t)
+			};
+			case "matrix": return {
+				...tf,
+				a: lerp(tf.a, bt.a, t),
+				b: lerp(tf.b, bt.b, t),
+				c: lerp(tf.c, bt.c, t),
+				d: lerp(tf.d, bt.d, t),
+				tx: lerp(tf.tx, bt.tx, t),
+				ty: lerp(tf.ty, bt.ty, t)
+			};
+		}
+	});
+}
+/** Apply transforms to line geometry (from→to) */
+function applyLine(from, to, tf) {
+	let nf = [...from], nt = [...to];
+	for (const t of tf) switch (t.type) {
+		case "rotate": {
+			const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
+			const rot = (px, py) => [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos];
+			nf = rot(nf[0], nf[1]);
+			nt = rot(nt[0], nt[1]);
+			break;
+		}
+		case "scale":
+			nt = [nf[0] + (nt[0] - nf[0]) * t.sx, nf[1] + (nt[1] - nf[1]) * t.sy];
+			break;
+		case "translate":
+			nf = [nf[0] + t.dx, nf[1] + t.dy];
+			nt = [nt[0] + t.dx, nt[1] + t.dy];
+			break;
+		case "matrix": {
+			const { a, b, c, d, tx = 0, ty = 0 } = t;
+			const dx = nt[0] - nf[0], dy = nt[1] - nf[1];
+			nf = [nf[0] + tx, nf[1] + ty];
+			nt = [nf[0] + a * dx + c * dy, nf[1] + b * dx + d * dy];
+			break;
+		}
+	}
+	return {
+		from: nf,
+		to: nt
+	};
+}
+/** Apply transforms to polygon vertices */
+function applyVertices(vertices, tf) {
+	let nv = vertices.map((v) => [...v]);
+	for (const t of tf) switch (t.type) {
+		case "rotate": {
+			const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
+			nv = nv.map(([px, py]) => [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos]);
+			break;
+		}
+		case "scale": {
+			const cx = nv.reduce((s, v) => s + v[0], 0) / nv.length, cy = nv.reduce((s, v) => s + v[1], 0) / nv.length;
+			nv = nv.map(([px, py]) => [cx + (px - cx) * t.sx, cy + (py - cy) * t.sy]);
+			break;
+		}
+		case "translate":
+			nv = nv.map(([px, py]) => [px + t.dx, py + t.dy]);
+			break;
+		case "matrix": {
+			const { a, b, c, d, tx = 0, ty = 0 } = t;
+			const ox = nv[0][0], oy = nv[0][1];
+			nv = nv.map(([px, py]) => {
+				const dx = px - ox, dy = py - oy;
+				return [ox + a * dx + c * dy + tx, oy + b * dx + d * dy + ty];
+			});
+			break;
+		}
+	}
+	return nv;
 }
 
 //#endregion
@@ -3567,6 +3780,1063 @@ function svgColor(c) {
 }
 
 //#endregion
+//#region vis/renderer/svg.ts
+/** Ray-box intersection: how far along direction (dx,dy) from (ox,oy)
+*  to reach the rectangle [xMin,xMax]×[yMin,yMax].
+*  Returns [tNeg, tPos] — t-parameters for negative and positive directions. */
+function rayBoxExtent(ox, oy, dx, dy, xMin, xMax, yMin, yMax) {
+	let tPos = Infinity, tNeg = Infinity;
+	if (dx > .001) {
+		tPos = Math.min(tPos, (xMax - ox) / dx);
+		tNeg = Math.min(tNeg, (ox - xMin) / dx);
+	}
+	if (dx < -.001) {
+		tNeg = Math.min(tNeg, (xMax - ox) / -dx);
+		tPos = Math.min(tPos, (ox - xMin) / -dx);
+	}
+	if (dy > .001) {
+		tPos = Math.min(tPos, (yMax - oy) / dy);
+		tNeg = Math.min(tNeg, (oy - yMin) / dy);
+	}
+	if (dy < -.001) {
+		tNeg = Math.min(tNeg, (yMax - oy) / -dy);
+		tPos = Math.min(tPos, (oy - yMin) / -dy);
+	}
+	return [tNeg, tPos];
+}
+function computeAxesGeometry(gd) {
+	const ox = gd.ox ?? 0, oy = gd.oy ?? 0;
+	const as = gd.arrowSize ?? 8;
+	const ah = as / 2;
+	const ix = gd.ix ?? 1, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? -1;
+	if (iy !== 0 || jx !== 0) {
+		const iLen = Math.sqrt(ix * ix + iy * iy) || 1;
+		const jLen = Math.sqrt(jx * jx + jy * jy) || 1;
+		const iu = ix / iLen, iv = iy / iLen;
+		const ju = jx / jLen, jv = jy / jLen;
+		const xMin = gd.xMin ?? 0, xMax = gd.xMax ?? ox + 300;
+		const yMin = gd.yMin ?? oy - 200, yMax = gd.yMax ?? oy + 200;
+		const [iNegT, iPosT] = rayBoxExtent(ox, oy, ix, iy, xMin, xMax, yMin, yMax);
+		const [jNegT, jPosT] = rayBoxExtent(ox, oy, jx, jy, xMin, xMax, yMin, yMax);
+		const ixNeg = ox - ix * iNegT, iyNeg = oy - iy * iNegT;
+		const ixPos = ox + ix * iPosT, iyPos = oy + iy * iPosT;
+		const jxNeg = ox - jx * jNegT, jyNeg = oy - jy * jNegT;
+		const jxPos = ox + jx * jPosT, jyPos = oy + jy * jPosT;
+		return {
+			xLine: {
+				x1: ixNeg,
+				y1: iyNeg,
+				x2: ixPos,
+				y2: iyPos
+			},
+			yLine: {
+				x1: jxNeg,
+				y1: jyNeg,
+				x2: jxPos,
+				y2: jyPos
+			},
+			rightArrow: `${ixPos},${iyPos} ${ixPos - iu * as + iv * ah},${iyPos - iv * as - iu * ah} ${ixPos - iu * as - iv * ah},${iyPos - iv * as + iu * ah}`,
+			leftArrow: `${ixNeg},${iyNeg} ${ixNeg + iu * as + iv * ah},${iyNeg + iv * as - iu * ah} ${ixNeg + iu * as - iv * ah},${iyNeg + iv * as + iu * ah}`,
+			topArrow: `${jxPos},${jyPos} ${jxPos - ju * as + jv * ah},${jyPos - jv * as - ju * ah} ${jxPos - ju * as - jv * ah},${jyPos - jv * as + ju * ah}`,
+			bottomArrow: `${jxNeg},${jyNeg} ${jxNeg + ju * as + jv * ah},${jyNeg + jv * as - ju * ah} ${jxNeg + ju * as - jv * ah},${jyNeg + jv * as + ju * ah}`,
+			stdOpacity: "1"
+		};
+	}
+	const xL = gd.xMin ?? ox;
+	const xR = gd.xMax ?? ox + 300;
+	const yT = gd.yMin ?? oy - 200;
+	const yB = gd.yMax ?? oy + 200;
+	return {
+		xLine: {
+			x1: xL,
+			y1: oy,
+			x2: xR,
+			y2: oy
+		},
+		yLine: {
+			x1: ox,
+			y1: yB,
+			x2: ox,
+			y2: yT
+		},
+		rightArrow: `${xR},${oy} ${xR - as},${oy - ah} ${xR - as},${oy + ah}`,
+		leftArrow: `${xL},${oy} ${xL + as},${oy - ah} ${xL + as},${oy + ah}`,
+		topArrow: `${ox},${yT} ${ox - ah},${yT + as} ${ox + ah},${yT + as}`,
+		bottomArrow: `${ox},${yB} ${ox - ah},${yB - as} ${ox + ah},${yB - as}`,
+		stdOpacity: "1"
+	};
+}
+/** Draw or update axes group. On create, appends all 7 children with data-role
+*  attributes. On update (when transition is provided), selects by data-role
+*  and transitions geometry — no fragile DOM-index assumptions. */
+function drawAxesGroup(g, gd, tr) {
+	const geo = computeAxesGeometry(gd);
+	const sw = gd.strokeW ?? 1.4;
+	const stroke = svgColor(gd.stroke);
+	const children = g.selectAll("*");
+	if (tr && children.size() >= 7) {
+		const sel = (role) => g.select(`[data-role="${role}"]`).interrupt().transition(tr);
+		sel("x-axis").attr("x1", geo.xLine.x1).attr("y1", geo.xLine.y1).attr("x2", geo.xLine.x2).attr("y2", geo.xLine.y2);
+		sel("x-arrow-right").attr("points", geo.rightArrow).attr("opacity", geo.stdOpacity);
+		sel("x-arrow-left").attr("points", geo.leftArrow).attr("opacity", geo.stdOpacity);
+		sel("y-axis").attr("x1", geo.yLine.x1).attr("y1", geo.yLine.y1).attr("x2", geo.yLine.x2).attr("y2", geo.yLine.y2);
+		sel("y-arrow-top").attr("points", geo.topArrow).attr("opacity", geo.stdOpacity);
+		sel("y-arrow-bottom").attr("points", geo.bottomArrow).attr("opacity", geo.stdOpacity);
+		sel("origin").attr("cx", gd.ox ?? 0).attr("cy", gd.oy ?? 0);
+		g.selectAll("[data-role]").attr("stroke", stroke);
+	} else {
+		g.selectAll("*").remove();
+		g.append("line").attr("data-role", "x-axis").attr("x1", geo.xLine.x1).attr("y1", geo.xLine.y1).attr("x2", geo.xLine.x2).attr("y2", geo.xLine.y2).attr("stroke", stroke).attr("stroke-width", sw);
+		g.append("polygon").attr("data-role", "x-arrow-right").attr("points", geo.rightArrow).attr("fill", stroke).attr("opacity", geo.stdOpacity);
+		g.append("polygon").attr("data-role", "x-arrow-left").attr("points", geo.leftArrow).attr("fill", stroke).attr("opacity", geo.stdOpacity);
+		g.append("line").attr("data-role", "y-axis").attr("x1", geo.yLine.x1).attr("y1", geo.yLine.y1).attr("x2", geo.yLine.x2).attr("y2", geo.yLine.y2).attr("stroke", stroke).attr("stroke-width", sw);
+		g.append("polygon").attr("data-role", "y-arrow-top").attr("points", geo.topArrow).attr("fill", stroke).attr("opacity", geo.stdOpacity);
+		g.append("polygon").attr("data-role", "y-arrow-bottom").attr("points", geo.bottomArrow).attr("fill", stroke).attr("opacity", geo.stdOpacity);
+		g.append("circle").attr("data-role", "origin").attr("cx", gd.ox ?? 0).attr("cy", gd.oy ?? 0).attr("r", 3).attr("fill", svgColor("#fff")).attr("stroke", stroke).attr("stroke-width", sw);
+	}
+}
+/** Dev-mode NaN guard: warns with entity context before the browser swallows the error.
+*  Called from rendering hot paths — cheap isNaN check, no allocations. */
+function _checkNaN(id, coords) {
+	for (const key of Object.keys(coords)) if (isNaN(coords[key])) console.warn(`[learnvis] NaN in entity "${id}" — ${key}=${coords[key]}. Check upstream math or missing vertex declarations.`);
+}
+function svgLineColor(stroke) {
+	if (!stroke || stroke === "none") return "none";
+	return `color-mix(in oklab, ${svgColor(stroke)} 70%, var(--lv-mix-bg, white))`;
+}
+function getPathParams(pts) {
+	const dists = [0];
+	let total = 0;
+	for (let i = 0; i < pts.length - 1; i++) {
+		const d = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
+		total += d;
+		dists.push(total);
+	}
+	return {
+		dists,
+		total
+	};
+}
+function samplePolyline(pts, params, t) {
+	if (t <= 0) return pts[0];
+	if (t >= 1) return pts[pts.length - 1];
+	const target = t * params.total;
+	for (let i = 0; i < params.dists.length - 1; i++) {
+		const d1 = params.dists[i], d2 = params.dists[i + 1];
+		if (target >= d1 && target <= d2) {
+			const segLen = d2 - d1;
+			const ratio = segLen === 0 ? 0 : (target - d1) / segLen;
+			const p1 = pts[i], p2 = pts[i + 1];
+			return [p1[0] + (p2[0] - p1[0]) * ratio, p1[1] + (p2[1] - p1[1]) * ratio];
+		}
+	}
+	return pts[pts.length - 1];
+}
+function alignPolylines(ptsA, ptsB) {
+	if (ptsA.length < 2) ptsA = [ptsA[0] || [0, 0], ptsA[0] || [0, 0]];
+	if (ptsB.length < 2) ptsB = [ptsB[0] || [0, 0], ptsB[0] || [0, 0]];
+	const pA = getPathParams(ptsA);
+	const pB = getPathParams(ptsB);
+	const tSet = /* @__PURE__ */ new Set();
+	if (pA.total > 0) pA.dists.forEach((d) => tSet.add(d / pA.total));
+	else {
+		tSet.add(0);
+		tSet.add(1);
+	}
+	if (pB.total > 0) pB.dists.forEach((d) => tSet.add(d / pB.total));
+	else {
+		tSet.add(0);
+		tSet.add(1);
+	}
+	tSet.add(0);
+	tSet.add(1);
+	const tVals = Array.from(tSet).sort((a, b) => a - b);
+	return [tVals.map((t) => samplePolyline(ptsA, pA, t)), tVals.map((t) => samplePolyline(ptsB, pB, t))];
+}
+function resolveLinePoints(ld, id) {
+	if (ld.points && ld.points.length >= 2) return ld.points;
+	let x1, y1, x2, y2;
+	if (ld.transforms && ld.transforms.length > 0) {
+		const res = applyLine(ld.from ?? [ld.x1 ?? 0, ld.y1 ?? 0], ld.to ?? [ld.x2 ?? 0, ld.y2 ?? 0], ld.transforms);
+		x1 = res.from[0];
+		y1 = res.from[1];
+		x2 = res.to[0];
+		y2 = res.to[1];
+	} else {
+		x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
+		y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
+		x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
+		y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
+	}
+	if (id) _checkNaN(id, {
+		x1,
+		y1,
+		x2,
+		y2
+	});
+	return [[x1, y1], [x2, y2]];
+}
+/** Construct identity-equivalent transforms matching the structure of the given list.
+*  Used to enable smooth attrTween interpolation when one side lacks transforms. */
+function identityTransforms(tf) {
+	return tf.map((t) => {
+		switch (t.type) {
+			case "rotate": return {
+				type: "rotate",
+				angle: 0,
+				cx: t.cx,
+				cy: t.cy
+			};
+			case "scale": return {
+				type: "scale",
+				sx: 1,
+				sy: 1
+			};
+			case "translate": return {
+				type: "translate",
+				dx: 0,
+				dy: 0
+			};
+			case "matrix": return {
+				type: "matrix",
+				a: 1,
+				b: 0,
+				c: 0,
+				d: 1,
+				tx: 0,
+				ty: 0
+			};
+		}
+	});
+}
+/** Pad both transform arrays to the same length with identity-equivalent transforms.
+*  Without this, interpolate() (which maps over the old array) would miss extra
+*  transforms in the new array — e.g. old=[rotate(45)], new=[rotate(45),scale(2)]
+*  would never interpolate the scale, causing the animation to appear frozen. */
+function normalizeTransforms(oldTf, newTf) {
+	const maxLen = Math.max(oldTf.length, newTf.length);
+	if (oldTf.length < maxLen) oldTf = [...oldTf, ...identityTransforms(newTf.slice(oldTf.length))];
+	if (newTf.length < maxLen) newTf = [...newTf, ...identityTransforms(oldTf.slice(newTf.length))];
+	return {
+		old: oldTf,
+		new: newTf
+	};
+}
+function markerFor(stroke, cache, svg, config) {
+	if (!stroke) return void 0;
+	const size = config?.size ?? 10, w = config?.width ?? size, h = config?.height ?? size;
+	const offset = config?.offset ?? 0, open = config?.open ?? false;
+	const key = `${stroke}|${size}|${w}|${h}|${offset}|${open}`;
+	if (!cache[key]) {
+		let defs = svg.select("defs");
+		if (defs.empty()) defs = svg.append("defs");
+		const id = "fm" + Object.keys(cache).length;
+		const vbW = w + offset + 2;
+		const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
+		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", svgColor("none")).attr("stroke", svgColor(stroke)).attr("stroke-width", 1.5);
+		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", svgColor(stroke));
+		cache[key] = id;
+	}
+	return `url(#${cache[key]})`;
+}
+function applyCommon(svg, opacity) {
+	if (opacity != null) svg.attr("opacity", opacity);
+}
+function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
+	let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
+	if (a1 < 0) a1 += 2 * Math.PI;
+	if (a2 < 0) a2 += 2 * Math.PI;
+	if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
+	const cwLen = a2 >= a1 ? a2 - a1 : 2 * Math.PI - a1 + a2;
+	const ccwLen = a2 < a1 ? a1 - a2 : a1 + (2 * Math.PI - a2);
+	const sweep = cwLen <= ccwLen ? 1 : 0;
+	const arcLen = sweep === 1 ? cwLen : ccwLen;
+	const ma = sweep === 1 ? a1 + arcLen / 2 : a1 - arcLen / 2;
+	const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
+	const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
+	return {
+		a1,
+		a2,
+		sweep,
+		ma,
+		path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
+	};
+}
+function drawEntity(ctx, id, d, markerCache) {
+	const { bg, nodes, edges, overlay } = ctx.stage;
+	switch (d.type) {
+		case "node": {
+			const nd = d;
+			_checkNaN(id, {
+				x: nd.x,
+				y: nd.y
+			});
+			const g = nodes.append("g").attr("data-id", id);
+			if (nd.shape === "rect") {
+				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
+				g.append("rect").attr("class", "shp").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("rx", nd.rx ?? 5).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			} else if (nd.shape === "symbol") {
+				const sym = globalThis.d3?.symbol?.().type?.(globalThis.d3?.[nd.symType ?? "symbolCircle"] ?? globalThis.d3?.symbolCircle)?.size?.((nd.r ?? 8) ** 2)?.();
+				g.append("path").attr("data-id", id).attr("d", sym ? `${sym}` : "").attr("transform", `translate(${nd.x},${nd.y})`).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.2);
+			} else g.append("circle").attr("class", "shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			applyCommon(g, nd.opacity);
+			const label = nd.label || "";
+			let text = null;
+			if (label) {
+				nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+				const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+				const gap = nd.labelGap ?? 12;
+				const place = nd.labelPlace ?? "above";
+				let ly, anchor = "middle";
+				if (place === "above") ly = nd.y - bh / 2 - gap;
+				else if (place === "below") ly = nd.y + bh / 2 + gap;
+				else if (place === "left") {
+					ly = nd.y;
+					anchor = "end";
+				} else if (place === "right") {
+					ly = nd.y;
+					anchor = "start";
+				} else ly = nd.y - bh / 2 - gap;
+				text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(nd.stroke)).attr("font-weight", "600").attr("x", nd.x).attr("y", ly).attr("text-anchor", anchor).text(label);
+			}
+			return {
+				group: g,
+				text
+			};
+		}
+		case "line": {
+			const ld = d;
+			const ptsStr = resolveLinePoints(ld, id).map((p) => p.join(",")).join(" ");
+			const hasMarker = ld.marker === "arrow" || ld.directed;
+			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
+			applyCommon(el, ld.opacity);
+			return {
+				group: el,
+				text: null
+			};
+		}
+		case "region": {
+			const rd = d;
+			if (rd.shape === "circle") {
+				const el = bg.append("circle").attr("data-id", id).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
+				applyCommon(el, rd.opacity);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			if (rd.shape === "arc") {
+				const a = globalThis.d3?.arc?.()?.({
+					innerRadius: rd.innerR ?? 0,
+					outerRadius: rd.outerR ?? 0,
+					startAngle: rd.startAngle ?? 0,
+					endAngle: rd.endAngle ?? 0
+				}) ?? "";
+				const el = bg.append("path").attr("data-id", id).attr("d", `${a}`).attr("transform", `translate(${rd.cx ?? 0},${rd.cy ?? 0})`).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
+				applyCommon(el, rd.opacity);
+				return {
+					group: el,
+					text: null
+				};
+			}
+			let pts;
+			if (rd.transforms && rd.transforms.length > 0) pts = applyVertices(rd.vertices ?? rd.pts ?? [], rd.transforms);
+			else pts = rd.pts ?? rd.vertices ?? [];
+			const ptsStr = pts.map((p) => p.join(",")).join(" ");
+			const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0).attr("stroke-dasharray", rd.dash ?? "");
+			applyCommon(el, rd.opacity);
+			let rt = null;
+			const rlabel = rd.label ?? "";
+			if (rlabel) {
+				const minX = Math.min(...pts.map((p) => p[0]));
+				const maxX = Math.max(...pts.map((p) => p[0]));
+				const minY = Math.min(...pts.map((p) => p[1]));
+				const maxY = Math.max(...pts.map((p) => p[1]));
+				const cx = (minX + maxX) / 2;
+				const cy = (minY + maxY) / 2;
+				const gap = rd.labelGap ?? 6;
+				let lx, ly, anchor;
+				switch (rd.labelPlace) {
+					case "above":
+						lx = cx;
+						ly = minY - gap;
+						anchor = "middle";
+						break;
+					case "below":
+						lx = cx;
+						ly = maxY + gap;
+						anchor = "middle";
+						break;
+					case "left":
+						lx = minX + gap;
+						ly = minY + 14;
+						anchor = "start";
+						break;
+					case "right":
+						lx = maxX + gap;
+						ly = minY + 10;
+						anchor = "start";
+						break;
+					default:
+						lx = cx;
+						ly = cy + 4;
+						anchor = "middle";
+						break;
+				}
+				rt = bg.append("text").attr("class", "vlbl-txt").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", "#888").attr("font-weight", "500").attr("x", lx).attr("y", ly).attr("text-anchor", anchor).text(rlabel);
+			}
+			return {
+				group: el,
+				text: rt
+			};
+		}
+		case "curve": {
+			const cd = d;
+			const [d0, d1] = cd.domain, n = cd.samples ?? 200;
+			const step = (d1 - d0) / (n - 1), ox = cd.x, oy = cd.y;
+			const pw = cd.width, ph = cd.height;
+			const fn = new Function("x", `return (${cd.f})(x)`);
+			let yMin = Infinity, yMax = -Infinity;
+			for (let i = 0; i < n; i++) {
+				const y = fn(d0 + i * step);
+				if (y < yMin) yMin = y;
+				if (y > yMax) yMax = y;
+			}
+			let r0 = yMin, r1 = yMax;
+			if (cd.range) [r0, r1] = cd.range;
+			if (r0 === r1) {
+				r0 -= 1;
+				r1 += 1;
+			}
+			const sx = (x) => ox + (x - d0) / (d1 - d0) * pw;
+			const sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
+			const ptsStr = Array.from({ length: n }, (_, i) => {
+				const xv = d0 + i * step;
+				return [sx(xv), sy(fn(xv))].join(",");
+			}).join(" ");
+			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor("none")).attr("stroke", svgColor(cd.stroke)).attr("stroke-width", cd.strokeW).attr("stroke-dasharray", cd.dash ?? "");
+			applyCommon(el, cd.opacity);
+			return {
+				group: el,
+				text: null
+			};
+		}
+		case "group": {
+			const gd = d;
+			if (gd.subtype === "angle") {
+				const gv = overlay.append("g").attr("data-id", id);
+				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
+				gv.append("path").attr("d", arc.path).attr("fill", svgColor("none")).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
+				let text = null;
+				const label = gd.label ?? "";
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const lr = (gd.arcR ?? 30) + 12;
+					text = gv.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
+				}
+				applyCommon(gv, gd.opacity);
+				return {
+					group: gv,
+					text
+				};
+			}
+			const g = bg.append("g").attr("data-id", id);
+			if (gd.subtype === "axes") drawAxesGroup(g, gd);
+			else if (gd.subtype === "grid") drawGridLines(g, gd);
+			else if (gd.subtype === "matrix") {
+				const data = gd.data ?? [[0]];
+				const rows = data.length, cols = data[0]?.length ?? 1;
+				const x = gd.x ?? 0, y = gd.y ?? 0;
+				const cw = gd.cellW ?? 40, ch = gd.cellH ?? 22;
+				const st = svgColor(gd.stroke ?? "#222");
+				const font = "JetBrains Mono,monospace";
+				const fmt = (v) => Number.isInteger(v) ? `${v}` : v.toFixed(2).replace(/\.?0+$/, "") || "0";
+				const bh = rows * ch;
+				g.append("text").attr("x", x).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("[");
+				for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) g.append("text").attr("x", x + 12 + c * cw + cw / 2).attr("y", y + r * ch + ch / 2).attr("font-size", "13px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text(fmt(data[r]?.[c] ?? 0));
+				g.append("text").attr("x", x + 12 + cols * cw + 4).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("]");
+				if (gd.label) g.append("text").attr("x", x + 12 + cols * cw / 2).attr("y", y + bh + 18).attr("font-size", "10px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").text(gd.label);
+			}
+			applyCommon(g, gd.opacity);
+			return {
+				group: g,
+				text: null
+			};
+		}
+	}
+}
+/** Clip a line through point P in direction D to the rectangle [rx, ry, rw, rh].
+*  Returns the two intersection points, or null if the line misses the rect. */
+function clipLineToRect(px, py, dx, dy, rx, ry, rw, rh) {
+	const M = 2;
+	const xMin = rx - M, yMin = ry - M;
+	const xMax = rx + rw + M, yMax = ry + rh + M;
+	let tMin = -Infinity, tMax = Infinity;
+	if (Math.abs(dx) > 1e-10) {
+		const t1 = (xMin - px) / dx, t2 = (xMax - px) / dx;
+		if (t1 > t2) {
+			tMin = Math.max(tMin, t2);
+			tMax = Math.min(tMax, t1);
+		} else {
+			tMin = Math.max(tMin, t1);
+			tMax = Math.min(tMax, t2);
+		}
+	} else if (px < xMin || px > xMax) return null;
+	if (Math.abs(dy) > 1e-10) {
+		const t1 = (yMin - py) / dy, t2 = (yMax - py) / dy;
+		if (t1 > t2) {
+			tMin = Math.max(tMin, t2);
+			tMax = Math.min(tMax, t1);
+		} else {
+			tMin = Math.max(tMin, t1);
+			tMax = Math.min(tMax, t2);
+		}
+	} else if (py < yMin || py > yMax) return null;
+	if (tMin > tMax) return null;
+	return [
+		px + tMin * dx,
+		py + tMin * dy,
+		px + tMax * dx,
+		py + tMax * dy
+	];
+}
+function computeGridLines(gd) {
+	const ax = gd.ox ?? 0, ay = gd.oy ?? 0;
+	const rx = gd.gx ?? 0, ry = gd.gy ?? 0;
+	const rw = gd.w ?? 400, rh = gd.h ?? 300;
+	const ix = gd.ix ?? 0, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? 0;
+	const scr = (mx, my) => [ax + mx * ix + my * jx, ay + mx * iy + my * jy];
+	if (gd.mx0 !== void 0 && gd.mx1 !== void 0 && gd.my0 !== void 0 && gd.my1 !== void 0) {
+		const step = gd.mStep ?? 1;
+		const lines = [];
+		const toKey = (n) => Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(8)).toString();
+		const x0 = Math.ceil(gd.mx0 / step) * step;
+		const y0 = Math.ceil(gd.my0 / step) * step;
+		for (let mx = x0; mx <= gd.mx1 + step * .5; mx += step) {
+			const [x1, y1] = scr(mx, gd.my0);
+			const [x2, y2] = scr(mx, gd.my1);
+			lines.push({
+				x1,
+				y1,
+				x2,
+				y2,
+				key: "X" + toKey(mx)
+			});
+		}
+		for (let my = y0; my <= gd.my1 + step * .5; my += step) {
+			const [x1, y1] = scr(gd.mx0, my);
+			const [x2, y2] = scr(gd.mx1, my);
+			lines.push({
+				x1,
+				y1,
+				x2,
+				y2,
+				key: "Y" + toKey(my)
+			});
+		}
+		return lines;
+	}
+	const sp = gd.sp ?? 40;
+	const iux = ix || 1, iuy = iy || 0, jux = jx || 0, juy = jy || -1;
+	const diag = Math.sqrt(rw * rw + rh * rh);
+	const kMax = Math.ceil(diag / sp) + 1;
+	function generateFamily(tag, lineDx, lineDy, perpDx, perpDy) {
+		const lines = [];
+		const perpLen = Math.sqrt(perpDx * perpDx + perpDy * perpDy) || 1;
+		const pux = perpDx / perpLen, puy = perpDy / perpLen;
+		for (let k = -kMax; k <= kMax; k++) {
+			const s = k * sp;
+			const seg = clipLineToRect(ax + s * pux, ay + s * puy, lineDx, lineDy, rx, ry, rw, rh);
+			if (seg) lines.push({
+				x1: seg[0],
+				y1: seg[1],
+				x2: seg[2],
+				y2: seg[3],
+				key: tag + k
+			});
+		}
+		return lines;
+	}
+	return [...generateFamily("I", iux, iuy, -iuy, iux), ...generateFamily("J", jux, juy, -jy, jux)];
+}
+function drawGridLines(g, gd, transition) {
+	const data = computeGridLines(gd);
+	const stroke = svgColor(gd.stroke);
+	const sw = gd.strokeW ?? .3;
+	const dash = gd.dash ?? null;
+	const lines = g.selectAll("line").data(data, (d) => d.key);
+	if (transition) lines.exit().transition(transition).attr("opacity", 0).remove();
+	else lines.exit().remove();
+	const enter = lines.enter().append("line").attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", transition ? 0 : 1);
+	if (dash) enter.attr("stroke-dasharray", dash);
+	const merged = enter.merge(lines);
+	if (transition) merged.transition(transition).attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", 1).attr("stroke-dasharray", dash ?? null);
+	else merged.attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("stroke-dasharray", dash ?? null);
+}
+function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoot) {
+	switch (newState.type) {
+		case "node": {
+			const nd = newState;
+			if (nd.shape === "rect") {
+				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
+				svg.select("rect").interrupt().transition(tr).attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			} else svg.select(".shp").interrupt().transition(tr).attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			applyCommon(svg, nd.opacity);
+			break;
+		}
+		case "line": {
+			const ld = newState;
+			const oldLd = oldState;
+			const lineId = svg.attr("data-id") || "unknown";
+			const [oldResampled, newResampled] = alignPolylines(resolveLinePoints(oldLd, lineId), resolveLinePoints(ld, lineId));
+			svg.interrupt().transition(tr).attrTween("points", () => (t) => {
+				return oldResampled.map((op, i) => {
+					const np = newResampled[i];
+					return `${op[0] + (np[0] - op[0]) * t},${op[1] + (np[1] - op[1]) * t}`;
+				}).join(" ");
+			}).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
+			if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
+			break;
+		}
+		case "region": {
+			const rd = newState;
+			if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill));
+			else {
+				const oldRd = oldState;
+				let oldTf = oldRd.transforms;
+				let newTf = rd.transforms;
+				let regionBase;
+				if (rd.transforms && rd.transforms.length > 0) {
+					regionBase = rd.vertices ?? rd.pts ?? [];
+					if (!oldRd.transforms) oldTf = identityTransforms(rd.transforms);
+				}
+				if (oldRd.transforms && oldRd.transforms.length > 0 && !regionBase) {
+					regionBase = oldRd.vertices ?? oldRd.pts ?? [];
+					if (!rd.transforms) newTf = identityTransforms(oldRd.transforms);
+				}
+				if (regionBase && regionBase.length > 0 && oldTf && newTf) {
+					const norm = normalizeTransforms(oldTf, newTf);
+					svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(regionBase, interpolate(norm.old, norm.new, t)).map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
+				} else {
+					let pts;
+					if (rd.transforms && rd.transforms.length > 0) pts = applyVertices(rd.vertices ?? rd.pts ?? [], rd.transforms);
+					else pts = rd.pts ?? rd.vertices ?? [];
+					svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
+				}
+			}
+			if (rd.opacity != null) svg.transition(tr).attr("opacity", rd.opacity);
+			break;
+		}
+		case "group": {
+			const gd = newState;
+			if (gd.subtype === "angle") {
+				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
+				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
+				const label = gd.label ?? "";
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const lr = (gd.arcR ?? 30) + 12;
+					if (text) text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+					else {
+						const existing = svg.select("text");
+						if (!existing.empty()) existing.interrupt().transition(tr).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+						else svg.append("text").attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+					}
+				} else if (text) text.text("");
+				else svg.select("text").text("");
+			} else if (gd.subtype === "axes") drawAxesGroup(svg, gd, tr);
+			else if (gd.subtype === "grid") {
+				svg.interrupt();
+				drawGridLines(svg, gd, tr);
+			}
+			break;
+		}
+	}
+}
+function updateEntityImmediate(svg, text, d) {
+	switch (d.type) {
+		case "node": {
+			const nd = d;
+			if (nd.shape === "rect") {
+				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
+				svg.select("rect").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			} else svg.select(".shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
+			applyCommon(svg, nd.opacity);
+			break;
+		}
+		case "line": {
+			const ld = d;
+			const ptsStr = resolveLinePoints(ld, svg.attr("data-id") || "unknown").map((p) => p.join(",")).join(" ");
+			svg.attr("points", ptsStr).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW);
+			applyCommon(svg, ld.opacity);
+			break;
+		}
+		case "region": {
+			const rd = d;
+			let pts;
+			if (rd.transforms && rd.transforms.length > 0) pts = applyVertices(rd.vertices ?? rd.pts ?? [], rd.transforms);
+			else pts = rd.pts ?? rd.vertices ?? [];
+			svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0);
+			applyCommon(svg, rd.opacity);
+			break;
+		}
+		case "group": {
+			const gd = d;
+			if (gd.subtype === "angle") {
+				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
+				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
+				svg.select("path").attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
+				const label = gd.label ?? "";
+				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
+					const lr = (gd.arcR ?? 30) + 12;
+					if (text) text.attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+					else {
+						const existing = svg.select("text");
+						if (!existing.empty()) existing.attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
+						else svg.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
+					}
+				} else if (text) text.text("");
+				else svg.select("text").text("");
+			} else if (gd.subtype === "axes") drawAxesGroup(svg, gd);
+			else if (gd.subtype === "grid") drawGridLines(svg, gd);
+			break;
+		}
+	}
+}
+var SVGRenderer = class {
+	constructor(ctx) {
+		this.handles = /* @__PURE__ */ new Map();
+		this._markerCache = {};
+		this.ctx = ctx;
+	}
+	beginFrame() {
+		this.ctx.root.selectAll(".vlbl").remove();
+	}
+	commitFrame(opts) {
+		this._repositionLabels(opts);
+	}
+	create(id, state) {
+		const h = new SVGHandle(this.ctx, id, state, this._markerCache);
+		this.handles.set(id, h);
+		return h;
+	}
+	dispose() {
+		this.handles.clear();
+	}
+	_repositionLabels(opts) {
+		const edgeAngles = /* @__PURE__ */ new Map();
+		for (const [id, h] of this.handles) {
+			if (h.state.type !== "line") continue;
+			const ld = h.state;
+			const x1 = ld.x1 ?? ld.from?.[0] ?? 0, y1 = ld.y1 ?? ld.from?.[1] ?? 0;
+			const x2 = ld.x2 ?? ld.to?.[0] ?? 0, y2 = ld.y2 ?? ld.to?.[1] ?? 0;
+			const dx = x2 - x1, dy = y2 - y1;
+			const ang = Math.atan2(dy, dx);
+			const rev = ang > 0 ? ang - Math.PI : ang + Math.PI;
+			const fromNode = (ld._fromPort ?? "").split("-")[0] || ld.from?.id;
+			const toNode = (ld._toPort ?? "").split("-")[0] || ld.to?.id;
+			if (fromNode) {
+				if (!edgeAngles.has(fromNode)) edgeAngles.set(fromNode, []);
+				edgeAngles.get(fromNode).push(ang);
+			}
+			if (toNode) {
+				if (!edgeAngles.has(toNode)) edgeAngles.set(toNode, []);
+				edgeAngles.get(toNode).push(rev);
+			}
+		}
+		const dirs = [
+			{
+				place: "above",
+				angle: -Math.PI / 2,
+				dx: 0,
+				dy: -1,
+				anchor: "middle",
+				dyAttr: null
+			},
+			{
+				place: "below",
+				angle: Math.PI / 2,
+				dx: 0,
+				dy: 1,
+				anchor: "middle",
+				dyAttr: "0.6em"
+			},
+			{
+				place: "right",
+				angle: 0,
+				dx: 1,
+				dy: 0,
+				anchor: "start",
+				dyAttr: "0.35em"
+			},
+			{
+				place: "left",
+				angle: Math.PI,
+				dx: -1,
+				dy: 0,
+				anchor: "end",
+				dyAttr: "0.35em"
+			}
+		];
+		function angleDiff(a, b) {
+			let d = Math.abs(a - b);
+			if (d > Math.PI) d = 2 * Math.PI - d;
+			return d;
+		}
+		for (const [id, h] of this.handles) {
+			if (h.state.type !== "node") continue;
+			const nd = h.state;
+			const label = nd.label || "";
+			if (!label) continue;
+			const nodeKey = id.includes(":") ? id.split(":")[1] : label;
+			const angles = edgeAngles.get(nodeKey) ?? edgeAngles.get(label) ?? [];
+			let place = dirs[0];
+			for (const dir of dirs) if (angles.every((a) => angleDiff(a, dir.angle) >= Math.PI / 4)) {
+				place = dir;
+				break;
+			}
+			const bw = nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
+			const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
+			const halfW = bw / 2, halfH = bh / 2;
+			const gap = 6;
+			const tx = nd.x + place.dx * (halfW + gap);
+			const ty = nd.y + place.dy * (halfH + gap);
+			h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
+		}
+	}
+};
+var SVGHandle = class {
+	constructor(ctx, id, state, markerCache) {
+		this.svg = null;
+		this._text = null;
+		this.ctx = ctx;
+		this._cache = markerCache;
+		this.state = { ...state };
+		this._clean(id);
+		const result = drawEntity(ctx, id, state, markerCache);
+		this.svg = result.group;
+		this._text = result.text;
+	}
+	update(state, opts) {
+		if (!this.svg) {
+			this.state = { ...state };
+			return;
+		}
+		if (opts?.transition) transitionEntity(this.svg, this._text, this.state, state, opts.transition, this._cache, this.ctx.svg);
+		else updateEntityImmediate(this.svg, this._text, state);
+		this.state = { ...state };
+	}
+	setTextPosition(x, y, anchor, dyAttr) {
+		if (!this._text) return;
+		this._text.attr("x", x).attr("y", y).attr("text-anchor", anchor);
+		if (dyAttr) this._text.attr("dy", dyAttr);
+		else this._text.attr("dy", null);
+	}
+	remove() {
+		this.svg?.remove();
+		this._text?.remove();
+		this.svg = null;
+		this._text = null;
+	}
+	_clean(id) {
+		[
+			this.ctx.stage.bg,
+			this.ctx.stage.nodes,
+			this.ctx.stage.edges,
+			this.ctx.stage.overlay
+		].forEach((g) => g.selectAll("[data-id]").filter(function() {
+			const did = this.getAttribute("data-id");
+			return did === id || did.startsWith(id + "-");
+		}).remove());
+	}
+};
+
+//#endregion
+//#region vis/frame.ts
+const defaultAnimation = {
+	duration: 500,
+	enter: {
+		ratio: .6,
+		easing: cubicOut
+	},
+	update: {
+		ratio: 1,
+		easing: cubicOut
+	},
+	exit: {
+		ratio: .4,
+		easing: cubicIn
+	}
+};
+var FrameManager = class {
+	constructor(ctx, animation, renderer) {
+		this.store = /* @__PURE__ */ new Map();
+		this.handles = /* @__PURE__ */ new Map();
+		this.current = /* @__PURE__ */ new Set();
+		this.previous = /* @__PURE__ */ new Set();
+		this._uncommitted = false;
+		this.animation = {
+			...defaultAnimation,
+			...animation
+		};
+		this.renderer = renderer ?? new SVGRenderer(ctx);
+	}
+	begin() {
+		if (this._uncommitted) throw new Error("commit() required before begin()");
+		this._uncommitted = true;
+		this.previous = new Set(this.current);
+		this.current.clear();
+		this.renderer.beginFrame();
+	}
+	declare(id, state) {
+		this.current.add(id);
+		const existing = this.store.get(id);
+		if (existing) {
+			if (!("transforms" in state)) delete existing.desired.transforms;
+			Object.assign(existing.desired, state);
+			return existing;
+		}
+		const entity = {
+			id,
+			desired: { ...state },
+			svg: null
+		};
+		this.store.set(id, entity);
+		return entity;
+	}
+	patch(id, partial) {
+		const entity = this.store.get(id);
+		if (!entity) throw new Error(`Entity not found: ${id}`);
+		Object.assign(entity.desired, partial);
+	}
+	/** Typed getter: narrows EntityState by its discriminant type field. */
+	get(id, _type) {
+		return this.store.get(id);
+	}
+	commit(opts) {
+		if (!this._uncommitted) throw new Error("begin() required before commit()");
+		this._uncommitted = false;
+		if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
+			this._commitStatic();
+			this.renderer.commitFrame({ animate: false });
+			return;
+		}
+		const dur = opts?.ms ?? this.animation.duration;
+		const enterTr = transition().duration(dur * this.animation.enter.ratio).ease(this.animation.enter.easing);
+		const updateTr = transition().duration(dur * this.animation.update.ratio).ease(this.animation.update.easing);
+		transition().duration(dur * this.animation.exit.ratio).ease(this.animation.exit.easing);
+		for (const id of this.previous) if (!this.current.has(id)) {
+			this.handles.get(id)?.remove();
+			this.store.delete(id);
+			this.handles.delete(id);
+		}
+		for (const id of this.current) if (!this.previous.has(id)) {
+			const e = this.store.get(id);
+			const h = this.renderer.create(id, e.desired);
+			this.handles.set(id, h);
+			e.svg = h.svg ?? null;
+			const to = e.desired.opacity ?? 1;
+			const svgEl = h.svg;
+			if (svgEl) svgEl.attr("opacity", 0).transition(enterTr).attr("opacity", to);
+		}
+		for (const id of this.current) if (this.previous.has(id)) {
+			const e = this.store.get(id);
+			this.handles.get(id)?.update(e.desired, {
+				animate: true,
+				transition: updateTr
+			});
+		}
+		this.renderer.commitFrame({
+			animate: true,
+			ms: dur
+		});
+	}
+	_commitStatic() {
+		for (const id of this.previous) if (!this.current.has(id)) {
+			this.handles.get(id)?.remove();
+			this.store.delete(id);
+			this.handles.delete(id);
+		}
+		for (const id of this.current) {
+			const e = this.store.get(id);
+			if (!this.previous.has(id)) {
+				const h = this.renderer.create(id, e.desired);
+				this.handles.set(id, h);
+				e.svg = h.svg ?? null;
+			} else this.handles.get(id)?.update(e.desired);
+		}
+	}
+	get entities() {
+		return this.store;
+	}
+	get frameIds() {
+		return this.current;
+	}
+};
+
+//#endregion
+//#region vis/tokens.ts
+/** 7 语义色 + 7 填充变体，全部使用 OKLCH 色彩空间 */
+const TOKENS = {
+	primary: "oklch(0.52 0.18 68)",
+	accent: "oklch(0.62 0.15 155)",
+	danger: "oklch(0.48 0.18 22)",
+	warning: "oklch(0.58 0.20 85)",
+	info: "oklch(0.50 0.12 240)",
+	muted: "oklch(0.55 0.02 65)",
+	success: "oklch(0.48 0.18 150)",
+	fills: {
+		primary: "oklch(0.88 0.06 68)",
+		accent: "oklch(0.88 0.06 155)",
+		danger: "oklch(0.88 0.04 22)",
+		warning: "oklch(0.90 0.08 85)",
+		info: "oklch(0.88 0.04 240)",
+		muted: "oklch(0.92 0.01 75)",
+		success: "oklch(0.88 0.06 150)"
+	}
+};
+TOKENS.primary, TOKENS.accent, TOKENS.danger, TOKENS.warning, TOKENS.info, TOKENS.muted, TOKENS.success;
+const SEMANTIC_COLORS = [
+	"primary",
+	"accent",
+	"danger",
+	"warning",
+	"info",
+	"muted",
+	"success",
+	"dim"
+];
+/** 
+* Resolves a color string. 
+* If it's a semantic name (e.g. 'primary'), returns the corresponding CSS variable var(--lv-primary).
+* Otherwise returns the raw value (e.g. '#e07745').
+*/
+function resolveColor$1(val) {
+	if (SEMANTIC_COLORS.includes(val)) return `var(--lv-${val === "dim" ? "muted" : val})`;
+	return val;
+}
+/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
+const alpha = (c, pct = 15) => {
+	return `color-mix(in oklab, ${resolveColor$1(c)} ${pct}%, transparent)`;
+};
+/** 
+* 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
+* 每个语义色返回 { fg, bg, a(pct) }
+*/
+const palette = () => {
+	const p = {};
+	for (const c of SEMANTIC_COLORS) {
+		const varName = c === "dim" ? "--lv-muted" : `--lv-${c}`;
+		p[c] = {
+			fg: `var(${varName})`,
+			bg: `var(${varName}-bg, color-mix(in oklab, var(${varName}) 12%, var(--lv-mix-bg, white)))`,
+			a: (pct) => `color-mix(in oklab, var(${varName}) ${pct}%, transparent)`
+		};
+	}
+	return p;
+};
+
+//#endregion
 //#region vis/primitives.ts
 /** 为形状绘制光晕背景（半透明圆角矩形） */
 const halo = (g, cx, cy, w, h, rx, { pad = 6, fill = svgColor("oklch(0.92 0.015 75)"), stroke = svgColor("oklch(0.55 0.02 65 / 0.22)"), strokeWidth = 1.5, id = "h" } = {}) => {
@@ -3625,6 +4895,1373 @@ const createCanvas = (selector, width = 560, height = 400, margin = 48) => {
 		M: margin
 	};
 };
+
+//#endregion
+//#region vis/bootstrap.ts
+function bootstrap(selector, opts = {}) {
+	const { width = 560, height = 400, margin = 48, geom: gOpts = {} } = opts;
+	const C = createCanvas(selector, width, height, margin);
+	const p = palette();
+	const geom = Object.freeze({
+		nW: 34,
+		nH: 26,
+		dR: 8,
+		rx: 5,
+		gap: 4,
+		...gOpts
+	});
+	const { markerFor } = defineArrows(C.svg, { sw: 2 });
+	return {
+		svg: C.svg,
+		W: C.W,
+		H: C.H,
+		M: C.M,
+		stage: {
+			bg: C.bg,
+			nodes: C.nG,
+			edges: C.eG,
+			overlay: C.oG
+		},
+		root: C.root,
+		palette: p,
+		geom,
+		markerFor
+	};
+}
+
+//#endregion
+//#region vis/gfx.ts
+function resolveColor(p, c) {
+	if (!c) return {
+		stroke: p.primary.fg,
+		fill: p.primary.bg
+	};
+	const col = p[c];
+	if (col) return {
+		stroke: col.fg,
+		fill: col.bg
+	};
+	return {
+		stroke: c,
+		fill: c
+	};
+}
+var GfxImpl = class {
+	constructor(eid, fm, palette) {
+		this.fm = fm;
+		this.palette = palette;
+		this.eid = eid;
+	}
+	color(c) {
+		const r = resolveColor(this.palette, c);
+		const patch = { stroke: r.stroke };
+		const e = this.fm.entities.get(this.eid);
+		if (e && "fill" in e.desired) patch.fill = r.fill;
+		this.fm.patch(this.eid, patch);
+		return this;
+	}
+	stroke(w) {
+		this.fm.patch(this.eid, { strokeW: w });
+		return this;
+	}
+	fill(c) {
+		const r = resolveColor(this.palette, c);
+		this.fm.patch(this.eid, { fill: r.fill });
+		return this;
+	}
+	opacity(v) {
+		this.fm.patch(this.eid, { opacity: v });
+		return this;
+	}
+	dash(pattern) {
+		this.fm.patch(this.eid, { dash: pattern ?? "5 4" });
+		return this;
+	}
+	label(t, place, gap) {
+		const p = { label: t };
+		if (place !== void 0) p.labelPlace = place;
+		if (gap !== void 0) p.labelGap = gap;
+		this.fm.patch(this.eid, p);
+		return this;
+	}
+	size(r) {
+		this.fm.patch(this.eid, { r });
+		return this;
+	}
+	move(x, y) {
+		this.fm.patch(this.eid, {
+			x,
+			y
+		});
+		return this;
+	}
+	rotate(deg, cx, cy) {
+		this._addTransform({
+			type: "rotate",
+			angle: deg,
+			cx,
+			cy
+		});
+		return this;
+	}
+	scale(sx, sy = sx) {
+		this._addTransform({
+			type: "scale",
+			sx,
+			sy
+		});
+		return this;
+	}
+	translate(dx, dy) {
+		this._addTransform({
+			type: "translate",
+			dx,
+			dy
+		});
+		return this;
+	}
+	/** Apply an arbitrary 2×2 linear transform with optional translation. */
+	matrix(a, b, c, d, tx = 0, ty = 0) {
+		this._addTransform({
+			type: "matrix",
+			a,
+			b,
+			c,
+			d,
+			tx,
+			ty
+		});
+		return this;
+	}
+	_addTransform(t) {
+		const e = this.fm.entities.get(this.eid);
+		if (!e) return;
+		const d = e.desired;
+		d.transforms = [...d.transforms || [], t];
+		this.fm.patch(this.eid, { transforms: d.transforms });
+	}
+	pos() {
+		const e = this.fm.entities.get(this.eid);
+		if (!e) return [0, 0];
+		const d = e.desired;
+		if ("x" in d && d.x != null) return [d.x, d.y ?? 0];
+		if ("cx" in d && d.cx != null) return [d.cx, d.cy ?? 0];
+		if ("from" in d && d.from) {
+			const from = d.from;
+			if (from.length === 2) return [from[0], from[1]];
+		}
+		if ("x1" in d && d.x1 != null) return [d.x1, d.y1 ?? 0];
+		return [0, 0];
+	}
+};
+
+//#endregion
+//#region vis/coords.ts
+var CoordGfx = class {
+	constructor(inner, proj) {
+		this.inner = inner;
+		this.proj = proj;
+	}
+	color(c) {
+		this.inner.color(c);
+		return this;
+	}
+	stroke(w) {
+		this.inner.stroke(w);
+		return this;
+	}
+	fill(c) {
+		this.inner.fill(c);
+		return this;
+	}
+	opacity(v) {
+		this.inner.opacity(v);
+		return this;
+	}
+	dash(p) {
+		this.inner.dash(p);
+		return this;
+	}
+	label(t, place, gap) {
+		this.inner.label(t, place, gap);
+		return this;
+	}
+	size(r) {
+		this.inner.size(r);
+		return this;
+	}
+	move(x, y) {
+		const s = this.proj([x, y]);
+		this.inner.move(s[0], s[1]);
+		return this;
+	}
+	rotate(deg, cx, cy) {
+		const s = this.proj([cx, cy]);
+		this.inner.rotate(deg, s[0], s[1]);
+		return this;
+	}
+	scale(sx, sy) {
+		this.inner.scale(sx, sy);
+		return this;
+	}
+	translate(dx, dy) {
+		const s = this.proj([dx, dy]);
+		const o = this.proj([0, 0]);
+		this.inner.translate(s[0] - o[0], s[1] - o[1]);
+		return this;
+	}
+	matrix(a, b, c, d, tx, ty) {
+		this.inner.matrix(a, b, c, d, tx, ty);
+		return this;
+	}
+	pos() {
+		return this.inner.pos();
+	}
+};
+function createCoordView(fm, palette, cfg = {}, W = 560, H = 400, geom = {
+	nW: 34,
+	nH: 26,
+	dR: 8,
+	rx: 5,
+	gap: 4
+}) {
+	const { x: xDom, y: yDom, margin = 0, nice = false, aspect, basis } = cfg;
+	const xdr = xDom ?? [-5, 5];
+	const ydr = yDom ?? [-5, 5];
+	const padX = W * (margin || 0);
+	const padY = H * (margin || 0);
+	let pxMin = padX, pxMax = W - padX;
+	let pyMin = padY, pyMax = H - padY;
+	if (aspect === "equal" || typeof aspect === "number" && aspect > 0) {
+		const ratio = aspect === "equal" ? 1 : aspect;
+		if ((xdr[1] - xdr[0]) / (pxMax - pxMin) > (ydr[1] - ydr[0]) / (pyMax - pyMin) * ratio) {
+			const desiredH = (pxMax - pxMin) * (ydr[1] - ydr[0]) / (xdr[1] - xdr[0]) / ratio;
+			const centerY = (pyMin + pyMax) / 2;
+			pyMin = centerY - desiredH / 2;
+			pyMax = centerY + desiredH / 2;
+		} else {
+			const desiredW = (pyMax - pyMin) * (xdr[1] - xdr[0]) / (ydr[1] - ydr[0]) * ratio;
+			const centerX = (pxMin + pxMax) / 2;
+			pxMin = centerX - desiredW / 2;
+			pxMax = centerX + desiredW / 2;
+		}
+	}
+	const xScale = linear().domain(xdr).range([pxMin, pxMax]);
+	const yScale = linear().domain(ydr).range([pyMax, pyMin]);
+	if (nice) {
+		xScale.nice();
+		yScale.nice();
+	}
+	const p = palette;
+	const stdIx = xScale(1) - xScale(0);
+	const stdIy = 0;
+	const stdJx = 0;
+	const stdJy = yScale(1) - yScale(0);
+	const ox = xScale(0), oy = yScale(0);
+	let ix = stdIx, iy = stdIy, jx = stdJx, jy = stdJy;
+	if (basis) {
+		ix = basis[0][0] * stdIx + basis[0][1] * stdJx;
+		iy = basis[0][0] * stdIy + basis[0][1] * stdJy;
+		jx = basis[1][0] * stdIx + basis[1][1] * stdJx;
+		jy = basis[1][0] * stdIy + basis[1][1] * stdJy;
+	}
+	const project = (v) => [ox + v[0] * ix + v[1] * jx, oy + v[0] * iy + v[1] * jy];
+	const px = (v) => ox + v * ix;
+	const py = (v) => oy + v * jy;
+	function g(eid) {
+		return new CoordGfx(new GfxImpl(eid, fm, p), project);
+	}
+	function point(id, mx, my) {
+		const [sx, sy] = project([mx, my]);
+		const e = eid("node", id);
+		fm.declare(e, {
+			type: "node",
+			shape: "circle",
+			x: sx,
+			y: sy,
+			r: 4,
+			fill: p.primary.fg,
+			stroke: p.primary.fg
+		});
+		return g(e);
+	}
+	function vector(id, from, to) {
+		const sf = project(from), st = project(to);
+		const e = eid("line", id);
+		fm.declare(e, {
+			type: "line",
+			from: sf,
+			to: st,
+			x1: sf[0],
+			y1: sf[1],
+			x2: st[0],
+			y2: st[1],
+			stroke: p.primary.fg,
+			strokeW: 2,
+			marker: "arrow",
+			directed: true
+		});
+		return g(e);
+	}
+	function line(id, from, to) {
+		const sf = project(from), st = project(to);
+		const e = eid("line", id);
+		fm.declare(e, {
+			type: "line",
+			from: sf,
+			to: st,
+			x1: sf[0],
+			y1: sf[1],
+			x2: st[0],
+			y2: st[1],
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return g(e);
+	}
+	function circle(id, cx, cy, r) {
+		const sc = project([cx, cy]);
+		const sr = xScale(r) - xScale(0);
+		const e = eid("region", id);
+		fm.declare(e, {
+			type: "region",
+			shape: "circle",
+			cx: sc[0],
+			cy: sc[1],
+			r: Math.abs(sr),
+			fill: "none",
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return g(e);
+	}
+	function polygon(id, vertices) {
+		const pts = vertices.map(project);
+		const e = eid("region", id);
+		fm.declare(e, {
+			type: "region",
+			shape: "polygon",
+			vertices: pts,
+			fill: p.primary.a(15),
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return g(e);
+	}
+	function curve(id, fn, domain) {
+		const domainX = domain ?? xdr;
+		const samples = 200;
+		const fStr = fn.toString();
+		const e = eid("curve", id);
+		const sx = px(domainX[0]), sy = py(ydr[1]);
+		const sw = px(domainX[1]) - px(domainX[0]);
+		const sh = py(ydr[0]) - py(ydr[1]);
+		fm.declare(e, {
+			type: "curve",
+			f: fStr,
+			domain: domainX,
+			x: Math.min(sx, sx + sw),
+			y: Math.min(sy, sy + sh),
+			width: Math.abs(sw),
+			height: Math.abs(sh),
+			samples,
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return g(e);
+	}
+	function fill(id, vertices) {
+		const pts = vertices.map(project);
+		const e = eid("region", id);
+		fm.declare(e, {
+			type: "region",
+			shape: "fill",
+			vertices: pts,
+			fill: p.primary.a(15),
+			stroke: "none",
+			strokeW: 0
+		});
+		return g(e);
+	}
+	function rect(id, mx, my, mw, mh) {
+		const tl = project([mx, my]);
+		const br = project([mx + mw, my + mh]);
+		const w = br[0] - tl[0], h = br[1] - tl[1];
+		const e = eid("region", id);
+		fm.declare(e, {
+			type: "region",
+			shape: "polygon",
+			vertices: [
+				[tl[0], tl[1]],
+				[tl[0] + w, tl[1]],
+				[tl[0] + w, tl[1] + h],
+				[tl[0], tl[1] + h]
+			],
+			fill: "none",
+			stroke: p.primary.fg,
+			strokeW: 2,
+			_rx: 0
+		});
+		return g(e);
+	}
+	function angle(id, vertex, ray1, ray2) {
+		const sv = project(vertex), sr1 = project(ray1), sr2 = project(ray2);
+		const e = eid("group", id);
+		fm.declare(e, {
+			type: "group",
+			subtype: "angle",
+			vertex: sv,
+			ray1: sr1,
+			ray2: sr2,
+			arcR: 24,
+			stroke: p.primary.fg,
+			strokeW: 1.5,
+			fill: p.primary.a(15)
+		});
+		return g(e);
+	}
+	function axes(opts) {
+		const axe = eid("group", "axes");
+		const [x0, y0] = project([0, 0]);
+		function ext(ox, oy, dx, dy) {
+			let tPos = Infinity, tNeg = Infinity;
+			if (dx > .001) {
+				tPos = Math.min(tPos, (W - ox) / dx);
+				tNeg = Math.min(tNeg, ox / dx);
+			}
+			if (dx < -.001) {
+				tNeg = Math.min(tNeg, (W - ox) / -dx);
+				tPos = Math.min(tPos, ox / -dx);
+			}
+			if (dy > .001) {
+				tPos = Math.min(tPos, (H - oy) / dy);
+				tNeg = Math.min(tNeg, oy / dy);
+			}
+			if (dy < -.001) {
+				tNeg = Math.min(tNeg, (H - oy) / -dy);
+				tPos = Math.min(tPos, oy / -dy);
+			}
+			return [tNeg, tPos];
+		}
+		const [iNegT, iPosT] = ext(x0, y0, ix, iy);
+		const [jNegT, jPosT] = ext(x0, y0, jx, jy);
+		const xMin = x0 - ix * iNegT;
+		const xMax = x0 + ix * iPosT;
+		const yMin = y0 + jy * jPosT;
+		const yMax = y0 - jy * jNegT;
+		fm.declare(axe, {
+			type: "group",
+			subtype: "axes",
+			ox: x0,
+			oy: y0,
+			xMin,
+			xMax,
+			yMin,
+			yMax,
+			ix,
+			iy,
+			jx,
+			jy,
+			xLabel: opts?.xLabel,
+			yLabel: opts?.yLabel,
+			arrowSize: opts?.arrowSize,
+			stroke: p.dim.fg,
+			strokeW: 1.2,
+			fill: "none"
+		});
+		return new CoordGfx(new GfxImpl(axe, fm, p), project);
+	}
+	function grid(opts) {
+		const ge = eid("group", "grid");
+		const domainSpan = xdr[1] - xdr[0];
+		const defaultStep = domainSpan > 0 ? Math.pow(10, Math.floor(Math.log10(domainSpan))) : 1;
+		const step = opts?.spacing ?? defaultStep;
+		const mx0 = Math.ceil(xdr[0] / step) * step;
+		const mx1 = Math.floor(xdr[1] / step) * step;
+		fm.declare(ge, {
+			type: "group",
+			subtype: "grid",
+			mx0,
+			mx1,
+			my0: ydr[0],
+			my1: ydr[1],
+			mStep: step,
+			ox,
+			oy,
+			ix,
+			iy,
+			jx,
+			jy,
+			stroke: opts?.color ?? p.dim.fg,
+			strokeW: .5,
+			dash: opts?.dash
+		});
+	}
+	function origin(opts) {
+		const r = resolveColor(p, opts?.color ?? "primary");
+		const oe = eid("node", "origin");
+		fm.declare(oe, {
+			type: "node",
+			shape: "circle",
+			x: px(0),
+			y: py(0),
+			r: 4,
+			fill: r.fill,
+			stroke: r.stroke,
+			label: opts?.label ?? "O",
+			labelPlace: "below",
+			labelGap: 6
+		});
+	}
+	return {
+		point,
+		vector,
+		line,
+		circle,
+		polygon,
+		curve,
+		fill,
+		rect,
+		angle,
+		axes,
+		grid,
+		origin,
+		project: (v) => [px(v[0]), py(v[1])],
+		x: px,
+		y: py
+	};
+}
+
+//#endregion
+//#region vis/geometry.ts
+const len = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
+const exitPt = (n, tx, ty, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
+	if (n.t === "dummy") {
+		const dx = tx - n.x, dy = ty - n.y, l = len(dx, dy);
+		return {
+			x: n.x + dx / l * dR,
+			y: n.y + dy / l * dR
+		};
+	}
+	const dy = ty - n.y;
+	if (Math.abs(dy) > 10) return {
+		x: n.x,
+		y: n.y + Math.sign(dy) * (nH / 2)
+	};
+	return {
+		x: n.x + Math.sign(tx - n.x) * (nW / 2),
+		y: n.y
+	};
+};
+const entryPt = (n, fx, fy, { nW = 34, nH = 26, dR = 8, gap = 0 } = {}) => {
+	if (n.t === "dummy") {
+		const dx = n.x - fx, dy = n.y - fy, l = len(dx, dy);
+		return {
+			x: n.x - dx / l * (dR + gap),
+			y: n.y - dy / l * (dR + gap)
+		};
+	}
+	const dy = n.y - fy;
+	if (Math.abs(dy) > 10) return {
+		x: n.x,
+		y: n.y - Math.sign(dy) * (nH / 2 + gap)
+	};
+	return {
+		x: n.x - Math.sign(n.x - fx) * (nW / 2 + gap),
+		y: n.y
+	};
+};
+const getBounds = (nodes, { nW = 34, nH = 26, dR = 8, pad = 8 } = {}) => {
+	if (!nodes.length) return null;
+	const xs = nodes.map((n) => n.x - (n.t === "dummy" ? dR : nW / 2));
+	const xe = nodes.map((n) => n.x + (n.t === "dummy" ? dR : nW / 2));
+	const ys = nodes.map((n) => n.y - (n.t === "dummy" ? dR : nH / 2));
+	const ye = nodes.map((n) => n.y + (n.t === "dummy" ? dR : nH / 2));
+	return {
+		mx: Math.min(...xs) - pad,
+		Mx: Math.max(...xe) + pad,
+		my: Math.min(...ys) - pad,
+		My: Math.max(...ye) + pad
+	};
+};
+const centerIn = (rect) => ({
+	x: rect.x + rect.w / 2,
+	y: rect.y + rect.h / 2
+});
+const distribute = (count, container, { dir = "v", gap = 16, itemW, itemH, align = "center" } = {}) => {
+	const iw = itemW || 40, ih = itemH || 30;
+	const out = [];
+	if (dir === "v") {
+		const totalH = count * ih + (count - 1) * gap;
+		const sy = container.y + (container.h - totalH) / 2;
+		const cx = align === "center" ? container.x + container.w / 2 : align === "start" ? container.x + iw / 2 : container.x + container.w - iw / 2;
+		for (let i = 0; i < count; i++) out.push({
+			x: cx,
+			y: sy + i * (ih + gap) + ih / 2
+		});
+	} else {
+		const totalW = count * iw + (count - 1) * gap;
+		const sx = container.x + (container.w - totalW) / 2;
+		const cy = container.y + container.h / 2;
+		for (let i = 0; i < count; i++) out.push({
+			x: sx + i * (iw + gap) + iw / 2,
+			y: cy
+		});
+	}
+	return out;
+};
+/** Half-width of a marker arrow tip, including offset. Used for edge endpoint adjustment. */
+function markerHalf(config) {
+	return ((config?.width ?? config?.size ?? 10) + (config?.offset ?? 0) + 2) / 2;
+}
+/** Offset line endpoints by given radii. Marker tip extends outward from line end. */
+function offsetLine(from, to, fromR, toR, _directed = true) {
+	const dx = to[0] - from[0], dy = to[1] - from[1];
+	const l = len(dx, dy);
+	if (l < 1e-9) return {
+		x1: from[0],
+		y1: from[1],
+		x2: to[0],
+		y2: to[1]
+	};
+	const ux = dx / l, uy = dy / l;
+	return {
+		x1: from[0] + ux * fromR,
+		y1: from[1] + uy * fromR,
+		x2: to[0] - ux * toR,
+		y2: to[1] - uy * toR
+	};
+}
+
+//#endregion
+//#region vis/themes.ts
+const themes = {
+	warm: {
+		name: "warm",
+		desc: "暖色调 · 教学友好 · 琥珀+青",
+		palette: {
+			primary: {
+				fg: "oklch(0.55 0.20 55)",
+				bg: "oklch(0.88 0.08 55)"
+			},
+			accent: {
+				fg: "oklch(0.57 0.15 180)",
+				bg: "oklch(0.88 0.06 180)"
+			},
+			danger: {
+				fg: "oklch(0.48 0.18 22)",
+				bg: "oklch(0.88 0.04 22)"
+			},
+			warning: {
+				fg: "oklch(0.58 0.20 85)",
+				bg: "oklch(0.90 0.08 85)"
+			},
+			info: {
+				fg: "oklch(0.50 0.12 240)",
+				bg: "oklch(0.88 0.04 240)"
+			},
+			dim: {
+				fg: "oklch(0.50 0.02 60)",
+				bg: "oklch(0.90 0.01 75)"
+			},
+			muted: {
+				fg: "oklch(0.50 0.02 60)",
+				bg: "oklch(0.90 0.01 75)"
+			},
+			success: {
+				fg: "oklch(0.48 0.18 150)",
+				bg: "oklch(0.88 0.06 150)"
+			}
+		}
+	},
+	cool: {
+		name: "cool",
+		desc: "冷色调 · 科技感 · 蓝+薄荷",
+		palette: {
+			primary: {
+				fg: "oklch(0.52 0.14 250)",
+				bg: "oklch(0.88 0.05 250)"
+			},
+			accent: {
+				fg: "oklch(0.55 0.11 160)",
+				bg: "oklch(0.88 0.05 160)"
+			},
+			danger: {
+				fg: "oklch(0.50 0.16 10)",
+				bg: "oklch(0.88 0.04 10)"
+			},
+			warning: {
+				fg: "oklch(0.58 0.18 90)",
+				bg: "oklch(0.90 0.06 90)"
+			},
+			info: {
+				fg: "oklch(0.48 0.10 250)",
+				bg: "oklch(0.88 0.04 250)"
+			},
+			dim: {
+				fg: "oklch(0.50 0.02 250)",
+				bg: "oklch(0.90 0.01 250)"
+			},
+			muted: {
+				fg: "oklch(0.50 0.02 250)",
+				bg: "oklch(0.90 0.01 250)"
+			},
+			success: {
+				fg: "oklch(0.50 0.14 150)",
+				bg: "oklch(0.88 0.05 150)"
+			}
+		}
+	},
+	dark: {
+		name: "dark",
+		desc: "暗色 · 终端风 · 亮色前景",
+		palette: {
+			primary: {
+				fg: "oklch(0.72 0.16 65)",
+				bg: "oklch(0.28 0.05 65)"
+			},
+			accent: {
+				fg: "oklch(0.68 0.13 155)",
+				bg: "oklch(0.24 0.05 155)"
+			},
+			danger: {
+				fg: "oklch(0.62 0.16 25)",
+				bg: "oklch(0.24 0.04 25)"
+			},
+			warning: {
+				fg: "oklch(0.72 0.18 85)",
+				bg: "oklch(0.26 0.05 85)"
+			},
+			info: {
+				fg: "oklch(0.62 0.12 240)",
+				bg: "oklch(0.24 0.04 240)"
+			},
+			dim: {
+				fg: "oklch(0.50 0.03 260)",
+				bg: "oklch(0.22 0.01 260)"
+			},
+			muted: {
+				fg: "oklch(0.50 0.03 260)",
+				bg: "oklch(0.22 0.01 260)"
+			},
+			success: {
+				fg: "oklch(0.62 0.15 150)",
+				bg: "oklch(0.26 0.05 150)"
+			}
+		}
+	},
+	paper: {
+		name: "paper",
+		desc: "学术风 · 极简 · 墨色+白",
+		palette: {
+			primary: {
+				fg: "oklch(0.38 0.03 60)",
+				bg: "oklch(0.92 0.01 80)"
+			},
+			accent: {
+				fg: "oklch(0.42 0.06 150)",
+				bg: "oklch(0.90 0.02 150)"
+			},
+			danger: {
+				fg: "oklch(0.35 0.06 20)",
+				bg: "oklch(0.90 0.02 20)"
+			},
+			warning: {
+				fg: "oklch(0.45 0.08 80)",
+				bg: "oklch(0.92 0.02 80)"
+			},
+			info: {
+				fg: "oklch(0.40 0.06 240)",
+				bg: "oklch(0.90 0.02 240)"
+			},
+			dim: {
+				fg: "oklch(0.45 0.01 80)",
+				bg: "oklch(0.94 0.01 80)"
+			},
+			muted: {
+				fg: "oklch(0.45 0.01 80)",
+				bg: "oklch(0.94 0.01 80)"
+			},
+			success: {
+				fg: "oklch(0.40 0.08 150)",
+				bg: "oklch(0.90 0.03 150)"
+			}
+		}
+	},
+	vivid: {
+		name: "vivid",
+		desc: "高饱和 · 演示/演讲 · 亮色",
+		palette: {
+			primary: {
+				fg: "oklch(0.62 0.22 68)",
+				bg: "oklch(0.88 0.10 68)"
+			},
+			accent: {
+				fg: "oklch(0.58 0.18 180)",
+				bg: "oklch(0.86 0.08 180)"
+			},
+			danger: {
+				fg: "oklch(0.55 0.22 22)",
+				bg: "oklch(0.86 0.08 22)"
+			},
+			warning: {
+				fg: "oklch(0.65 0.24 85)",
+				bg: "oklch(0.90 0.10 85)"
+			},
+			info: {
+				fg: "oklch(0.52 0.16 250)",
+				bg: "oklch(0.86 0.06 250)"
+			},
+			dim: {
+				fg: "oklch(0.52 0.03 80)",
+				bg: "oklch(0.90 0.01 80)"
+			},
+			muted: {
+				fg: "oklch(0.52 0.03 80)",
+				bg: "oklch(0.90 0.01 80)"
+			},
+			success: {
+				fg: "oklch(0.55 0.20 150)",
+				bg: "oklch(0.86 0.08 150)"
+			}
+		}
+	},
+	soft: {
+		name: "soft",
+		desc: "低对比 · 柔和 · 灰绿基调",
+		palette: {
+			primary: {
+				fg: "oklch(0.50 0.06 140)",
+				bg: "oklch(0.90 0.02 140)"
+			},
+			accent: {
+				fg: "oklch(0.48 0.05 200)",
+				bg: "oklch(0.90 0.02 200)"
+			},
+			danger: {
+				fg: "oklch(0.42 0.08 30)",
+				bg: "oklch(0.88 0.02 30)"
+			},
+			warning: {
+				fg: "oklch(0.50 0.08 90)",
+				bg: "oklch(0.90 0.03 90)"
+			},
+			info: {
+				fg: "oklch(0.45 0.05 240)",
+				bg: "oklch(0.90 0.02 240)"
+			},
+			dim: {
+				fg: "oklch(0.48 0.02 100)",
+				bg: "oklch(0.92 0.01 100)"
+			},
+			muted: {
+				fg: "oklch(0.48 0.02 100)",
+				bg: "oklch(0.92 0.01 100)"
+			},
+			success: {
+				fg: "oklch(0.48 0.10 150)",
+				bg: "oklch(0.88 0.04 150)"
+			}
+		}
+	}
+};
+function resolveTheme(name) {
+	return themes[name] || themes.warm;
+}
+
+//#endregion
+//#region vis/scene.ts
+let _Symbol$dispose;
+_Symbol$dispose = Symbol.dispose;
+var SceneImpl = class {
+	constructor(selector, opts = {}) {
+		const { width = 560, height = 400, margin = 48, theme, geom: gOpts, ms, animation, renderer } = opts;
+		this._ctx = bootstrap(selector, {
+			width,
+			height,
+			margin,
+			geom: gOpts
+		});
+		this._palette = this._ctx.palette;
+		this._geom = this._ctx.geom;
+		this._fm = new FrameManager(this._ctx, animation, renderer);
+		this.svg = this._ctx.svg.node();
+		this.width = this._ctx.W;
+		this.height = this._ctx.H;
+		this._injectTheme(theme || "warm");
+	}
+	_injectTheme(themeName) {
+		if (typeof document === "undefined") return;
+		const theme = themes[themeName];
+		if (!theme) return;
+		const tp = theme.palette ? {
+			...TOKENS,
+			...theme.palette
+		} : TOKENS;
+		const fills = {
+			...TOKENS.fills,
+			...theme.palette?.fills || {}
+		};
+		let cssVars = "";
+		for (const key of Object.keys(tp)) {
+			if (key === "fills") continue;
+			const v = tp[key];
+			const bgV = fills[key];
+			const fgColor = typeof v === "object" ? v.fg ?? v : v;
+			const bgColor = typeof v === "object" ? v.bg ?? bgV : bgV;
+			const varName = key === "dim" ? "muted" : key;
+			if (fgColor) cssVars += `--lv-${varName}: ${fgColor}; `;
+			if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
+		}
+		const isDark = themeName === "dark";
+		cssVars += `--lv-mix-bg: ${isDark ? "oklch(0.20 0.01 250)" : "oklch(0.97 0.005 80)"}; --lv-mix-fg: ${isDark ? "oklch(0.90 0.01 250)" : "oklch(0.25 0.02 60)"}; `;
+		if (!cssVars) return;
+		const themeClassName = `lv-theme-${themeName}`;
+		const styleId = `lv-style-${themeClassName}`;
+		if (!document.getElementById(styleId)) {
+			const styleEl = document.createElement("style");
+			styleEl.id = styleId;
+			styleEl.textContent = `@layer learnvis.theme { .${themeClassName} { ${cssVars} } }`;
+			document.head.appendChild(styleEl);
+		}
+		const svgNode = this.svg;
+		if (svgNode) {
+			svgNode.classList.add(themeClassName);
+			const entries = cssVars.trim().split(";").filter(Boolean);
+			for (const e of entries) {
+				const [prop, val] = e.split(":").map((s) => s.trim());
+				if (prop && val) svgNode.style.setProperty(prop, val);
+			}
+		}
+	}
+	point(id, x, y) {
+		const e = eid("node", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "node",
+			shape: "circle",
+			x,
+			y,
+			r: 4,
+			fill: p.primary.fg,
+			stroke: p.primary.fg
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	vertex(id, x, y) {
+		const e = eid("node", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "node",
+			shape: "circle",
+			x,
+			y,
+			r: 10,
+			fill: p.primary.a(15),
+			stroke: p.primary.fg,
+			label: id,
+			labelPlace: "below",
+			labelGap: 6
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	edge(a, b) {
+		const p = this._palette;
+		const aId = typeof a === "string" ? eid("node", a) : a.eid;
+		const bId = typeof b === "string" ? eid("node", b) : b.eid;
+		const aEnt = this._fm.entities.get(aId);
+		const bEnt = this._fm.entities.get(bId);
+		if (!aEnt || !bEnt) throw new Error(`edge(): entity "${!aEnt ? aId : bId}" not found. Ensure vertex() is called before edge() in the same frame.`);
+		const ax = aEnt.desired.x;
+		const ay = aEnt.desired.y;
+		const ar = aEnt.desired.r ?? 10;
+		const bx = bEnt.desired.x;
+		const by = bEnt.desired.y;
+		const br = bEnt.desired.r ?? 10;
+		const { x1, y1, x2, y2 } = offsetLine([ax, ay], [bx, by], ar + 4, br + markerHalf(), true);
+		const e = eid("line", typeof a === "string" && typeof b === "string" ? `${a}:${b}` : `${aId.replace("node:", "")}:${bId.replace("node:", "")}`);
+		this._fm.declare(e, {
+			type: "line",
+			from: [ax, ay],
+			to: [bx, by],
+			x1,
+			y1,
+			x2,
+			y2,
+			stroke: p.dim.fg,
+			strokeW: 1.8,
+			directed: true,
+			marker: "arrow"
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	line(id, x1, y1, x2, y2) {
+		const e = eid("line", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "line",
+			from: [x1, y1],
+			to: [x2, y2],
+			x1,
+			y1,
+			x2,
+			y2,
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	vector(id, from, to) {
+		const e = eid("line", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "line",
+			from: [...from],
+			to: [...to],
+			x1: from[0],
+			y1: from[1],
+			x2: to[0],
+			y2: to[1],
+			stroke: p.primary.fg,
+			strokeW: 2,
+			marker: "arrow",
+			directed: true
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	polyline(id, pts) {
+		const e = eid("line", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "line",
+			points: pts.map((p) => [...p]),
+			x1: pts[0]?.[0],
+			y1: pts[0]?.[1],
+			x2: pts[pts.length - 1]?.[0],
+			y2: pts[pts.length - 1]?.[1],
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	circle(id, cx, cy, r) {
+		const e = eid("region", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "region",
+			shape: "circle",
+			cx,
+			cy,
+			r,
+			fill: "none",
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	polygon(id, vertices) {
+		const e = eid("region", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "region",
+			shape: "polygon",
+			vertices: vertices.map((v) => [...v]),
+			fill: p.primary.a(15),
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	rect(id, x, y, w, h) {
+		const e = eid("region", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "region",
+			shape: "polygon",
+			vertices: [
+				[x, y],
+				[x + w, y],
+				[x + w, y + h],
+				[x, y + h]
+			],
+			fill: "none",
+			stroke: p.primary.fg,
+			strokeW: 2,
+			_rx: 0
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	curve(id, fn, domain) {
+		const e = eid("curve", id);
+		const p = this._palette;
+		const sx = domain[0], ex = domain[1];
+		const x = Math.min(sx, ex);
+		const w = Math.abs(ex - sx);
+		this._fm.declare(e, {
+			type: "curve",
+			f: fn.toString(),
+			domain,
+			x,
+			y: 0,
+			width: w,
+			height: 400,
+			samples: 200,
+			stroke: p.primary.fg,
+			strokeW: 2
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	angle(id, vertex, ray1, ray2) {
+		const e = eid("group", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "group",
+			subtype: "angle",
+			vertex: [...vertex],
+			ray1: [...ray1],
+			ray2: [...ray2],
+			arcR: 24,
+			stroke: p.primary.fg,
+			strokeW: 1.5,
+			fill: p.primary.a(15)
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	fill(id, vertices) {
+		const e = eid("region", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "region",
+			shape: "fill",
+			vertices: vertices.map((v) => [...v]),
+			fill: p.primary.a(15),
+			stroke: "none",
+			strokeW: 0
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	block(id, x, y, w, h) {
+		const e = eid("node", id);
+		const p = this._palette;
+		const fill = `color-mix(in oklab, ${p.primary.bg} 85%, white)`;
+		this._fm.declare(e, {
+			type: "node",
+			shape: "rect",
+			x,
+			y,
+			w,
+			h,
+			rx: this._geom.rx,
+			fill,
+			stroke: p.primary.fg,
+			strokeW: 1.2,
+			label: id
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	label(id, text, x, y) {
+		const e = eid("node", id);
+		const p = this._palette;
+		this._fm.declare(e, {
+			type: "node",
+			shape: "circle",
+			x,
+			y,
+			r: 0,
+			fill: "none",
+			stroke: "none",
+			label: text,
+			labelPlace: "below",
+			labelGap: 0
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	layout(type, vertices, edges, opts) {
+		const vs = vertices.map((g) => {
+			const eid = g.eid;
+			const ent = this._fm.entities.get(eid);
+			if (!ent) throw new Error(`layout(): entity "${eid}" not found in frame`);
+			const d = ent.desired;
+			return {
+				id: eid,
+				x: d.x,
+				y: d.y,
+				r: d.r ?? 10
+			};
+		});
+		const n = vs.length;
+		if (n === 0) return;
+		const cx = opts?.center?.[0] ?? this.width / 2;
+		const cy = opts?.center?.[1] ?? this.height / 2;
+		switch (type) {
+			case "circular": {
+				const r = opts?.radius ?? Math.min(this.width, this.height) * .35;
+				vs.forEach((v, i) => {
+					const angle = 2 * Math.PI * i / n - Math.PI / 2;
+					v.x = cx + r * Math.cos(angle);
+					v.y = cy + r * Math.sin(angle);
+					this._fm.patch(v.id, {
+						x: v.x,
+						y: v.y
+					});
+				});
+				break;
+			}
+			case "force": {
+				const sim = simulation_default(vs).force("charge", manyBody_default().strength(-300)).force("center", center_default(cx, cy)).force("collision", collide_default().radius((d) => d.r + 2));
+				if (edges && edges.length > 0) {
+					const nodeMap = /* @__PURE__ */ new Map();
+					for (const v of vs) nodeMap.set(v.id, v);
+					const links = [];
+					for (const e2 of edges) {
+						const parts = e2.eid.replace("line:", "").split(":");
+						if (parts.length >= 2) {
+							const srcId = `node:${parts[0]}`;
+							const tgtId = `node:${parts[1]}`;
+							const srcV = nodeMap.get(srcId);
+							const tgtV = nodeMap.get(tgtId);
+							if (srcV && tgtV) links.push({
+								source: srcV,
+								target: tgtV
+							});
+						}
+					}
+					if (links.length > 0) sim.force("link", link_default(links).distance(60));
+				}
+				sim.stop();
+				for (let i = 0; i < 300; i++) sim.tick();
+				vs.forEach((v) => {
+					this._fm.patch(v.id, {
+						x: v.x,
+						y: v.y
+					});
+				});
+				break;
+			}
+		}
+	}
+	axes(id, origin, opts) {
+		const e = eid("group", id);
+		const p = this._palette;
+		const ox = origin[0], oy = origin[1];
+		const xLen = opts?.xLen ?? 300;
+		const yLen = opts?.yLen ?? 200;
+		this._fm.declare(e, {
+			type: "group",
+			subtype: "axes",
+			ox,
+			oy,
+			xMin: ox,
+			xMax: ox + xLen,
+			yMin: oy - yLen,
+			yMax: oy,
+			xLabel: opts?.xLabel,
+			yLabel: opts?.yLabel,
+			arrowSize: opts?.arrowSize,
+			stroke: p.dim.fg,
+			strokeW: 1.2,
+			fill: "none"
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	gridScreen(id, origin, opts) {
+		const e = eid("group", id);
+		const p = this._palette;
+		const w = opts?.width ?? this.width;
+		const h = opts?.height ?? this.height;
+		const sp = opts?.spacing ?? 40;
+		this._fm.declare(e, {
+			type: "group",
+			subtype: "grid",
+			mx0: origin[0],
+			mx1: origin[0] + w,
+			my0: origin[1],
+			my1: origin[1] + h,
+			mStep: sp,
+			gx: origin[0],
+			gy: origin[1],
+			w,
+			h,
+			sp,
+			stroke: opts?.color ?? "#d4d4d4",
+			strokeW: .5
+		});
+		return new GfxImpl(e, this._fm, p);
+	}
+	coords(config) {
+		return createCoordView(this._fm, this._palette, config, this.width, this.height, this._geom);
+	}
+	render(fn, opts) {
+		this._fm.begin();
+		fn(this);
+		this._fm.commit({ animate: opts?.animate });
+	}
+	steps(defs, opts) {
+		return createStepsController(this, defs, opts);
+	}
+	[_Symbol$dispose]() {}
+	dispose() {
+		this[Symbol.dispose]();
+	}
+};
+function createStepsController(scene, defs, opts) {
+	let _current = (opts?.start ?? 0) - 1;
+	const _total = defs.length;
+	let _mode = opts?.mode ?? "full";
+	const _listeners = [];
+	function _exec(i) {
+		const def = defs[i];
+		if (!def) return;
+		if (_mode === "full") scene.render((s) => {
+			def.frame(s);
+		});
+		else scene.render((s) => {
+			def.frame(s);
+		});
+		_listeners.forEach((fn) => fn(i, def));
+	}
+	function go(i) {
+		const idx = Math.max(0, Math.min(i, _total - 1));
+		_current = idx;
+		_exec(idx);
+	}
+	function next() {
+		go(_current + 1);
+	}
+	function prev() {
+		go(_current - 1);
+	}
+	function reset() {
+		_current = -1;
+		scene.render(() => {});
+	}
+	return {
+		go,
+		next,
+		prev,
+		reset,
+		get current() {
+			return _current;
+		},
+		get total() {
+			return _total;
+		},
+		get currentStepDef() {
+			return _current >= 0 && _current < _total ? defs[_current] : null;
+		},
+		onChange(fn) {
+			_listeners.push(fn);
+			return () => {
+				const idx = _listeners.indexOf(fn);
+				if (idx >= 0) _listeners.splice(idx, 1);
+			};
+		},
+		destroy() {}
+	};
+}
+function canvas(selector, opts) {
+	return new SceneImpl(selector, opts);
+}
 
 //#endregion
 //#region vis/stepper.ts
@@ -3879,6 +6516,7 @@ function stepper(container, ctrlOrLabels, onChangeOrOpts, legacyOpts) {
 		counterEl.textContent = `${i + 1} / ${ctrl.total}`;
 	}
 	rebuildDots(ctrl.current, ctrl.total);
+	if (ctrl.current < 0) ctrl.go(0);
 	return { destroy: () => {
 		cleanup();
 		ct.removeEventListener("keydown", onKeydown);
@@ -3912,3109 +6550,6 @@ const katexify = (html) => {
 		displayMode: true
 	})).replace(/\$([^$]+)\$/g, (_, m) => window.katex.renderToString(m, { throwOnError: false }));
 };
-
-//#endregion
-//#region vis/bootstrap.ts
-function bootstrap(selector, opts = {}) {
-	const { width = 560, height = 400, margin = 48, geom: gOpts = {} } = opts;
-	const C = createCanvas(selector, width, height, margin);
-	const p = palette();
-	const geom = Object.freeze({
-		nW: 34,
-		nH: 26,
-		dR: 8,
-		rx: 5,
-		gap: 4,
-		...gOpts
-	});
-	const { markerFor } = defineArrows(C.svg, { sw: 2 });
-	return {
-		svg: C.svg,
-		W: C.W,
-		H: C.H,
-		M: C.M,
-		stage: {
-			bg: C.bg,
-			nodes: C.nG,
-			edges: C.eG,
-			overlay: C.oG
-		},
-		root: C.root,
-		palette: p,
-		geom,
-		markerFor
-	};
-}
-
-//#endregion
-//#region vis/themes.ts
-const themes = {
-	warm: {
-		name: "warm",
-		desc: "暖色调 · 教学友好 · 琥珀+青",
-		palette: {
-			primary: {
-				fg: "oklch(0.55 0.20 55)",
-				bg: "oklch(0.88 0.08 55)"
-			},
-			accent: {
-				fg: "oklch(0.57 0.15 180)",
-				bg: "oklch(0.88 0.06 180)"
-			},
-			danger: {
-				fg: "oklch(0.48 0.18 22)",
-				bg: "oklch(0.88 0.04 22)"
-			},
-			warning: {
-				fg: "oklch(0.58 0.20 85)",
-				bg: "oklch(0.90 0.08 85)"
-			},
-			info: {
-				fg: "oklch(0.50 0.12 240)",
-				bg: "oklch(0.88 0.04 240)"
-			},
-			dim: {
-				fg: "oklch(0.50 0.02 60)",
-				bg: "oklch(0.90 0.01 75)"
-			},
-			muted: {
-				fg: "oklch(0.50 0.02 60)",
-				bg: "oklch(0.90 0.01 75)"
-			},
-			success: {
-				fg: "oklch(0.48 0.18 150)",
-				bg: "oklch(0.88 0.06 150)"
-			}
-		}
-	},
-	cool: {
-		name: "cool",
-		desc: "冷色调 · 科技感 · 蓝+薄荷",
-		palette: {
-			primary: {
-				fg: "oklch(0.52 0.14 250)",
-				bg: "oklch(0.88 0.05 250)"
-			},
-			accent: {
-				fg: "oklch(0.55 0.11 160)",
-				bg: "oklch(0.88 0.05 160)"
-			},
-			danger: {
-				fg: "oklch(0.50 0.16 10)",
-				bg: "oklch(0.88 0.04 10)"
-			},
-			warning: {
-				fg: "oklch(0.58 0.18 90)",
-				bg: "oklch(0.90 0.06 90)"
-			},
-			info: {
-				fg: "oklch(0.48 0.10 250)",
-				bg: "oklch(0.88 0.04 250)"
-			},
-			dim: {
-				fg: "oklch(0.50 0.02 250)",
-				bg: "oklch(0.90 0.01 250)"
-			},
-			muted: {
-				fg: "oklch(0.50 0.02 250)",
-				bg: "oklch(0.90 0.01 250)"
-			},
-			success: {
-				fg: "oklch(0.50 0.14 150)",
-				bg: "oklch(0.88 0.05 150)"
-			}
-		}
-	},
-	dark: {
-		name: "dark",
-		desc: "暗色 · 终端风 · 亮色前景",
-		palette: {
-			primary: {
-				fg: "oklch(0.72 0.16 65)",
-				bg: "oklch(0.28 0.05 65)"
-			},
-			accent: {
-				fg: "oklch(0.68 0.13 155)",
-				bg: "oklch(0.24 0.05 155)"
-			},
-			danger: {
-				fg: "oklch(0.62 0.16 25)",
-				bg: "oklch(0.24 0.04 25)"
-			},
-			warning: {
-				fg: "oklch(0.72 0.18 85)",
-				bg: "oklch(0.26 0.05 85)"
-			},
-			info: {
-				fg: "oklch(0.62 0.12 240)",
-				bg: "oklch(0.24 0.04 240)"
-			},
-			dim: {
-				fg: "oklch(0.50 0.03 260)",
-				bg: "oklch(0.22 0.01 260)"
-			},
-			muted: {
-				fg: "oklch(0.50 0.03 260)",
-				bg: "oklch(0.22 0.01 260)"
-			},
-			success: {
-				fg: "oklch(0.62 0.15 150)",
-				bg: "oklch(0.26 0.05 150)"
-			}
-		}
-	},
-	paper: {
-		name: "paper",
-		desc: "学术风 · 极简 · 墨色+白",
-		palette: {
-			primary: {
-				fg: "oklch(0.38 0.03 60)",
-				bg: "oklch(0.92 0.01 80)"
-			},
-			accent: {
-				fg: "oklch(0.42 0.06 150)",
-				bg: "oklch(0.90 0.02 150)"
-			},
-			danger: {
-				fg: "oklch(0.35 0.06 20)",
-				bg: "oklch(0.90 0.02 20)"
-			},
-			warning: {
-				fg: "oklch(0.45 0.08 80)",
-				bg: "oklch(0.92 0.02 80)"
-			},
-			info: {
-				fg: "oklch(0.40 0.06 240)",
-				bg: "oklch(0.90 0.02 240)"
-			},
-			dim: {
-				fg: "oklch(0.45 0.01 80)",
-				bg: "oklch(0.94 0.01 80)"
-			},
-			muted: {
-				fg: "oklch(0.45 0.01 80)",
-				bg: "oklch(0.94 0.01 80)"
-			},
-			success: {
-				fg: "oklch(0.40 0.08 150)",
-				bg: "oklch(0.90 0.03 150)"
-			}
-		}
-	},
-	vivid: {
-		name: "vivid",
-		desc: "高饱和 · 演示/演讲 · 亮色",
-		palette: {
-			primary: {
-				fg: "oklch(0.62 0.22 68)",
-				bg: "oklch(0.88 0.10 68)"
-			},
-			accent: {
-				fg: "oklch(0.58 0.18 180)",
-				bg: "oklch(0.86 0.08 180)"
-			},
-			danger: {
-				fg: "oklch(0.55 0.22 22)",
-				bg: "oklch(0.86 0.08 22)"
-			},
-			warning: {
-				fg: "oklch(0.65 0.24 85)",
-				bg: "oklch(0.90 0.10 85)"
-			},
-			info: {
-				fg: "oklch(0.52 0.16 250)",
-				bg: "oklch(0.86 0.06 250)"
-			},
-			dim: {
-				fg: "oklch(0.52 0.03 80)",
-				bg: "oklch(0.90 0.01 80)"
-			},
-			muted: {
-				fg: "oklch(0.52 0.03 80)",
-				bg: "oklch(0.90 0.01 80)"
-			},
-			success: {
-				fg: "oklch(0.55 0.20 150)",
-				bg: "oklch(0.86 0.08 150)"
-			}
-		}
-	},
-	soft: {
-		name: "soft",
-		desc: "低对比 · 柔和 · 灰绿基调",
-		palette: {
-			primary: {
-				fg: "oklch(0.50 0.06 140)",
-				bg: "oklch(0.90 0.02 140)"
-			},
-			accent: {
-				fg: "oklch(0.48 0.05 200)",
-				bg: "oklch(0.90 0.02 200)"
-			},
-			danger: {
-				fg: "oklch(0.42 0.08 30)",
-				bg: "oklch(0.88 0.02 30)"
-			},
-			warning: {
-				fg: "oklch(0.50 0.08 90)",
-				bg: "oklch(0.90 0.03 90)"
-			},
-			info: {
-				fg: "oklch(0.45 0.05 240)",
-				bg: "oklch(0.90 0.02 240)"
-			},
-			dim: {
-				fg: "oklch(0.48 0.02 100)",
-				bg: "oklch(0.92 0.01 100)"
-			},
-			muted: {
-				fg: "oklch(0.48 0.02 100)",
-				bg: "oklch(0.92 0.01 100)"
-			},
-			success: {
-				fg: "oklch(0.48 0.10 150)",
-				bg: "oklch(0.88 0.04 150)"
-			}
-		}
-	}
-};
-function resolveTheme(name) {
-	return themes[name] || themes.warm;
-}
-
-//#endregion
-//#region vis/types.ts
-/** Construct a typed EntityId from a prefix and name. */
-function eid(prefix, id) {
-	if (!id) id = "_";
-	return `${prefix}:${id}`;
-}
-
-//#endregion
-//#region vis/transform.ts
-function rotate(angle, cx, cy) {
-	return {
-		type: "rotate",
-		angle,
-		cx,
-		cy
-	};
-}
-function scale(sx, sy = sx) {
-	return {
-		type: "scale",
-		sx,
-		sy
-	};
-}
-function translate(dx, dy) {
-	return {
-		type: "translate",
-		dx,
-		dy
-	};
-}
-function matrix(a, b, c, d, tx = 0, ty = 0) {
-	return {
-		type: "matrix",
-		a,
-		b,
-		c,
-		d,
-		tx,
-		ty
-	};
-}
-function lerp(a, b, t) {
-	return a + (b - a) * t;
-}
-/** Interpolate between two transform arrays (must be same structure) */
-function interpolate(a, b, t) {
-	return a.map((tf, i) => {
-		const bt = b[i] ?? tf;
-		switch (tf.type) {
-			case "rotate": return {
-				...tf,
-				angle: lerp(tf.angle, bt.angle, t)
-			};
-			case "scale": return {
-				...tf,
-				sx: lerp(tf.sx, bt.sx, t),
-				sy: lerp(tf.sy, bt.sy, t)
-			};
-			case "translate": return {
-				...tf,
-				dx: lerp(tf.dx, bt.dx, t),
-				dy: lerp(tf.dy, bt.dy, t)
-			};
-			case "matrix": return {
-				...tf,
-				a: lerp(tf.a, bt.a, t),
-				b: lerp(tf.b, bt.b, t),
-				c: lerp(tf.c, bt.c, t),
-				d: lerp(tf.d, bt.d, t),
-				tx: lerp(tf.tx, bt.tx, t),
-				ty: lerp(tf.ty, bt.ty, t)
-			};
-		}
-	});
-}
-/** Apply transforms to line geometry (from→to) */
-function applyLine(from, to, tf) {
-	let nf = [...from], nt = [...to];
-	for (const t of tf) switch (t.type) {
-		case "rotate": {
-			const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
-			const rot = (px, py) => [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos];
-			nf = rot(nf[0], nf[1]);
-			nt = rot(nt[0], nt[1]);
-			break;
-		}
-		case "scale":
-			nt = [nf[0] + (nt[0] - nf[0]) * t.sx, nf[1] + (nt[1] - nf[1]) * t.sy];
-			break;
-		case "translate":
-			nf = [nf[0] + t.dx, nf[1] + t.dy];
-			nt = [nt[0] + t.dx, nt[1] + t.dy];
-			break;
-		case "matrix": {
-			const { a, b, c, d, tx, ty } = t;
-			nf = [a * nf[0] + c * nf[1] + tx, b * nf[0] + d * nf[1] + ty];
-			nt = [a * nt[0] + c * nt[1] + tx, b * nt[0] + d * nt[1] + ty];
-			break;
-		}
-	}
-	return {
-		from: nf,
-		to: nt
-	};
-}
-/** Apply transforms to polygon vertices */
-function applyVertices(vertices, tf) {
-	let nv = vertices.map((v) => [...v]);
-	for (const t of tf) switch (t.type) {
-		case "rotate": {
-			const cos = Math.cos(t.angle * Math.PI / 180), sin = Math.sin(t.angle * Math.PI / 180);
-			nv = nv.map(([px, py]) => [t.cx + (px - t.cx) * cos - (py - t.cy) * sin, t.cy + (px - t.cx) * sin + (py - t.cy) * cos]);
-			break;
-		}
-		case "scale": {
-			const cx = nv.reduce((s, v) => s + v[0], 0) / nv.length, cy = nv.reduce((s, v) => s + v[1], 0) / nv.length;
-			nv = nv.map(([px, py]) => [cx + (px - cx) * t.sx, cy + (py - cy) * t.sy]);
-			break;
-		}
-		case "translate":
-			nv = nv.map(([px, py]) => [px + t.dx, py + t.dy]);
-			break;
-		case "matrix": {
-			const { a, b, c, d, tx, ty } = t;
-			nv = nv.map(([px, py]) => [a * px + c * py + tx, b * px + d * py + ty]);
-			break;
-		}
-	}
-	return nv;
-}
-
-//#endregion
-//#region vis/mixins.ts
-function resolveColor(p, c) {
-	if (!c) return {
-		stroke: p.primary.fg,
-		fill: p.primary.bg
-	};
-	const col = p[c];
-	if (col) return {
-		stroke: col.fg,
-		fill: col.bg
-	};
-	return {
-		stroke: c,
-		fill: c
-	};
-}
-function patch(eid, fm, props) {
-	fm.patch(eid, props);
-}
-const mixColor = (eid, fm, p) => ({ color(c) {
-	const r = resolveColor(p, c);
-	patch(eid, fm, {
-		stroke: r.stroke,
-		fill: r.fill
-	});
-	return this;
-} });
-const mixStroke = (eid, fm, p) => ({ color(c) {
-	patch(eid, fm, { stroke: resolveColor(p, c).stroke });
-	return this;
-} });
-const mixStrokeW = (eid, fm) => ({ strokeW(n) {
-	patch(eid, fm, { strokeW: n });
-	return this;
-} });
-const mixFill = (eid, fm, p) => ({ fill(c) {
-	patch(eid, fm, { fill: resolveColor(p, c).fill });
-	return this;
-} });
-const mixOpacity = (eid, fm) => ({ opacity(v) {
-	patch(eid, fm, { opacity: v });
-	return this;
-} });
-const mixSize = (eid, fm) => ({ size(n) {
-	patch(eid, fm, {
-		r: n,
-		pathSize: n
-	});
-	return this;
-} });
-const mixDashed = (eid, fm) => ({ dashed(d = "5 4") {
-	patch(eid, fm, { dash: d });
-	return this;
-} });
-const mixLabel = (eid, fm) => ({ label(t) {
-	patch(eid, fm, { label: t });
-	return this;
-} });
-const mixLabelPos = (eid, fm, defaults) => ({ label(t, place, gap) {
-	patch(eid, fm, {
-		label: t,
-		labelPlace: place ?? defaults.labelPlace,
-		labelGap: gap ?? defaults.labelGap
-	});
-	return this;
-} });
-const mixNodeLabel = (eid, fm) => ({ label(t, place, gap) {
-	const p = { label: t };
-	if (place !== void 0) p.labelPlace = place;
-	if (gap !== void 0) p.labelGap = gap;
-	fm.patch(eid, p);
-	return this;
-} });
-const mixMoveTo = (eid, fm) => ({ moveTo(x, y) {
-	patch(eid, fm, {
-		x,
-		y
-	});
-	return this;
-} });
-function coreNodeMixin(eid, fm, p) {
-	return {
-		...mixColor(eid, fm, p),
-		...mixStrokeW(eid, fm),
-		...mixFill(eid, fm, p),
-		...mixOpacity(eid, fm),
-		...mixSize(eid, fm),
-		...mixNodeLabel(eid, fm),
-		...mixMoveTo(eid, fm)
-	};
-}
-const mixTransform = (eid, fm, getKey) => ({
-	rotate(a, cx, cy) {
-		const e = fm.entities.get(eid);
-		if (!e) return this;
-		const d = e.desired;
-		if (!d._base) _stashBase(d, getKey);
-		d._tf = [...d._tf || [], rotate(a, cx, cy)];
-		fm.patch(eid, {
-			_tf: d._tf,
-			_base: d._base
-		});
-		return this;
-	},
-	scale(sx, sy = sx) {
-		const e = fm.entities.get(eid);
-		if (!e) return this;
-		const d = e.desired;
-		if (!d._base) _stashBase(d, getKey);
-		d._tf = [...d._tf || [], scale(sx, sy)];
-		fm.patch(eid, {
-			_tf: d._tf,
-			_base: d._base
-		});
-		return this;
-	},
-	translate(dx, dy) {
-		const e = fm.entities.get(eid);
-		if (!e) return this;
-		const d = e.desired;
-		if (!d._base) _stashBase(d, getKey);
-		d._tf = [...d._tf || [], translate(dx, dy)];
-		fm.patch(eid, {
-			_tf: d._tf,
-			_base: d._base
-		});
-		return this;
-	},
-	matrixTransform(a, b, c, d, tx = 0, ty = 0) {
-		const e = fm.entities.get(eid);
-		if (!e) return this;
-		const sd = e.desired;
-		if (!sd._base) _stashBase(sd, getKey);
-		sd._tf = [...sd._tf || [], matrix(a, b, c, d, tx, ty)];
-		fm.patch(eid, {
-			_tf: sd._tf,
-			_base: sd._base
-		});
-		return this;
-	}
-});
-function _stashBase(d, getKey) {
-	if (getKey === "vector" && "from" in d) d._base = {
-		from: [...d.from || [0, 0]],
-		to: [...d.to || [0, 0]]
-	};
-	else if (getKey === "polygon" && "vertices" in d) d._base = { vertices: (d.vertices || []).map((v) => [...v]) };
-}
-const mixTranslatePos = (eid, fm) => ({ translate(dx, dy) {
-	const e = fm.entities.get(eid);
-	if (!e) return this;
-	const d = e.desired;
-	if ("x" in d && d.x != null) patch(eid, fm, {
-		x: d.x + dx,
-		y: (d.y ?? 0) + dy
-	});
-	else if ("cx" in d && d.cx != null) patch(eid, fm, {
-		cx: d.cx + dx,
-		cy: (d.cy ?? 0) + dy
-	});
-	return this;
-} });
-
-//#endregion
-//#region vis/math.ts
-const vecLen = (dx, dy) => Math.sqrt(dx * dx + dy * dy);
-function createMathRenderer(fm, ctx, palette) {
-	const p = palette;
-	function patch(eid, props) {
-		fm.patch(eid, props);
-	}
-	function point(id, pos, opts = {}) {
-		const eid$5 = eid("point", id);
-		const { stroke, fill } = resolveColor(p, opts.color);
-		const r = opts.size ?? 4;
-		const label = opts.label ?? "";
-		fm.declare(eid$5, {
-			type: "node",
-			shape: "circle",
-			x: pos[0],
-			y: pos[1],
-			r,
-			stroke,
-			fill,
-			label,
-			labelPlace: opts.labelPlace,
-			labelGap: opts.labelGap
-		});
-		return {
-			pos() {
-				return [pos[0], pos[1]];
-			},
-			...mixColor(eid$5, fm, p),
-			...mixLabelPos(eid$5, fm, {
-				labelPlace: opts.labelPlace,
-				labelGap: opts.labelGap
-			}),
-			...mixSize(eid$5, fm),
-			...mixFill(eid$5, fm, p),
-			...mixOpacity(eid$5, fm),
-			...mixTranslatePos(eid$5, fm)
-		};
-	}
-	function vector(id, from, to, opts = {}) {
-		const eid$6 = eid("vector", id);
-		const { stroke } = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.6;
-		const dash = opts.dash ?? "";
-		const label = opts.label ?? "";
-		const labelGap = opts.labelGap ?? 10;
-		const labelPlace = opts.labelPlace ?? "above";
-		const marker = opts.marker ?? null;
-		const a = offsetLine(from, to, 4, 4 + markerHalf(marker ?? void 0), true);
-		fm.declare(eid$6, {
-			type: "line",
-			marker: "arrow",
-			from: [a.x1, a.y1],
-			to: [a.x2, a.y2],
-			stroke,
-			strokeW,
-			dash,
-			label,
-			labelPlace,
-			labelGap,
-			_markerCfg: marker
-		});
-		return {
-			...mixStroke(eid$6, fm, p),
-			...mixLabelPos(eid$6, fm, {
-				labelPlace,
-				labelGap
-			}),
-			...mixStrokeW(eid$6, fm),
-			...mixDashed(eid$6, fm),
-			...mixOpacity(eid$6, fm),
-			...mixTransform(eid$6, fm, "vector")
-		};
-	}
-	function segment(id, a, b, opts = {}) {
-		const eid$7 = eid("segment", id);
-		const { stroke } = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.5;
-		const dash = opts.dash ?? "";
-		const label = opts.label ?? "";
-		const labelGap = opts.labelGap ?? 10;
-		fm.declare(eid$7, {
-			type: "line",
-			a,
-			b,
-			stroke,
-			strokeW,
-			dash,
-			label,
-			labelGap
-		});
-		return {
-			...mixStroke(eid$7, fm, p),
-			...mixStrokeW(eid$7, fm),
-			...mixDashed(eid$7, fm),
-			...mixLabel(eid$7, fm),
-			...mixOpacity(eid$7, fm)
-		};
-	}
-	function polyline(id, pts, opts = {}) {
-		const eid$8 = eid("segment", id);
-		const { stroke } = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.5;
-		const dash = opts.dash ?? "";
-		const opacity = opts.opacity ?? 1;
-		fm.declare(eid$8, {
-			type: "line",
-			points: pts,
-			stroke,
-			strokeW,
-			dash,
-			opacity
-		});
-		return {
-			...mixStroke(eid$8, fm, p),
-			...mixStrokeW(eid$8, fm),
-			...mixDashed(eid$8, fm),
-			...mixOpacity(eid$8, fm)
-		};
-	}
-	function circle(id, center, radius, opts = {}) {
-		const eid$9 = eid("circle", id);
-		const { stroke, fill } = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.2;
-		const dash = opts.dash ?? "";
-		const opacity = opts.opacity ?? 1;
-		const finalFill = opts.fill ?? p.accent.a(8);
-		fm.declare(eid$9, {
-			type: "region",
-			shape: "circle",
-			cx: center[0],
-			cy: center[1],
-			r: radius,
-			stroke,
-			fill: finalFill,
-			strokeW,
-			dash,
-			opacity
-		});
-		return {
-			...mixColor(eid$9, fm, p),
-			...mixStrokeW(eid$9, fm),
-			...mixFill(eid$9, fm, p),
-			...mixDashed(eid$9, fm),
-			...mixOpacity(eid$9, fm),
-			...mixTranslatePos(eid$9, fm)
-		};
-	}
-	function polygon(id, vertices, opts = {}) {
-		const eid$10 = eid("polygon", id);
-		const r = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.5;
-		const opacity = opts.opacity ?? 1;
-		const finalFill = opts.fill ?? r.fill;
-		fm.declare(eid$10, {
-			type: "region",
-			shape: "polygon",
-			vertices,
-			stroke: r.stroke,
-			fill: finalFill,
-			strokeW,
-			opacity,
-			label: ""
-		});
-		return {
-			...mixColor(eid$10, fm, p),
-			...mixStrokeW(eid$10, fm),
-			...mixFill(eid$10, fm, p),
-			...mixDashed(eid$10, fm),
-			...mixOpacity(eid$10, fm),
-			...mixLabel(eid$10, fm),
-			...mixTransform(eid$10, fm, "polygon")
-		};
-	}
-	function rightAngle(id, vertex, ray1, ray2, opts = {}) {
-		const eid$11 = eid("angle", id);
-		const { stroke } = resolveColor(p, opts.color ?? "dim");
-		const sz = opts.size ?? 8;
-		const [vx, vy] = vertex;
-		const d1 = vecLen(ray1[0] - vx, ray1[1] - vy) || 1;
-		const d2 = vecLen(ray2[0] - vx, ray2[1] - vy) || 1;
-		const u1x = (ray1[0] - vx) / d1, u1y = (ray1[1] - vy) / d1;
-		const u2x = (ray2[0] - vx) / d2, u2y = (ray2[1] - vy) / d2;
-		const ptsStr = [
-			[vx + u1x * sz, vy + u1y * sz],
-			[vx + (u1x + u2x) * sz, vy + (u1y + u2y) * sz],
-			[vx + u2x * sz, vy + u2y * sz]
-		].map((p) => p.join(",")).join(" ");
-		fm.declare(eid$11, {
-			type: "region",
-			shape: "polygon",
-			d: `M${ptsStr}`,
-			x: 0,
-			y: 0,
-			stroke,
-			fill: "none",
-			strokeW: 1.5
-		});
-		return {
-			...mixStroke(eid$11, fm, p),
-			...mixStrokeW(eid$11, fm),
-			...mixSize(eid$11, fm),
-			...mixOpacity(eid$11, fm)
-		};
-	}
-	function angle(id, vertex, ray1, ray2, opts = {}) {
-		const eid$12 = eid("angle", id);
-		const { stroke, fill } = resolveColor(p, opts.color);
-		const label = opts.label ?? "";
-		const arcR = opts.size ?? 30;
-		const finalFill = opts.fill ?? p.warning.a(15);
-		fm.declare(eid$12, {
-			type: "group",
-			subtype: "angle",
-			vertex,
-			ray1,
-			ray2,
-			stroke,
-			fill: finalFill,
-			label,
-			arcR
-		});
-		return {
-			...mixColor(eid$12, fm, p),
-			...mixStrokeW(eid$12, fm),
-			...mixFill(eid$12, fm, p),
-			...mixDashed(eid$12, fm),
-			...mixOpacity(eid$12, fm),
-			...mixLabel(eid$12, fm)
-		};
-	}
-	function fn(id, f, opts = {}) {
-		const eid$13 = eid("fn", id);
-		const { stroke } = resolveColor(p, opts.color);
-		const strokeW = opts.strokeW ?? 1.5;
-		const dash = opts.dash ?? "";
-		const opacity = opts.opacity ?? 1;
-		const label = opts.label ?? "";
-		const domain = opts.domain ?? [0, 10];
-		const samples = opts.samples ?? 200;
-		const ox = opts.x ?? 0;
-		const oy = opts.y ?? 300;
-		const pw = opts.width ?? 780;
-		const ph = opts.height ?? 460;
-		fm.declare(eid$13, {
-			type: "curve",
-			f: f.toString(),
-			domain,
-			range: opts.range,
-			x: ox,
-			y: oy,
-			width: pw,
-			height: ph,
-			samples,
-			stroke,
-			strokeW,
-			dash,
-			opacity,
-			label
-		});
-		return {
-			...mixStroke(eid$13, fm, p),
-			...mixStrokeW(eid$13, fm),
-			...mixDashed(eid$13, fm),
-			...mixOpacity(eid$13, fm),
-			...mixLabel(eid$13, fm)
-		};
-	}
-	function grid(id, origin, opts = {}) {
-		const eid$14 = eid("grid", id);
-		const { stroke } = resolveColor(p, opts.color);
-		const w = opts.width ?? 400, h = opts.height ?? 300;
-		fm.declare(eid$14, {
-			type: "group",
-			subtype: "grid",
-			ox: origin[0] + w / 2,
-			oy: origin[1] + h / 2,
-			gx: origin[0],
-			gy: origin[1],
-			w,
-			h,
-			sp: opts.spacing ?? 40,
-			stroke,
-			strokeW: opts.strokeW ?? .3
-		});
-	}
-	function axes(id, origin, opts = {}) {
-		const eid$15 = eid("axes", id);
-		const { stroke } = resolveColor(p, opts.color);
-		fm.declare(eid$15, {
-			type: "group",
-			subtype: "axes",
-			ox: origin[0],
-			oy: origin[1],
-			xl: opts.xLen ?? 300,
-			yl: opts.yLen ?? 200,
-			xLabel: opts.xLabel,
-			yLabel: opts.yLabel,
-			stroke,
-			strokeW: opts.strokeW ?? 1.4
-		});
-	}
-	function rect(id, cx, cy, w, h) {
-		const hw = w / 2, hh = h / 2;
-		return polygon(id, [
-			[cx - hw, cy - hh],
-			[cx + hw, cy - hh],
-			[cx + hw, cy + hh],
-			[cx - hw, cy + hh]
-		]);
-	}
-	function ngon(id, cx, cy, r, sides) {
-		const verts = [];
-		for (let i = 0; i < sides; i++) {
-			const a = 2 * Math.PI * i / sides - Math.PI / 2;
-			verts.push([cx + r * Math.cos(a), cy + r * Math.sin(a)]);
-		}
-		return polygon(id, verts);
-	}
-	function ellipse(id, cx, cy, rx, ry, n = 32) {
-		const verts = [];
-		for (let i = 0; i < n; i++) {
-			const a = 2 * Math.PI * i / n;
-			verts.push([cx + rx * Math.cos(a), cy + ry * Math.sin(a)]);
-		}
-		return polygon(id, verts);
-	}
-	function symbol(id, pos, opts = {}) {
-		const eid$16 = eid("path", id);
-		const t = {
-			circle: circle_default,
-			cross: cross_default,
-			diamond: diamond_default,
-			square: square_default,
-			star: star_default,
-			triangle: triangle_default,
-			wye: wye_default
-		}[opts.type ?? "circle"] ?? circle_default;
-		const sy = Symbol$1().type(t).size((opts.size ?? 8) ** 2)();
-		const d = sy ? `${sy}` : "";
-		const r = resolveColor(p, opts.color);
-		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid$16, {
-			type: "region",
-			shape: "polygon",
-			d,
-			x: pos[0],
-			y: pos[1],
-			stroke: r.stroke,
-			fill: rf,
-			strokeW: 1.2
-		});
-		return {
-			...mixStroke(eid$16, fm, p),
-			...mixStrokeW(eid$16, fm),
-			...mixDashed(eid$16, fm),
-			...mixSize(eid$16, fm),
-			...mixFill(eid$16, fm, p),
-			...mixOpacity(eid$16, fm),
-			...mixTranslatePos(eid$16, fm)
-		};
-	}
-	function arc(id, center, opts) {
-		const eid$17 = eid("path", id);
-		const a = arc_default()({
-			innerRadius: opts.innerR ?? 0,
-			outerRadius: opts.outerR,
-			startAngle: opts.startAngle,
-			endAngle: opts.endAngle
-		}) || "";
-		const r = resolveColor(p, opts.color);
-		const rf = opts.fill ? resolveColor(p, opts.fill).fill : r.fill;
-		fm.declare(eid$17, {
-			type: "region",
-			shape: "polygon",
-			d: `${a}`,
-			x: center[0],
-			y: center[1],
-			stroke: r.stroke,
-			fill: rf,
-			strokeW: opts.strokeW ?? 1.2
-		});
-		return {
-			...mixStroke(eid$17, fm, p),
-			...mixStrokeW(eid$17, fm),
-			...mixDashed(eid$17, fm),
-			...mixSize(eid$17, fm),
-			...mixFill(eid$17, fm, p),
-			...mixOpacity(eid$17, fm),
-			...mixTranslatePos(eid$17, fm)
-		};
-	}
-	function projection(id, pt, lf, lt, opts = {}) {
-		const eidSeg = eid("segment", id);
-		const eidPt = eid("point", id + "-p");
-		const { stroke } = resolveColor(p, opts.color);
-		const dash = opts.dash ?? "4 3";
-		const pc = opts.pointColor ?? stroke;
-		const [px, py] = pt, [x1, y1] = lf, [x2, y2] = lt;
-		const dx = x2 - x1, dy = y2 - y1;
-		const t = dx === 0 && dy === 0 ? 0 : ((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy);
-		const fx = x1 + t * dx, fy = y1 + t * dy;
-		fm.declare(eidSeg, {
-			type: "line",
-			a: pt,
-			b: [fx, fy],
-			stroke,
-			strokeW: 1.2,
-			dash,
-			label: "",
-			labelGap: 0
-		});
-		fm.declare(eidPt, {
-			type: "node",
-			shape: "circle",
-			x: fx,
-			y: fy,
-			r: 3,
-			stroke: pc,
-			fill: pc,
-			label: "",
-			labelPlace: void 0,
-			labelGap: void 0
-		});
-		return {
-			...mixStroke(eidSeg, fm, p),
-			...mixDashed(eidSeg, fm),
-			...mixStrokeW(eidSeg, fm)
-		};
-	}
-	function fill(id, pts, opts = {}) {
-		const eid$18 = eid("fill", id);
-		const r = resolveColor(p, opts.color);
-		fm.declare(eid$18, {
-			type: "region",
-			shape: "fill",
-			pts,
-			fill: r.fill,
-			opacity: opts.opacity
-		});
-		return {
-			...mixFill(eid$18, fm, p),
-			...mixOpacity(eid$18, fm)
-		};
-	}
-	function fillFn(id, f, opts = {}) {
-		const eid$19 = eid("fill", id);
-		const domain = opts.domain ?? [0, 10];
-		const samples = opts.samples ?? 200;
-		const ox = opts.x ?? 0, oy = opts.y ?? 300;
-		const pw = opts.width ?? 780, ph = opts.height ?? 460;
-		const r = resolveColor(p, opts.color);
-		const baseline = opts.baseline ?? 0;
-		const [d0, d1] = domain;
-		const step = (d1 - d0) / (samples - 1);
-		let yMin = Infinity, yMax = -Infinity;
-		for (let i = 0; i < samples; i++) {
-			const y = f(d0 + i * step);
-			if (y < yMin) yMin = y;
-			if (y > yMax) yMax = y;
-		}
-		let r0 = yMin, r1 = yMax;
-		if (opts.range) [r0, r1] = opts.range;
-		if (r0 === r1) {
-			r0 -= 1;
-			r1 += 1;
-		}
-		const sx = (x) => ox + (x - d0) / (d1 - d0) * pw;
-		const sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
-		const pts = [];
-		pts.push([sx(d0), sy(baseline)]);
-		for (let i = 0; i < samples; i++) pts.push([sx(d0 + i * step), sy(f(d0 + i * step))]);
-		pts.push([sx(d1), sy(baseline)]);
-		fm.declare(eid$19, {
-			type: "region",
-			shape: "fill",
-			pts,
-			fill: r.fill,
-			opacity: opts.opacity ?? .45
-		});
-		return {
-			...mixFill(eid$19, fm, p),
-			...mixOpacity(eid$19, fm)
-		};
-	}
-	function autoGridStep(lo, hi, pxSize) {
-		const targetCount = Math.max(5, Math.min(14, Math.round(pxSize / 80)));
-		const raw = (hi - lo) / targetCount;
-		const exp = Math.floor(Math.log10(raw));
-		const f = raw / 10 ** exp;
-		let step = 10 ** exp;
-		if (f >= 5) step *= 5;
-		else if (f >= 2) step *= 2;
-		return step || 1;
-	}
-	function niceDomain(lo, hi) {
-		const span = hi - lo;
-		if (span === 0 || !isFinite(span)) return [lo - 1, hi + 1];
-		let step = 10 ** Math.floor(Math.log10(span / 10));
-		const m = span / 10 / step;
-		if (m > 5) step *= 5;
-		else if (m > 2) step *= 2;
-		if (step < Number.EPSILON) return [lo, hi];
-		return [Math.floor(lo / step) * step, Math.ceil(hi / step) * step];
-	}
-	function makeTicks(lo, hi, count) {
-		const raw = (hi - lo) / count;
-		const exp = Math.floor(Math.log10(raw));
-		const f = raw / 10 ** exp;
-		let step;
-		if (f < 1.5) step = 10 ** exp;
-		else if (f < 3) step = 2 * 10 ** exp;
-		else if (f < 7) step = 5 * 10 ** exp;
-		else step = 10 * 10 ** exp;
-		const i0 = Math.ceil(lo / step);
-		const i1 = Math.floor(hi / step);
-		const vals = [];
-		for (let i = i0; i <= i1; i++) vals.push(i * step);
-		return vals;
-	}
-	function formatTick(n, fmt) {
-		if (typeof fmt === "function") return fmt(n);
-		if (fmt === "pi") {
-			const r = n / Math.PI;
-			if (Math.abs(r) < 1e-10) return "0";
-			if (Math.abs(r - 1) < 1e-10) return "π";
-			if (Math.abs(r + 1) < 1e-10) return "−π";
-			for (const d of [
-				2,
-				3,
-				4,
-				6
-			]) {
-				const num = Math.round(r * d);
-				if (Math.abs(r - num / d) < 1e-8) {
-					if (num === 1) return `π/${d}`;
-					if (num === -1) return `−π/${d}`;
-					if (d === 1) return `${num}π`;
-					return `${num}π/${d}`;
-				}
-			}
-			return `${r.toFixed(2)}π`;
-		}
-		if (Number.isInteger(n)) return `${n}`;
-		return parseFloat(n.toFixed(4)).toString();
-	}
-	function resolveTicks(axis, cfg, domain) {
-		const raw = axis === "x" ? cfg.xTicks ?? cfg.ticks : cfg.yTicks ?? cfg.ticks;
-		if (raw === void 0 || raw === false || raw === null) return null;
-		if (raw === true) return makeTicks(domain[0], domain[1], 5);
-		if (typeof raw === "number") return makeTicks(domain[0], domain[1], raw);
-		return raw;
-	}
-	function coords(id, origin, config = {}) {
-		const w = ctx.W, h = ctx.H;
-		const ox = origin === "center" ? w / 2 : origin[0] ?? w / 2;
-		const oy = origin === "center" ? h / 2 : origin[1] ?? h / 2;
-		const xLen = w - 100, yLen = h - 100;
-		const margin = config.margin ?? 0;
-		let xd = config.x ?? [-5, 5], yd = config.y ?? [-5, 5];
-		if (config.nice) {
-			xd = niceDomain(xd[0], xd[1]);
-			yd = niceDomain(yd[0], yd[1]);
-		}
-		if (margin > 0) {
-			const xpad = (xd[1] - xd[0]) * margin / 2;
-			const ypad = (yd[1] - yd[0]) * margin / 2;
-			xd = [xd[0] - xpad, xd[1] + xpad];
-			yd = [yd[0] - ypad, yd[1] + ypad];
-		}
-		let scX = xLen / (xd[1] - xd[0]);
-		let scY = yLen / (yd[1] - yd[0]);
-		if (config.aspect === "equal") {
-			const sc = Math.min(scX, scY);
-			scX = sc;
-			scY = sc;
-		} else if (typeof config.aspect === "number") {
-			const avg = Math.sqrt(scX * scY);
-			scX = avg;
-			scY = avg * config.aspect;
-		}
-		const basis = config.basis ?? [[1, 0], [0, 1]];
-		const [ix, iy] = basis[0], [jx, jy] = basis[1];
-		const isx = ix * scX, isy = -iy * scY;
-		const jsx = jx * scX, jsy = -jy * scY;
-		const sx = (mx, my = 0) => ox + mx * isx + my * jsx;
-		const sy = (mx, my = 0) => oy + mx * isy + my * jsy;
-		const _pt = (x, y) => typeof x === "number" ? [x, y] : x;
-		const scr = ([mx, my]) => [sx(mx, my), sy(mx, my)];
-		function _wrap(b) {
-			const w = {};
-			for (const key of Object.keys(b)) {
-				const f = b[key];
-				if (typeof f !== "function") {
-					w[key] = f;
-					continue;
-				}
-				switch (key) {
-					case "rotate":
-						w[key] = function(a, cx, cy) {
-							const [sx2, sy2] = scr([cx, cy]);
-							f.call(w, -a, sx2, sy2);
-							return w;
-						};
-						break;
-					case "translate":
-						w[key] = function(dx, dy) {
-							f.call(w, dx * isx + dy * jsx, dx * isy + dy * jsy);
-							return w;
-						};
-						break;
-					case "matrixTransform":
-						w[key] = function(a, b, c, d, tx, ty) {
-							const sa = a;
-							const sc_m = -c * scX / scY;
-							const stx = ox - a * ox + c * oy * scX / scY + (tx ?? 0) * scX;
-							const sb = -b * scY / scX;
-							const sd = d;
-							const sty = oy - d * oy + b * ox * scY / scX - (ty ?? 0) * scY;
-							f.call(w, sa, sb, sc_m, sd, stx, sty);
-							return w;
-						};
-						break;
-					case "scale":
-						w[key] = function(sx2, sy2) {
-							f.call(w, sx2, sy2 ?? sx2);
-							return w;
-						};
-						break;
-					case "moveTo":
-						w[key] = function(mx, my) {
-							const [sx2, sy2] = scr([mx, my]);
-							f.call(w, sx2, sy2);
-							return w;
-						};
-						break;
-					default:
-						w[key] = function(...args) {
-							const r = f.apply(w, args);
-							return r === b ? w : r;
-						};
-						break;
-				}
-			}
-			return w;
-		}
-		const cfgAxesDefaults = {
-			color: config.axisColor,
-			strokeW: config.axisStrokeW,
-			arrow: config.axisArrow,
-			ticks: config.ticks,
-			xTicks: config.xTicks,
-			yTicks: config.yTicks,
-			tickFormat: config.tickFormat,
-			tickSize: config.tickSize
-		};
-		const cfgGridDefaults = {
-			color: config.gridColor,
-			spacing: config.gridSpacing,
-			dash: config.gridDash
-		};
-		return {
-			mapX: (mx) => sx(mx, 0),
-			mapY: (my) => sy(0, my),
-			mapPt(mx, my) {
-				const [x, y] = _pt(mx, my);
-				return [sx(x, y), sy(x, y)];
-			},
-			axes(aOpts = {}) {
-				const o = {
-					...cfgAxesDefaults,
-					...aOpts
-				};
-				const color = o.color ?? "dim", sw = o.strokeW ?? 1.4;
-				const tickSize = o.tickSize ?? 5;
-				const fmt = o.tickFormat ?? "decimal";
-				const x0s = scr([xd[0], 0]), x1s = scr([xd[1], 0]);
-				const y0s = scr([0, yd[0]]), y1s = scr([0, yd[1]]);
-				segment(id + "-xax", x0s, x1s, {
-					color,
-					strokeW: sw
-				});
-				segment(id + "-yax", y0s, y1s, {
-					color,
-					strokeW: sw
-				});
-				const xTicks = resolveTicks("x", o, xd);
-				const yTicks = resolveTicks("y", o, yd);
-				scr([0, 0]);
-				if (xTicks) for (const v of xTicks) {
-					const ts = scr([v, 0]);
-					segment(id + `-xt${v}`, [ts[0], ts[1] - tickSize], [ts[0], ts[1] + tickSize], {
-						color,
-						strokeW: .8
-					});
-					point(id + `-xtl${v}`, [ts[0], ts[1] + tickSize + 12], {
-						color,
-						label: formatTick(v, fmt),
-						size: 0,
-						fill: "transparent"
-					});
-				}
-				if (yTicks) for (const v of yTicks) {
-					const ts = scr([0, v]);
-					segment(id + `-yt${v}`, [ts[0] - tickSize, ts[1]], [ts[0] + tickSize, ts[1]], {
-						color,
-						strokeW: .8
-					});
-					point(id + `-ytl${v}`, [ts[0] - tickSize - 8, ts[1]], {
-						color,
-						label: formatTick(v, fmt),
-						size: 0,
-						fill: "transparent",
-						labelPlace: "left"
-					});
-				}
-			},
-			grid(gOpts = {}) {
-				const o = {
-					...cfgGridDefaults,
-					...gOpts
-				};
-				const color = o.color ?? "dim";
-				const gid = eid("grid", id + "-g");
-				const { stroke } = resolveColor(p, color);
-				const step = o.spacing === "auto" || o.spacing === void 0 ? Math.min(autoGridStep(xd[0], xd[1], xLen), autoGridStep(yd[0], yd[1], yLen)) : o.spacing;
-				const anchor = scr([0, 0]);
-				const M = (w - xLen) / 2;
-				const rectX = M, rectY = M;
-				fm.declare(gid, {
-					type: "group",
-					subtype: "grid",
-					ox: anchor[0],
-					oy: anchor[1],
-					gx: rectX,
-					gy: rectY,
-					w: xLen,
-					h: yLen,
-					mx0: xd[0],
-					mx1: xd[1],
-					my0: yd[0],
-					my1: yd[1],
-					mStep: step,
-					stroke,
-					strokeW: o.strokeW ?? .3,
-					dash: o.dash,
-					ix: isx,
-					iy: isy,
-					jx: jsx,
-					jy: jsy
-				});
-			},
-			fn(fid, f, fOpts = {}) {
-				const [px, py] = scr([xd[0], yd[1]]);
-				return fn(fid, f, {
-					domain: fOpts.domain ?? xd,
-					range: fOpts.range ?? yd,
-					x: px,
-					y: py,
-					width: xLen,
-					height: yLen,
-					color: fOpts.color,
-					label: fOpts.label,
-					samples: fOpts.samples,
-					strokeW: fOpts.strokeW,
-					dash: fOpts.dash,
-					opacity: fOpts.opacity
-				});
-			},
-			fillFn(fid, f, fOpts = {}) {
-				const [px, py] = scr([xd[0], yd[1]]);
-				return fillFn(fid, f, {
-					domain: xd,
-					range: fOpts.range ?? yd,
-					x: px,
-					y: py,
-					width: xLen,
-					height: yLen,
-					color: fOpts.color,
-					opacity: fOpts.opacity,
-					baseline: fOpts.baseline
-				});
-			},
-			point(pid, x, y, pOpts = {}) {
-				const [mx, my] = _pt(x, y);
-				return point(pid, scr([mx, my]), pOpts);
-			},
-			vector(vid, fx, fy, tx, ty, vOpts = {}) {
-				const from = _pt(fx, typeof fy === "number" ? fy : void 0);
-				const to = _pt(typeof fy === "number" ? tx : fy, typeof tx === "number" ? ty : void 0);
-				const opts = (typeof tx === "object" ? tx : typeof ty === "object" ? ty : vOpts) || {};
-				return _wrap(vector(vid, scr(from), scr(to), opts));
-			},
-			segment(sid, ax, ay, bx, by, sOpts = {}) {
-				const a = _pt(ax, typeof ay === "number" ? ay : void 0);
-				const b = _pt(typeof ay === "number" ? bx : ay, typeof bx === "number" ? by : void 0);
-				const opts = (typeof bx === "object" ? bx : typeof by === "object" ? by : sOpts) || {};
-				return segment(sid, scr(a), scr(b), opts);
-			},
-			polyline(plid, pts, plOpts = {}) {
-				return polyline(plid, pts.map((p) => scr(p)), plOpts);
-			},
-			circle(cid, center, radius, cOpts = {}) {
-				const c = _pt(center);
-				const cs = scr(c);
-				return circle(cid, cs, Math.abs(sx(c[0] + radius, c[1]) - cs[0]), cOpts);
-			},
-			polygon(pgid, vertices, pgOpts = {}) {
-				return _wrap(polygon(pgid, vertices.map((p) => scr(p)), pgOpts));
-			},
-			angle(aid, vertex, ray1, ray2, aOpts = {}) {
-				const v = _pt(vertex), r1 = _pt(ray1), r2 = _pt(ray2);
-				const size = aOpts.size !== void 0 ? scr([0, 0])[0] - scr([-aOpts.size, 0])[0] : void 0;
-				return angle(aid, scr(v), scr(r1), scr(r2), {
-					...aOpts,
-					size
-				});
-			},
-			projection(prid, pt, lf, lt, prOpts = {}) {
-				const p = _pt(pt), l = _pt(lf), t = _pt(lt);
-				return projection(prid, scr(p), scr(l), scr(t), prOpts);
-			},
-			basis(bid, borigin, bOpts = {}) {
-				const o = _pt(borigin);
-				const scale = typeof bOpts.scale === "number" ? bOpts.scale : 1;
-				const os = scr(o);
-				const iEnd = scr([o[0] + scale, o[1]]);
-				const jEnd = scr([o[0], o[1] + scale]);
-				const iStroke = bOpts.iColor ? resolveColor(p, bOpts.iColor).stroke : p.accent.fg;
-				const jStroke = bOpts.jColor ? resolveColor(p, bOpts.jColor).stroke : p.danger.fg;
-				const iLabel = bOpts.iLabel ?? "î";
-				const jLabel = bOpts.jLabel ?? "ĵ";
-				const sw = bOpts.strokeW ?? 2;
-				const iId = eid("vector", bid + "-i");
-				const jId = eid("vector", bid + "-j");
-				fm.declare(iId, {
-					type: "line",
-					marker: "arrow",
-					from: os,
-					to: iEnd,
-					stroke: iStroke,
-					strokeW: sw,
-					label: iLabel,
-					labelPlace: "below",
-					labelGap: 10
-				});
-				fm.declare(jId, {
-					type: "line",
-					marker: "arrow",
-					from: os,
-					to: jEnd,
-					stroke: jStroke,
-					strokeW: sw,
-					label: jLabel,
-					labelPlace: "left",
-					labelGap: 10
-				});
-				return {
-					color(c) {
-						const r = resolveColor(p, c);
-						fm.patch(iId, { stroke: r.stroke });
-						fm.patch(jId, { stroke: r.stroke });
-						return this;
-					},
-					iColor(c) {
-						const r = resolveColor(p, c);
-						fm.patch(iId, { stroke: r.stroke });
-						return this;
-					},
-					jColor(c) {
-						const r = resolveColor(p, c);
-						fm.patch(jId, { stroke: r.stroke });
-						return this;
-					},
-					scale(s) {
-						const ns = scr([o[0] + s, o[1]]);
-						fm.patch(iId, { to: ns });
-						const nj = scr([o[0], o[1] + s]);
-						fm.patch(jId, { to: nj });
-						return this;
-					},
-					strokeW(n) {
-						fm.patch(iId, { strokeW: n });
-						fm.patch(jId, { strokeW: n });
-						return this;
-					},
-					opacity(v) {
-						fm.patch(iId, { opacity: v });
-						fm.patch(jId, { opacity: v });
-						return this;
-					}
-				};
-			},
-			matrix(mid, data, mOpts = {}) {
-				return matrixPrimitive(mid, data, {
-					...mOpts,
-					x: mOpts.x !== void 0 ? scr([mOpts.x, 0])[0] : void 0,
-					y: mOpts.y !== void 0 ? scr([0, mOpts.y])[1] : void 0
-				});
-			},
-			rect(rid, cx, cy, w, h) {
-				const hw = w / 2, hh = h / 2;
-				return polygon(rid, [
-					[cx - hw, cy - hh],
-					[cx + hw, cy - hh],
-					[cx + hw, cy + hh],
-					[cx - hw, cy + hh]
-				].map((p) => scr(p)));
-			},
-			ngon(nid, cx, cy, r, sides) {
-				const c = scr([cx, cy]);
-				return _wrap(ngon(nid, c[0], c[1], r * scX, sides));
-			},
-			ellipse(eid$1, cx, cy, rx, ry, n) {
-				const c = scr([cx, cy]);
-				return _wrap(ellipse(eid$1, c[0], c[1], rx * scX, ry * scY, n));
-			}
-		};
-	}
-	function viewport(config = {}) {
-		const cfg = {
-			x: [-6, 6],
-			y: [-4, 4],
-			margin: .15,
-			nice: true,
-			showAxes: true,
-			showGrid: true,
-			showOrigin: true,
-			xLabel: "x",
-			yLabel: "y",
-			...config
-		};
-		const c = coords("vp", "center", cfg);
-		if (cfg.showAxes) c.axes();
-		if (cfg.showGrid) c.grid(cfg.gridSpacing !== void 0 || cfg.gridDash !== void 0 || cfg.gridColor !== void 0 ? {} : {
-			spacing: "auto",
-			color: "dim"
-		});
-		if (cfg.showOrigin) c.point("O", 0, 0, {
-			color: "primary",
-			label: "O",
-			size: 5
-		});
-		return c;
-	}
-	function matrixPrimitive(id, data, opts = {}) {
-		const eid$20 = eid("mat", id);
-		const r = resolveColor(p, opts.color);
-		fm.declare(eid$20, {
-			type: "group",
-			subtype: "matrix",
-			data,
-			x: opts.x ?? 0,
-			y: opts.y ?? 0,
-			cellW: opts.cellW,
-			cellH: opts.cellH,
-			stroke: r.stroke,
-			label: opts.label ?? ""
-		});
-		return {
-			set(newData) {
-				patch(eid$20, { data: newData });
-				return this;
-			},
-			color(c) {
-				patch(eid$20, { stroke: resolveColor(p, c).stroke });
-				return this;
-			},
-			label(t) {
-				patch(eid$20, { label: t });
-				return this;
-			},
-			moveTo(x, y) {
-				patch(eid$20, {
-					x,
-					y
-				});
-				return this;
-			},
-			...mixOpacity(eid$20, fm)
-		};
-	}
-	function basisPrimitive(id, origin, opts = {}) {
-		const s = opts.scale ?? 50;
-		const sw = opts.strokeW ?? 2;
-		const ox = origin[0], oy = origin[1];
-		const iId = eid("vector", id + "-i");
-		const jId = eid("vector", id + "-j");
-		const defaultStroke = resolveColor(p, opts.color).stroke;
-		const iStroke = opts.iColor ? resolveColor(p, opts.iColor).stroke : defaultStroke || p.accent.fg;
-		const jStroke = opts.jColor ? resolveColor(p, opts.jColor).stroke : defaultStroke || p.danger.fg;
-		const iLabel = opts.iLabel ?? "î";
-		const jLabel = opts.jLabel ?? "ĵ";
-		fm.declare(iId, {
-			type: "line",
-			marker: "arrow",
-			from: [ox, oy],
-			to: [ox + s, oy],
-			stroke: iStroke,
-			strokeW: sw,
-			label: iLabel,
-			labelPlace: "below",
-			labelGap: 10
-		});
-		fm.declare(jId, {
-			type: "line",
-			marker: "arrow",
-			from: [ox, oy],
-			to: [ox, oy - s],
-			stroke: jStroke,
-			strokeW: sw,
-			label: jLabel,
-			labelPlace: "left",
-			labelGap: 10
-		});
-		return {
-			color(c) {
-				const r = resolveColor(p, c);
-				fm.patch(iId, { stroke: r.stroke });
-				fm.patch(jId, { stroke: r.stroke });
-				return this;
-			},
-			iColor(c) {
-				const r = resolveColor(p, c);
-				fm.patch(iId, { stroke: r.stroke });
-				return this;
-			},
-			jColor(c) {
-				const r = resolveColor(p, c);
-				fm.patch(jId, { stroke: r.stroke });
-				return this;
-			},
-			scale(v) {
-				fm.patch(iId, { to: [ox + v, oy] });
-				fm.patch(jId, { to: [ox, oy - v] });
-				return this;
-			},
-			strokeW(n) {
-				fm.patch(iId, { strokeW: n });
-				fm.patch(jId, { strokeW: n });
-				return this;
-			},
-			...mixOpacity(iId, fm)
-		};
-	}
-	return {
-		point,
-		vector,
-		segment,
-		polyline,
-		circle,
-		polygon,
-		angle,
-		rightAngle,
-		projection,
-		fill,
-		fillFn,
-		coords,
-		viewport,
-		fn,
-		grid,
-		axes,
-		rect,
-		ngon,
-		ellipse,
-		symbol,
-		arc,
-		matrix: matrixPrimitive,
-		basis: basisPrimitive
-	};
-}
-
-//#endregion
-//#region vis/graph.ts
-function createGraph(fm, ctx, palette) {
-	const p = palette;
-	function localResolveColor(c) {
-		const col = p[c];
-		if (col) return {
-			stroke: col.fg,
-			fill: col.bg
-		};
-		return {
-			stroke: c,
-			fill: c
-		};
-	}
-	function patch(eid, fm, props) {
-		fm.patch(eid, props);
-	}
-	const _vertices = /* @__PURE__ */ new Map();
-	function vertex(id, pos) {
-		const eid$1 = eid("vertex", id);
-		const r = 10;
-		const stroke = p.primary.fg;
-		const fill = p.primary.a(15);
-		fm.declare(eid$1, {
-			type: "node",
-			x: pos[0],
-			y: pos[1],
-			r,
-			stroke,
-			fill,
-			label: id
-		});
-		const v = {
-			id,
-			x: pos[0],
-			y: pos[1],
-			_r: r,
-			_stroke: stroke,
-			_fill: fill,
-			pos() {
-				return [this.x, this.y];
-			},
-			color(c) {
-				const resolved = localResolveColor(c);
-				this._stroke = resolved.stroke;
-				this._fill = resolved.fill;
-				fm.patch(eid$1, {
-					stroke: this._stroke,
-					fill: this._fill
-				});
-				return this;
-			},
-			label(t) {
-				fm.patch(eid$1, { label: t });
-				return this;
-			},
-			size(r) {
-				this._r = r;
-				fm.patch(eid$1, { r });
-				return this;
-			},
-			fill(c) {
-				this._fill = c;
-				fm.patch(eid$1, { fill: c });
-				return this;
-			}
-		};
-		_vertices.set(id, v);
-		return v;
-	}
-	function edge(a, b, opts) {
-		const va = typeof a === "string" ? _vertices.get(a) : a;
-		const vb = typeof b === "string" ? _vertices.get(b) : b;
-		if (!va || !vb) {
-			const missing = !va ? typeof a === "string" ? a : a?.id : typeof b === "string" ? b : b?.id;
-			throw new Error(`edge(): vertex "${missing}" not found. Ensure vertex() is called before edge() in the same frame.`);
-		}
-		if (isNaN(va.x) || isNaN(va.y) || isNaN(vb.x) || isNaN(vb.y)) throw new Error(`edge(${va.id}, ${vb.id}): vertex position is NaN. Check that vertex coordinates are valid numbers.`);
-		const eid$2 = eid("edge", va.id + ":" + vb.id);
-		const stroke = p.dim.fg;
-		const strokeW = 1.8;
-		const directed = opts?.directed !== false;
-		const gap = opts?.gap ?? 4;
-		const marker = opts?.marker;
-		const { x1, y1, x2, y2 } = offsetLine([va.x, va.y], [vb.x, vb.y], va._r + gap, vb._r + markerHalf(marker), directed);
-		fm.declare(eid$2, {
-			type: "line",
-			from: va.id,
-			to: vb.id,
-			x1,
-			y1,
-			x2,
-			y2,
-			stroke,
-			strokeW,
-			dash: "",
-			directed,
-			marker: marker ?? null
-		});
-		return {
-			color(c) {
-				const resolved = localResolveColor(c);
-				fm.patch(eid$2, { stroke: resolved.stroke });
-				return this;
-			},
-			strokeW(n) {
-				fm.patch(eid$2, { strokeW: n });
-				return this;
-			},
-			dashed(d = "5 4") {
-				fm.patch(eid$2, { dash: d });
-				return this;
-			},
-			label(t) {
-				return this;
-			},
-			weight(n) {
-				return this;
-			}
-		};
-	}
-	function layout(type, vertices, edges, opts) {
-		const n = vertices.length;
-		if (n === 0) return;
-		const cx = opts?.center?.[0] ?? ctx.W / 2;
-		const cy = opts?.center?.[1] ?? ctx.H / 2;
-		switch (type) {
-			case "circular": {
-				const r = opts?.radius ?? Math.min(ctx.W, ctx.H) * .35;
-				vertices.forEach((v, i) => {
-					const angle = 2 * Math.PI * i / n - Math.PI / 2;
-					v.x = cx + r * Math.cos(angle);
-					v.y = cy + r * Math.sin(angle);
-				});
-				break;
-			}
-			case "force": {
-				const sim = simulation_default(vertices).force("charge", manyBody_default().strength(-300)).force("center", center_default(cx, cy)).force("collision", collide_default().radius((d) => d._r + 2));
-				if (edges && edges.length > 0) {
-					const links = edges.map((e) => ({
-						source: e.from,
-						target: e.to
-					}));
-					sim.force("link", link_default(links).id((d) => d.id).distance(60));
-				}
-				sim.stop();
-				for (let i = 0; i < 300; i++) sim.tick();
-				break;
-			}
-		}
-		for (const v of vertices) fm.declare(eid("vertex", v.id), {
-			type: "node",
-			x: v.x,
-			y: v.y,
-			r: v._r,
-			stroke: v._stroke,
-			fill: v._fill,
-			label: v.label
-		});
-	}
-	const BLOCK_STYLE = {
-		muted: {
-			stroke: "dim",
-			strokeW: 1,
-			fill: "dim"
-		},
-		normal: {
-			stroke: "primary",
-			strokeW: 1.5,
-			fill: "primary"
-		},
-		active: {
-			stroke: "primary",
-			strokeW: 2,
-			fill: "primary"
-		}
-	};
-	function block(id, x, y, w, h, opts = {}) {
-		const eid$3 = eid("vertex", id);
-		if (x === void 0 && y === void 0 && fm.entities.has(eid$3)) {
-			const nd = fm.entities.get(eid$3).desired;
-			const curX = nd.x;
-			const curY = nd.y;
-			return {
-				id,
-				x: curX,
-				y: curY,
-				pos() {
-					return [curX, curY];
-				},
-				...coreNodeMixin(eid$3, fm, p),
-				size(nw, nh) {
-					patch(eid$3, fm, {
-						_blockW: nw,
-						_blockH: nh ?? nw
-					});
-					return this;
-				}
-			};
-		}
-		const safeW = w ?? 100, safeH = h ?? 100;
-		const safeX = (x ?? 0) + safeW / 2;
-		const safeY = (y ?? 0) + safeH / 2;
-		const sStyle = BLOCK_STYLE[opts.style ?? "normal"];
-		const stroke = opts.stroke ?? resolveColor(p, opts.stroke ?? sStyle.stroke).stroke;
-		const fill = opts.fill ?? resolveColor(p, opts.fill ?? sStyle.fill).fill;
-		fm.declare(eid$3, {
-			type: "node",
-			shape: "rect",
-			x: safeX,
-			y: safeY,
-			r: opts.rx ?? 8,
-			fill,
-			stroke,
-			strokeW: opts.strokeW ?? sStyle.strokeW,
-			opacity: opts.opacity ?? 1,
-			label: opts.label ?? "",
-			labelPlace: opts.labelPlace ?? "above",
-			_blockW: w,
-			_blockH: h
-		});
-		return {
-			id,
-			x: safeX,
-			y: safeY,
-			pos() {
-				return [safeX, safeY];
-			},
-			...coreNodeMixin(eid$3, fm, p),
-			size(nw, nh) {
-				patch(eid$3, fm, {
-					_blockW: nw,
-					_blockH: nh ?? nw
-				});
-				return this;
-			}
-		};
-	}
-	function array(id, x, y, items, opts = {}) {
-		const itemW = opts.itemW ?? 30;
-		const itemH = opts.itemH ?? 30;
-		const gap = opts.gap ?? 8;
-		const pad = opts.padding ?? 10;
-		const dir = opts.dir ?? "x";
-		const color = opts.color ?? "dim";
-		const n = items.length;
-		let w = 0, h = 0;
-		if (n === 0) {
-			w = pad * 2;
-			h = pad * 2;
-		} else if (dir === "x") {
-			w = pad * 2 + n * itemW + (n - 1) * gap;
-			h = pad * 2 + itemH;
-		} else {
-			w = pad * 2 + itemW;
-			h = pad * 2 + n * itemH + (n - 1) * gap;
-		}
-		block(`array-bg-${id}`, x, y, w, h, {
-			fill: opts.bg ?? "#f8fafc",
-			stroke: opts.color ?? "#cbd5e1",
-			strokeW: 1.2,
-			rx: 6,
-			label: opts.label,
-			labelPlace: "left"
-		});
-		const res = [];
-		const startX = x + pad + itemW / 2;
-		const startY = y + pad + itemH / 2;
-		items.forEach((item, i) => {
-			const ix = dir === "x" ? startX + i * (itemW + gap) : startX;
-			const iy = dir === "y" ? startY + i * (itemH + gap) : startY;
-			const nd = block(`array-${id}-item-${item}`, ix - itemW / 2, iy - itemH / 2, itemW, itemH, { rx: 4 }).color(color).label(item);
-			res.push(nd);
-		});
-		return res;
-	}
-	function layer(id, rank, opts = {}) {
-		const eid$4 = eid("fill", id);
-		const style = opts.style ?? "band";
-		const r = resolveColor(p, opts.color ?? "accent");
-		let y, h;
-		if (opts.totalRanks != null) {
-			const total = opts.totalRanks;
-			const gap = opts.layerGap ?? 4;
-			const startY = opts.startY ?? 48;
-			const available = (opts.endY ?? (ctx?.H ? ctx.H - 48 : 412)) - startY;
-			h = opts.h ?? (available - (total - 1) * gap) / total;
-			y = opts.y ?? startY + rank * (h + gap);
-		} else {
-			y = opts.y ?? 0;
-			h = opts.h ?? 60;
-		}
-		const x = opts.x ?? 0, w = opts.w ?? ctx?.W ?? 780;
-		const vertices = [
-			[x, y],
-			[x + w, y],
-			[x + w, y + h],
-			[x, y + h]
-		];
-		const rx = opts.rx ?? 8;
-		const label = opts.label ?? "";
-		const labelPlace = opts.labelPlace ?? "left";
-		const labelGap = opts.labelGap ?? 6;
-		if (style === "band") {
-			const fill = `color-mix(in oklab, ${r.stroke} 6%, var(--lv-mix-bg, white))`;
-			fm.declare(eid$4, {
-				type: "region",
-				shape: "polygon",
-				vertices,
-				stroke: "none",
-				fill,
-				strokeW: 0,
-				...opts.opacity !== void 0 ? { opacity: opts.opacity } : {},
-				_rx: rx,
-				label,
-				labelPlace,
-				labelGap
-			});
-			return {
-				color(c) {
-					patch(eid$4, fm, { fill: `color-mix(in oklab, ${resolveColor(p, c).stroke} 6%, var(--lv-mix-bg, white))` });
-					return this;
-				},
-				...mixOpacity(eid$4, fm),
-				...mixLabel(eid$4, fm),
-				...mixDashed(eid$4, fm),
-				...mixStrokeW(eid$4, fm)
-			};
-		}
-		const dash = opts.dash ?? "4 3";
-		const strokeW = opts.strokeW ?? 1.2;
-		const opacity = opts.opacity ?? .7;
-		const fill = r.fill + " / 0.05";
-		fm.declare(eid$4, {
-			type: "region",
-			shape: "polygon",
-			vertices,
-			stroke: r.stroke,
-			fill,
-			strokeW,
-			dash,
-			opacity,
-			_rx: rx,
-			label,
-			labelPlace,
-			labelGap
-		});
-		return {
-			color(c) {
-				const rc = resolveColor(p, c);
-				patch(eid$4, fm, {
-					stroke: rc.stroke,
-					fill: rc.fill + " / 0.05"
-				});
-				return this;
-			},
-			...mixOpacity(eid$4, fm),
-			...mixLabel(eid$4, fm),
-			...mixDashed(eid$4, fm),
-			...mixStrokeW(eid$4, fm)
-		};
-	}
-	function layers(count, opts = {}) {
-		const results = [];
-		for (let i = 0; i < count; i++) {
-			const label = opts.labels?.[i] ?? `L${i}`;
-			results.push(layer(`L${i}`, i, {
-				...opts,
-				totalRanks: count,
-				label
-			}));
-		}
-		return results;
-	}
-	return {
-		vertex,
-		edge,
-		layout,
-		block,
-		array,
-		layer,
-		layers
-	};
-}
-
-//#endregion
-//#region vis/renderer/svg.ts
-/** Dev-mode NaN guard: warns with entity context before the browser swallows the error.
-*  Called from rendering hot paths — cheap isNaN check, no allocations. */
-function _checkNaN(id, coords) {
-	for (const key of Object.keys(coords)) if (isNaN(coords[key])) console.warn(`[learnvis] NaN in entity "${id}" — ${key}=${coords[key]}. Check upstream math or missing vertex declarations.`);
-}
-function svgLineColor(stroke) {
-	if (!stroke || stroke === "none") return "none";
-	return `color-mix(in oklab, ${svgColor(stroke)} 70%, var(--lv-mix-bg, white))`;
-}
-function getPathParams(pts) {
-	const dists = [0];
-	let total = 0;
-	for (let i = 0; i < pts.length - 1; i++) {
-		const d = Math.hypot(pts[i + 1][0] - pts[i][0], pts[i + 1][1] - pts[i][1]);
-		total += d;
-		dists.push(total);
-	}
-	return {
-		dists,
-		total
-	};
-}
-function samplePolyline(pts, params, t) {
-	if (t <= 0) return pts[0];
-	if (t >= 1) return pts[pts.length - 1];
-	const target = t * params.total;
-	for (let i = 0; i < params.dists.length - 1; i++) {
-		const d1 = params.dists[i], d2 = params.dists[i + 1];
-		if (target >= d1 && target <= d2) {
-			const segLen = d2 - d1;
-			const ratio = segLen === 0 ? 0 : (target - d1) / segLen;
-			const p1 = pts[i], p2 = pts[i + 1];
-			return [p1[0] + (p2[0] - p1[0]) * ratio, p1[1] + (p2[1] - p1[1]) * ratio];
-		}
-	}
-	return pts[pts.length - 1];
-}
-function alignPolylines(ptsA, ptsB) {
-	if (ptsA.length < 2) ptsA = [ptsA[0] || [0, 0], ptsA[0] || [0, 0]];
-	if (ptsB.length < 2) ptsB = [ptsB[0] || [0, 0], ptsB[0] || [0, 0]];
-	const pA = getPathParams(ptsA);
-	const pB = getPathParams(ptsB);
-	const tSet = /* @__PURE__ */ new Set();
-	if (pA.total > 0) pA.dists.forEach((d) => tSet.add(d / pA.total));
-	else {
-		tSet.add(0);
-		tSet.add(1);
-	}
-	if (pB.total > 0) pB.dists.forEach((d) => tSet.add(d / pB.total));
-	else {
-		tSet.add(0);
-		tSet.add(1);
-	}
-	tSet.add(0);
-	tSet.add(1);
-	const tVals = Array.from(tSet).sort((a, b) => a - b);
-	return [tVals.map((t) => samplePolyline(ptsA, pA, t)), tVals.map((t) => samplePolyline(ptsB, pB, t))];
-}
-function resolveLinePoints(ld, id) {
-	if (ld.points && ld.points.length >= 2) return ld.points;
-	let x1, y1, x2, y2;
-	if (ld._tf && ld._base) {
-		const b = ld._base;
-		const res = applyLine(b.from, b.to, ld._tf);
-		x1 = res.from[0];
-		y1 = res.from[1];
-		x2 = res.to[0];
-		y2 = res.to[1];
-	} else {
-		x1 = ld.x1 ?? ld.from?.[0] ?? ld.a?.[0] ?? 0;
-		y1 = ld.y1 ?? ld.from?.[1] ?? ld.a?.[1] ?? 0;
-		x2 = ld.x2 ?? ld.to?.[0] ?? ld.b?.[0] ?? 0;
-		y2 = ld.y2 ?? ld.to?.[1] ?? ld.b?.[1] ?? 0;
-	}
-	if (id) _checkNaN(id, {
-		x1,
-		y1,
-		x2,
-		y2
-	});
-	return [[x1, y1], [x2, y2]];
-}
-/** Construct identity-equivalent transforms matching the structure of the given list.
-*  Used to enable smooth attrTween interpolation when one side lacks _tf. */
-function identityTransforms(tf) {
-	return tf.map((t) => {
-		switch (t.type) {
-			case "rotate": return {
-				type: "rotate",
-				angle: 0,
-				cx: t.cx,
-				cy: t.cy
-			};
-			case "scale": return {
-				type: "scale",
-				sx: 1,
-				sy: 1
-			};
-			case "translate": return {
-				type: "translate",
-				dx: 0,
-				dy: 0
-			};
-			case "matrix": return {
-				type: "matrix",
-				a: 1,
-				b: 0,
-				c: 0,
-				d: 1,
-				tx: 0,
-				ty: 0
-			};
-		}
-	});
-}
-/** Pad both transform arrays to the same length with identity-equivalent transforms.
-*  Without this, interpolate() (which maps over the old array) would miss extra
-*  transforms in the new array — e.g. old=[rotate(45)], new=[rotate(45),scale(2)]
-*  would never interpolate the scale, causing the animation to appear frozen. */
-function normalizeTransforms(oldTf, newTf) {
-	const maxLen = Math.max(oldTf.length, newTf.length);
-	if (oldTf.length < maxLen) oldTf = [...oldTf, ...identityTransforms(newTf.slice(oldTf.length))];
-	if (newTf.length < maxLen) newTf = [...newTf, ...identityTransforms(oldTf.slice(newTf.length))];
-	return {
-		old: oldTf,
-		new: newTf
-	};
-}
-function markerFor(stroke, cache, svg, config) {
-	if (!stroke) return void 0;
-	const size = config?.size ?? 10, w = config?.width ?? size, h = config?.height ?? size;
-	const offset = config?.offset ?? 0, open = config?.open ?? false;
-	const key = `${stroke}|${size}|${w}|${h}|${offset}|${open}`;
-	if (!cache[key]) {
-		let defs = svg.select("defs");
-		if (defs.empty()) defs = svg.append("defs");
-		const id = "fm" + Object.keys(cache).length;
-		const vbW = w + offset + 2;
-		const m = defs.append("marker").attr("id", id).attr("viewBox", `0 0 ${vbW} ${h}`).attr("refX", vbW / 2).attr("refY", h / 2).attr("markerWidth", vbW).attr("markerHeight", h).attr("markerUnits", "userSpaceOnUse").attr("orient", "auto");
-		if (open) m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h}`).attr("fill", svgColor("none")).attr("stroke", svgColor(stroke)).attr("stroke-width", 1.5);
-		else m.append("path").attr("d", `M2,0 L${vbW},${h / 2} L2,${h} Z`).attr("fill", svgColor(stroke));
-		cache[key] = id;
-	}
-	return `url(#${cache[key]})`;
-}
-function applyCommon(svg, opacity) {
-	if (opacity != null) svg.attr("opacity", opacity);
-}
-function _angleArc(vx, vy, r1x, r1y, r2x, r2y, arcR) {
-	let a1 = Math.atan2(r1y - vy, r1x - vx), a2 = Math.atan2(r2y - vy, r2x - vx);
-	if (a1 < 0) a1 += 2 * Math.PI;
-	if (a2 < 0) a2 += 2 * Math.PI;
-	if (Math.abs(a2 - a1) < .001) a2 = a1 + .02;
-	const cwLen = a2 >= a1 ? a2 - a1 : 2 * Math.PI - a1 + a2;
-	const ccwLen = a2 < a1 ? a1 - a2 : a1 + (2 * Math.PI - a2);
-	const sweep = cwLen <= ccwLen ? 1 : 0;
-	const arcLen = sweep === 1 ? cwLen : ccwLen;
-	const ma = sweep === 1 ? a1 + arcLen / 2 : a1 - arcLen / 2;
-	const x1 = vx + arcR * Math.cos(a1), y1 = vy + arcR * Math.sin(a1);
-	const x2 = vx + arcR * Math.cos(a2), y2 = vy + arcR * Math.sin(a2);
-	return {
-		a1,
-		a2,
-		sweep,
-		ma,
-		path: `M${x1},${y1} A${arcR},${arcR} 0 0,${sweep} ${x2},${y2}`
-	};
-}
-function drawEntity(ctx, id, d, markerCache) {
-	const { bg, nodes, edges, overlay } = ctx.stage;
-	switch (d.type) {
-		case "node": {
-			const nd = d;
-			_checkNaN(id, {
-				x: nd.x,
-				y: nd.y
-			});
-			const g = nodes.append("g").attr("data-id", id);
-			if (nd.shape === "rect") {
-				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				g.append("rect").attr("class", "shp").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("rx", nd.rx ?? 5).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			} else if (nd.shape === "symbol") {
-				const sym = globalThis.d3?.symbol?.().type?.(globalThis.d3?.[nd.symType ?? "symbolCircle"] ?? globalThis.d3?.symbolCircle)?.size?.((nd.r ?? 8) ** 2)?.();
-				g.append("path").attr("data-id", id).attr("d", sym ? `${sym}` : "").attr("transform", `translate(${nd.x},${nd.y})`).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.2);
-			} else g.append("circle").attr("class", "shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			applyCommon(g, nd.opacity);
-			const label = nd.label || "";
-			let text = null;
-			if (label) {
-				nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
-				const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
-				const gap = nd.labelGap ?? 12;
-				const place = nd.labelPlace ?? "above";
-				let ly, anchor = "middle";
-				if (place === "above") ly = nd.y - bh / 2 - gap;
-				else if (place === "below") ly = nd.y + bh / 2 + gap;
-				else if (place === "left") {
-					ly = nd.y;
-					anchor = "end";
-				} else if (place === "right") {
-					ly = nd.y;
-					anchor = "start";
-				} else ly = nd.y - bh / 2 - gap;
-				text = g.append("text").attr("class", "vlbl-txt").attr("font-size", "11px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(nd.stroke)).attr("font-weight", "600").attr("x", nd.x).attr("y", ly).attr("text-anchor", anchor).text(label);
-			}
-			return {
-				group: g,
-				text
-			};
-		}
-		case "line": {
-			const ld = d;
-			const ptsStr = resolveLinePoints(ld, id).map((p) => p.join(",")).join(" ");
-			const hasMarker = ld.marker === "arrow" || ld.directed;
-			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", "none").attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "").attr("stroke-linecap", "round").attr("stroke-linejoin", "round").attr("marker-end", hasMarker ? markerFor(ld.stroke, markerCache, ctx.svg, ld._markerCfg ?? null) ?? null : null);
-			applyCommon(el, ld.opacity);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		case "region": {
-			const rd = d;
-			if (rd.shape === "circle") {
-				const el = bg.append("circle").attr("data-id", id).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
-				applyCommon(el, rd.opacity);
-				return {
-					group: el,
-					text: null
-				};
-			}
-			if (rd.shape === "arc") {
-				const a = globalThis.d3?.arc?.()?.({
-					innerRadius: rd.innerR ?? 0,
-					outerRadius: rd.outerR ?? 0,
-					startAngle: rd.startAngle ?? 0,
-					endAngle: rd.endAngle ?? 0
-				}) ?? "";
-				const el = bg.append("path").attr("data-id", id).attr("d", `${a}`).attr("transform", `translate(${rd.cx ?? 0},${rd.cy ?? 0})`).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill)).attr("stroke-width", rd.strokeW ?? 1.2);
-				applyCommon(el, rd.opacity);
-				return {
-					group: el,
-					text: null
-				};
-			}
-			let pts;
-			if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
-			else pts = rd.pts ?? rd.vertices ?? [];
-			const ptsStr = pts.map((p) => p.join(",")).join(" ");
-			const el = bg.append("polygon").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0).attr("stroke-dasharray", rd.dash ?? "");
-			applyCommon(el, rd.opacity);
-			let rt = null;
-			const rlabel = rd.label ?? "";
-			if (rlabel) {
-				const minX = Math.min(...pts.map((p) => p[0]));
-				const maxX = Math.max(...pts.map((p) => p[0]));
-				const minY = Math.min(...pts.map((p) => p[1]));
-				const maxY = Math.max(...pts.map((p) => p[1]));
-				const cx = (minX + maxX) / 2;
-				const cy = (minY + maxY) / 2;
-				const gap = rd.labelGap ?? 6;
-				let lx, ly, anchor;
-				switch (rd.labelPlace) {
-					case "above":
-						lx = cx;
-						ly = minY - gap;
-						anchor = "middle";
-						break;
-					case "below":
-						lx = cx;
-						ly = maxY + gap;
-						anchor = "middle";
-						break;
-					case "left":
-						lx = minX + gap;
-						ly = minY + 14;
-						anchor = "start";
-						break;
-					case "right":
-						lx = maxX + gap;
-						ly = minY + 10;
-						anchor = "start";
-						break;
-					default:
-						lx = cx;
-						ly = cy + 4;
-						anchor = "middle";
-						break;
-				}
-				rt = bg.append("text").attr("class", "vlbl-txt").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", "#888").attr("font-weight", "500").attr("x", lx).attr("y", ly).attr("text-anchor", anchor).text(rlabel);
-			}
-			return {
-				group: el,
-				text: rt
-			};
-		}
-		case "curve": {
-			const cd = d;
-			const [d0, d1] = cd.domain, n = cd.samples ?? 200;
-			const step = (d1 - d0) / (n - 1), ox = cd.x, oy = cd.y;
-			const pw = cd.width, ph = cd.height;
-			const fn = new Function("x", `return (${cd.f})(x)`);
-			let yMin = Infinity, yMax = -Infinity;
-			for (let i = 0; i < n; i++) {
-				const y = fn(d0 + i * step);
-				if (y < yMin) yMin = y;
-				if (y > yMax) yMax = y;
-			}
-			let r0 = yMin, r1 = yMax;
-			if (cd.range) [r0, r1] = cd.range;
-			if (r0 === r1) {
-				r0 -= 1;
-				r1 += 1;
-			}
-			const sx = (x) => ox + (x - d0) / (d1 - d0) * pw;
-			const sy = (y) => oy - (y - r0) / (r1 - r0) * ph;
-			const ptsStr = Array.from({ length: n }, (_, i) => {
-				const xv = d0 + i * step;
-				return [sx(xv), sy(fn(xv))].join(",");
-			}).join(" ");
-			const el = edges.append("polyline").attr("data-id", id).attr("points", ptsStr).attr("fill", svgColor("none")).attr("stroke", svgColor(cd.stroke)).attr("stroke-width", cd.strokeW).attr("stroke-dasharray", cd.dash ?? "");
-			applyCommon(el, cd.opacity);
-			return {
-				group: el,
-				text: null
-			};
-		}
-		case "group": {
-			const gd = d;
-			if (gd.subtype === "angle") {
-				const gv = overlay.append("g").attr("data-id", id);
-				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
-				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				gv.append("path").attr("d", arc.path).attr("fill", svgColor("none")).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
-				let text = null;
-				const label = gd.label ?? "";
-				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-					const lr = (gd.arcR ?? 30) + 12;
-					text = gv.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
-				}
-				applyCommon(gv, gd.opacity);
-				return {
-					group: gv,
-					text
-				};
-			}
-			const g = bg.append("g").attr("data-id", id);
-			if (gd.subtype === "axes") {
-				const ox = gd.ox ?? 0, oy = gd.oy ?? 0, xl = gd.xl ?? 300, yl = gd.yl ?? 200, sw = gd.strokeW ?? 1.4;
-				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox + xl + 10).attr("y2", oy).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
-				g.append("polygon").attr("points", `${ox + xl + 10},${oy} ${ox + xl},${oy - 6} ${ox + xl},${oy + 6}`).attr("fill", svgColor(gd.stroke));
-				g.append("line").attr("x1", ox).attr("y1", oy).attr("x2", ox).attr("y2", oy - yl - 10).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
-				g.append("polygon").attr("points", `${ox},${oy - yl - 10} ${ox - 6},${oy - yl} ${ox + 6},${oy - yl}`).attr("fill", svgColor(gd.stroke));
-				g.append("circle").attr("cx", ox).attr("cy", oy).attr("r", 3).attr("fill", svgColor("#fff")).attr("stroke", svgColor(gd.stroke)).attr("stroke-width", sw);
-			} else if (gd.subtype === "grid") drawGridLines(g, gd);
-			else if (gd.subtype === "matrix") {
-				const data = gd.data ?? [[0]];
-				const rows = data.length, cols = data[0]?.length ?? 1;
-				const x = gd.x ?? 0, y = gd.y ?? 0;
-				const cw = gd.cellW ?? 40, ch = gd.cellH ?? 22;
-				const st = svgColor(gd.stroke ?? "#222");
-				const font = "JetBrains Mono,monospace";
-				const fmt = (v) => Number.isInteger(v) ? `${v}` : v.toFixed(2).replace(/\.?0+$/, "") || "0";
-				const bh = rows * ch;
-				g.append("text").attr("x", x).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("[");
-				for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) g.append("text").attr("x", x + 12 + c * cw + cw / 2).attr("y", y + r * ch + ch / 2).attr("font-size", "13px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text(fmt(data[r]?.[c] ?? 0));
-				g.append("text").attr("x", x + 12 + cols * cw + 4).attr("y", y + bh / 2).attr("font-size", `${bh + 4}px`).attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").attr("dominant-baseline", "central").text("]");
-				if (gd.label) g.append("text").attr("x", x + 12 + cols * cw / 2).attr("y", y + bh + 18).attr("font-size", "10px").attr("fill", st).attr("font-family", font).attr("text-anchor", "middle").text(gd.label);
-			}
-			applyCommon(g, gd.opacity);
-			return {
-				group: g,
-				text: null
-			};
-		}
-	}
-}
-/** Clip a line through point P in direction D to the rectangle [rx, ry, rw, rh].
-*  Returns the two intersection points, or null if the line misses the rect. */
-function clipLineToRect(px, py, dx, dy, rx, ry, rw, rh) {
-	const M = 2;
-	const xMin = rx - M, yMin = ry - M;
-	const xMax = rx + rw + M, yMax = ry + rh + M;
-	let tMin = -Infinity, tMax = Infinity;
-	if (Math.abs(dx) > 1e-10) {
-		const t1 = (xMin - px) / dx, t2 = (xMax - px) / dx;
-		if (t1 > t2) {
-			tMin = Math.max(tMin, t2);
-			tMax = Math.min(tMax, t1);
-		} else {
-			tMin = Math.max(tMin, t1);
-			tMax = Math.min(tMax, t2);
-		}
-	} else if (px < xMin || px > xMax) return null;
-	if (Math.abs(dy) > 1e-10) {
-		const t1 = (yMin - py) / dy, t2 = (yMax - py) / dy;
-		if (t1 > t2) {
-			tMin = Math.max(tMin, t2);
-			tMax = Math.min(tMax, t1);
-		} else {
-			tMin = Math.max(tMin, t1);
-			tMax = Math.min(tMax, t2);
-		}
-	} else if (py < yMin || py > yMax) return null;
-	if (tMin > tMax) return null;
-	return [
-		px + tMin * dx,
-		py + tMin * dy,
-		px + tMax * dx,
-		py + tMax * dy
-	];
-}
-function computeGridLines(gd) {
-	const ax = gd.ox ?? 0, ay = gd.oy ?? 0;
-	const rx = gd.gx ?? 0, ry = gd.gy ?? 0;
-	const rw = gd.w ?? 400, rh = gd.h ?? 300;
-	const ix = gd.ix ?? 0, iy = gd.iy ?? 0, jx = gd.jx ?? 0, jy = gd.jy ?? 0;
-	const scr = (mx, my) => [ax + mx * ix + my * jx, ay + mx * iy + my * jy];
-	if (gd.mx0 !== void 0 && gd.mx1 !== void 0 && gd.my0 !== void 0 && gd.my1 !== void 0) {
-		const step = gd.mStep ?? 1;
-		const lines = [];
-		const toKey = (n) => Number.isInteger(n) ? String(n) : parseFloat(n.toFixed(8)).toString();
-		for (let mx = gd.mx0; mx <= gd.mx1 + step * .5; mx += step) {
-			const [x1, y1] = scr(mx, gd.my0);
-			const [x2, y2] = scr(mx, gd.my1);
-			lines.push({
-				x1,
-				y1,
-				x2,
-				y2,
-				key: "X" + toKey(mx)
-			});
-		}
-		for (let my = gd.my0; my <= gd.my1 + step * .5; my += step) {
-			const [x1, y1] = scr(gd.mx0, my);
-			const [x2, y2] = scr(gd.mx1, my);
-			lines.push({
-				x1,
-				y1,
-				x2,
-				y2,
-				key: "Y" + toKey(my)
-			});
-		}
-		return lines;
-	}
-	const sp = gd.sp ?? 40;
-	const iux = ix || 1, iuy = iy || 0, jux = jx || 0, juy = jy || -1;
-	const diag = Math.sqrt(rw * rw + rh * rh);
-	const kMax = Math.ceil(diag / sp) + 1;
-	function generateFamily(tag, lineDx, lineDy, perpDx, perpDy) {
-		const lines = [];
-		const perpLen = Math.sqrt(perpDx * perpDx + perpDy * perpDy) || 1;
-		const pux = perpDx / perpLen, puy = perpDy / perpLen;
-		for (let k = -kMax; k <= kMax; k++) {
-			const s = k * sp;
-			const seg = clipLineToRect(ax + s * pux, ay + s * puy, lineDx, lineDy, rx, ry, rw, rh);
-			if (seg) lines.push({
-				x1: seg[0],
-				y1: seg[1],
-				x2: seg[2],
-				y2: seg[3],
-				key: tag + k
-			});
-		}
-		return lines;
-	}
-	return [...generateFamily("I", iux, iuy, -iuy, iux), ...generateFamily("J", jux, juy, -jy, jux)];
-}
-function drawGridLines(g, gd, transition) {
-	const data = computeGridLines(gd);
-	const stroke = svgColor(gd.stroke);
-	const sw = gd.strokeW ?? .3;
-	const dash = gd.dash ?? null;
-	const lines = g.selectAll("line").data(data, (d) => d.key);
-	if (transition) lines.exit().transition(transition).attr("opacity", 0).remove();
-	else lines.exit().remove();
-	const enter = lines.enter().append("line").attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", transition ? 0 : 1);
-	if (dash) enter.attr("stroke-dasharray", dash);
-	const merged = enter.merge(lines);
-	if (transition) merged.transition(transition).attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("opacity", 1).attr("stroke-dasharray", dash ?? null);
-	else merged.attr("x1", (d) => d.x1).attr("y1", (d) => d.y1).attr("x2", (d) => d.x2).attr("y2", (d) => d.y2).attr("stroke", stroke).attr("stroke-width", sw).attr("stroke-dasharray", dash ?? null);
-}
-function transitionEntity(svg, text, oldState, newState, tr, markerCache, svgRoot) {
-	switch (newState.type) {
-		case "node": {
-			const nd = newState;
-			if (nd.shape === "rect") {
-				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				svg.select("rect").interrupt().transition(tr).attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			} else svg.select(".shp").interrupt().transition(tr).attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			applyCommon(svg, nd.opacity);
-			break;
-		}
-		case "line": {
-			const ld = newState;
-			const oldLd = oldState;
-			const lineId = svg.attr("data-id") || "unknown";
-			const [oldResampled, newResampled] = alignPolylines(resolveLinePoints(oldLd, lineId), resolveLinePoints(ld, lineId));
-			svg.interrupt().transition(tr).attrTween("points", () => (t) => {
-				return oldResampled.map((op, i) => {
-					const np = newResampled[i];
-					return `${op[0] + (np[0] - op[0]) * t},${op[1] + (np[1] - op[1]) * t}`;
-				}).join(" ");
-			}).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW).attr("stroke-dasharray", ld.dash ?? "");
-			if (ld.opacity != null) svg.transition(tr).attr("opacity", ld.opacity);
-			break;
-		}
-		case "region": {
-			const rd = newState;
-			if (rd.shape === "circle") svg.interrupt().transition(tr).attr("cx", rd.cx ?? 0).attr("cy", rd.cy ?? 0).attr("r", rd.r ?? 0).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? rd.fill));
-			else {
-				const oldRd = oldState;
-				let oldTf = oldRd._tf;
-				let newTf = rd._tf;
-				let regionBase;
-				if (rd._tf && rd._base && "vertices" in rd._base) {
-					regionBase = rd._base.vertices;
-					if (!oldRd._tf) oldTf = identityTransforms(rd._tf);
-				}
-				if (oldRd._tf && oldRd._base && "vertices" in oldRd._base && !regionBase) {
-					regionBase = oldRd._base.vertices;
-					if (!rd._tf) newTf = identityTransforms(oldRd._tf);
-				}
-				if (regionBase && oldTf && newTf) {
-					const norm = normalizeTransforms(oldTf, newTf);
-					svg.interrupt().transition(tr).attrTween("points", () => (t) => applyVertices(regionBase, interpolate(norm.old, norm.new, t)).map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
-				} else {
-					let pts;
-					if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
-					else pts = rd.pts ?? rd.vertices ?? [];
-					svg.interrupt().transition(tr).attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none"));
-				}
-			}
-			if (rd.opacity != null) svg.transition(tr).attr("opacity", rd.opacity);
-			break;
-		}
-		case "group": {
-			const gd = newState;
-			if (gd.subtype === "angle") {
-				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
-				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				svg.select("path").interrupt().transition(tr).attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
-				const label = gd.label ?? "";
-				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-					const lr = (gd.arcR ?? 30) + 12;
-					if (text) text.interrupt().transition(tr).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-					else {
-						const existing = svg.select("text");
-						if (!existing.empty()) existing.interrupt().transition(tr).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-						else svg.append("text").attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-					}
-				} else if (text) text.text("");
-				else svg.select("text").text("");
-			} else if (gd.subtype === "grid") {
-				svg.interrupt();
-				drawGridLines(svg, gd, tr);
-			}
-			break;
-		}
-	}
-}
-function updateEntityImmediate(svg, text, d) {
-	switch (d.type) {
-		case "node": {
-			const nd = d;
-			if (nd.shape === "rect") {
-				const bw = nd._blockW ?? nd.w ?? 60, bh = nd._blockH ?? nd.h ?? 36;
-				svg.select("rect").attr("x", nd.x - bw / 2).attr("y", nd.y - bh / 2).attr("width", bw).attr("height", bh).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			} else svg.select(".shp").attr("cx", nd.x).attr("cy", nd.y).attr("r", nd.r ?? 4).attr("fill", svgColor(nd.fill)).attr("stroke", svgColor(nd.stroke)).attr("stroke-width", nd.strokeW ?? 1.5);
-			applyCommon(svg, nd.opacity);
-			break;
-		}
-		case "line": {
-			const ld = d;
-			const ptsStr = resolveLinePoints(ld, svg.attr("data-id") || "unknown").map((p) => p.join(",")).join(" ");
-			svg.attr("points", ptsStr).attr("stroke", svgLineColor(ld.stroke)).attr("stroke-width", ld.strokeW);
-			applyCommon(svg, ld.opacity);
-			break;
-		}
-		case "region": {
-			const rd = d;
-			let pts;
-			if (rd._tf && rd._base && "vertices" in rd._base) pts = applyVertices(rd._base.vertices, rd._tf);
-			else pts = rd.pts ?? rd.vertices ?? [];
-			svg.attr("points", pts.map((p) => p.join(",")).join(" ")).attr("fill", svgColor(rd.fill)).attr("stroke", svgColor(rd.stroke ?? "none")).attr("stroke-width", rd.strokeW ?? 0);
-			applyCommon(svg, rd.opacity);
-			break;
-		}
-		case "group": {
-			const gd = d;
-			if (gd.subtype === "angle") {
-				const [vx, vy] = gd.vertex ?? [0, 0], [r1x, r1y] = gd.ray1 ?? [0, 0], [r2x, r2y] = gd.ray2 ?? [0, 0];
-				const arc = _angleArc(vx, vy, r1x, r1y, r2x, r2y, gd.arcR ?? 30);
-				svg.select("path").attr("d", arc.path).attr("stroke", svgColor(gd.stroke ?? "#000")).attr("stroke-width", gd.strokeW ?? 1.5);
-				const label = gd.label ?? "";
-				if (label && Math.abs(arc.a2 - arc.a1) > .02) {
-					const lr = (gd.arcR ?? 30) + 12;
-					if (text) text.attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-					else {
-						const existing = svg.select("text");
-						if (!existing.empty()) existing.attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).text(label);
-						else svg.append("text").attr("x", vx + lr * Math.cos(arc.ma)).attr("y", vy + lr * Math.sin(arc.ma)).attr("text-anchor", "middle").attr("dominant-baseline", "middle").attr("font-size", "10px").attr("font-family", "JetBrains Mono,monospace").attr("fill", svgColor(gd.stroke ?? "#000")).text(label);
-					}
-				} else if (text) text.text("");
-				else svg.select("text").text("");
-			} else if (gd.subtype === "grid") drawGridLines(svg, gd);
-			break;
-		}
-	}
-}
-var SVGRenderer = class {
-	constructor(ctx) {
-		this.handles = /* @__PURE__ */ new Map();
-		this._markerCache = {};
-		this.ctx = ctx;
-	}
-	beginFrame() {
-		this.ctx.root.selectAll(".vlbl").remove();
-	}
-	commitFrame(opts) {
-		this._repositionLabels(opts);
-	}
-	create(id, state) {
-		const h = new SVGHandle(this.ctx, id, state, this._markerCache);
-		this.handles.set(id, h);
-		return h;
-	}
-	dispose() {
-		this.handles.clear();
-	}
-	_repositionLabels(opts) {
-		const edgeAngles = /* @__PURE__ */ new Map();
-		for (const [id, h] of this.handles) {
-			if (h.state.type !== "line") continue;
-			const ld = h.state;
-			const x1 = ld.x1 ?? ld.from?.[0] ?? 0, y1 = ld.y1 ?? ld.from?.[1] ?? 0;
-			const x2 = ld.x2 ?? ld.to?.[0] ?? 0, y2 = ld.y2 ?? ld.to?.[1] ?? 0;
-			const dx = x2 - x1, dy = y2 - y1;
-			const ang = Math.atan2(dy, dx);
-			const rev = ang > 0 ? ang - Math.PI : ang + Math.PI;
-			const fromNode = (ld._fromPort ?? "").split("-")[0] || ld.from?.id;
-			const toNode = (ld._toPort ?? "").split("-")[0] || ld.to?.id;
-			if (fromNode) {
-				if (!edgeAngles.has(fromNode)) edgeAngles.set(fromNode, []);
-				edgeAngles.get(fromNode).push(ang);
-			}
-			if (toNode) {
-				if (!edgeAngles.has(toNode)) edgeAngles.set(toNode, []);
-				edgeAngles.get(toNode).push(rev);
-			}
-		}
-		const dirs = [
-			{
-				place: "above",
-				angle: -Math.PI / 2,
-				dx: 0,
-				dy: -1,
-				anchor: "middle",
-				dyAttr: null
-			},
-			{
-				place: "below",
-				angle: Math.PI / 2,
-				dx: 0,
-				dy: 1,
-				anchor: "middle",
-				dyAttr: "0.6em"
-			},
-			{
-				place: "right",
-				angle: 0,
-				dx: 1,
-				dy: 0,
-				anchor: "start",
-				dyAttr: "0.35em"
-			},
-			{
-				place: "left",
-				angle: Math.PI,
-				dx: -1,
-				dy: 0,
-				anchor: "end",
-				dyAttr: "0.35em"
-			}
-		];
-		function angleDiff(a, b) {
-			let d = Math.abs(a - b);
-			if (d > Math.PI) d = 2 * Math.PI - d;
-			return d;
-		}
-		for (const [id, h] of this.handles) {
-			if (h.state.type !== "node") continue;
-			const nd = h.state;
-			const label = nd.label || "";
-			if (!label) continue;
-			const nodeKey = id.includes(":") ? id.split(":")[1] : label;
-			const angles = edgeAngles.get(nodeKey) ?? edgeAngles.get(label) ?? [];
-			let place = dirs[0];
-			for (const dir of dirs) if (angles.every((a) => angleDiff(a, dir.angle) >= Math.PI / 4)) {
-				place = dir;
-				break;
-			}
-			const bw = nd._blockW ?? nd.w ?? (nd.r ?? 10) * 2;
-			const bh = nd._blockH ?? nd.h ?? (nd.r ?? 10) * 2;
-			const halfW = bw / 2, halfH = bh / 2;
-			const gap = 6;
-			const tx = nd.x + place.dx * (halfW + gap);
-			const ty = nd.y + place.dy * (halfH + gap);
-			h.setTextPosition(tx, ty, place.anchor, place.dyAttr);
-		}
-	}
-};
-var SVGHandle = class {
-	constructor(ctx, id, state, markerCache) {
-		this.svg = null;
-		this._text = null;
-		this.ctx = ctx;
-		this._cache = markerCache;
-		this.state = { ...state };
-		this._clean(id);
-		const result = drawEntity(ctx, id, state, markerCache);
-		this.svg = result.group;
-		this._text = result.text;
-	}
-	update(state, opts) {
-		if (!this.svg) {
-			this.state = { ...state };
-			return;
-		}
-		if (opts?.transition) transitionEntity(this.svg, this._text, this.state, state, opts.transition, this._cache, this.ctx.svg);
-		else updateEntityImmediate(this.svg, this._text, state);
-		this.state = { ...state };
-	}
-	setTextPosition(x, y, anchor, dyAttr) {
-		if (!this._text) return;
-		this._text.attr("x", x).attr("y", y).attr("text-anchor", anchor);
-		if (dyAttr) this._text.attr("dy", dyAttr);
-		else this._text.attr("dy", null);
-	}
-	remove() {
-		this.svg?.remove();
-		this._text?.remove();
-		this.svg = null;
-		this._text = null;
-	}
-	_clean(id) {
-		[
-			this.ctx.stage.bg,
-			this.ctx.stage.nodes,
-			this.ctx.stage.edges,
-			this.ctx.stage.overlay
-		].forEach((g) => g.selectAll("[data-id]").filter(function() {
-			const did = this.getAttribute("data-id");
-			return did === id || did.startsWith(id + "-");
-		}).remove());
-	}
-};
-
-//#endregion
-//#region vis/resolver.ts
-function resolveGeometry(store) {}
-
-//#endregion
-//#region vis/frame.ts
-const defaultAnimation = {
-	duration: 500,
-	enter: {
-		ratio: .6,
-		easing: cubicOut
-	},
-	update: {
-		ratio: 1,
-		easing: cubicOut
-	},
-	exit: {
-		ratio: .4,
-		easing: cubicIn
-	}
-};
-var FrameManager = class {
-	constructor(ctx, animation, renderer) {
-		this.store = /* @__PURE__ */ new Map();
-		this.handles = /* @__PURE__ */ new Map();
-		this.current = /* @__PURE__ */ new Set();
-		this.previous = /* @__PURE__ */ new Set();
-		this._uncommitted = false;
-		this.animation = {
-			...defaultAnimation,
-			...animation
-		};
-		this.renderer = renderer ?? new SVGRenderer(ctx);
-	}
-	begin() {
-		if (this._uncommitted) throw new Error("commit() required before begin()");
-		this._uncommitted = true;
-		this.previous = new Set(this.current);
-		this.current.clear();
-		this.renderer.beginFrame();
-	}
-	declare(id, state) {
-		this.current.add(id);
-		const existing = this.store.get(id);
-		if (existing) {
-			if (!("_tf" in state)) delete existing.desired._tf;
-			if (!("_base" in state)) delete existing.desired._base;
-			Object.assign(existing.desired, state);
-			return existing;
-		}
-		const entity = {
-			id,
-			desired: { ...state },
-			svg: null
-		};
-		this.store.set(id, entity);
-		return entity;
-	}
-	patch(id, partial) {
-		const entity = this.store.get(id);
-		if (!entity) throw new Error(`Entity not found: ${id}`);
-		Object.assign(entity.desired, partial);
-	}
-	/** Typed getter: narrows EntityState by its discriminant type field.
-	*  Usage: fm.get('point:O', 'node')!.desired.x  — no cast needed. */
-	get(id, _type) {
-		return this.store.get(id);
-	}
-	commit(opts) {
-		if (!this._uncommitted) throw new Error("begin() required before commit()");
-		this._uncommitted = false;
-		/* @__PURE__ */ resolveGeometry(this.store);
-		if (opts?.animate === false || typeof requestAnimationFrame === "undefined") {
-			this._commitStatic();
-			this.renderer.commitFrame({ animate: false });
-			return;
-		}
-		const dur = opts?.ms ?? this.animation.duration;
-		const enterTr = transition().duration(dur * this.animation.enter.ratio).ease(this.animation.enter.easing);
-		const updateTr = transition().duration(dur * this.animation.update.ratio).ease(this.animation.update.easing);
-		transition().duration(dur * this.animation.exit.ratio).ease(this.animation.exit.easing);
-		for (const id of this.previous) if (!this.current.has(id)) {
-			this.handles.get(id)?.remove();
-			this.store.delete(id);
-			this.handles.delete(id);
-		}
-		for (const id of this.current) if (!this.previous.has(id)) {
-			const e = this.store.get(id);
-			const h = this.renderer.create(id, e.desired);
-			this.handles.set(id, h);
-			e.svg = h.svg ?? null;
-			const to = e.desired.opacity ?? 1;
-			const svgEl = h.svg;
-			if (svgEl) svgEl.attr("opacity", 0).transition(enterTr).attr("opacity", to);
-		}
-		for (const id of this.current) if (this.previous.has(id)) {
-			const e = this.store.get(id);
-			this.handles.get(id)?.update(e.desired, {
-				animate: true,
-				transition: updateTr
-			});
-		}
-		for (const id of this.previous) if (!this.current.has(id)) {}
-		this.renderer.commitFrame({
-			animate: true,
-			ms: dur
-		});
-	}
-	_commitStatic() {
-		for (const id of this.previous) if (!this.current.has(id)) {
-			this.handles.get(id)?.remove();
-			this.store.delete(id);
-			this.handles.delete(id);
-		}
-		for (const id of this.current) {
-			const e = this.store.get(id);
-			if (!this.previous.has(id)) {
-				const h = this.renderer.create(id, e.desired);
-				this.handles.set(id, h);
-				e.svg = h.svg ?? null;
-			} else this.handles.get(id)?.update(e.desired);
-		}
-	}
-	get entities() {
-		return this.store;
-	}
-	get frameIds() {
-		return this.current;
-	}
-};
-
-//#endregion
-//#region vis/stage.ts
-const _stages = /* @__PURE__ */ new Map();
-let _observer = null;
-function stage(selector, opts = {}) {
-	const { width = 780, height = 460, margin = 48, geom, theme = "warm", animation, renderer } = opts;
-	const prev = _stages.get(selector);
-	if (prev) prev[Symbol.dispose]();
-	const ctx = bootstrap(selector, {
-		width,
-		height,
-		margin,
-		geom
-	});
-	const fm = new FrameManager(ctx, animation, renderer ?? new SVGRenderer(ctx));
-	const _theme = resolveTheme(theme);
-	const p = ctx.palette;
-	const tp = _theme.palette ? {
-		...TOKENS,
-		..._theme.palette
-	} : TOKENS;
-	const fills = {
-		...TOKENS.fills,
-		..._theme.palette?.fills || {}
-	};
-	let cssVars = "";
-	for (const key of Object.keys(tp)) {
-		if (key === "fills") continue;
-		const v = tp[key];
-		const bgV = fills[key];
-		const fgColor = typeof v === "object" ? v.fg : v;
-		const bgColor = typeof v === "object" ? v.bg || bgV : bgV;
-		const varName = key === "dim" ? "muted" : key;
-		if (fgColor) cssVars += `--lv-${varName}: ${fgColor}; `;
-		if (bgColor) cssVars += `--lv-${varName}-bg: ${bgColor}; `;
-	}
-	const isDark = theme === "dark";
-	cssVars += `--lv-mix-bg: ${isDark ? "oklch(0.20 0.01 250)" : "oklch(0.97 0.005 80)"}; --lv-mix-fg: ${isDark ? "oklch(0.90 0.01 250)" : "oklch(0.25 0.02 60)"}; `;
-	if (cssVars) {
-		const themeClassName = `lv-theme-${theme || "custom"}`;
-		ctx.svg.classed(themeClassName, true);
-		if (typeof document !== "undefined") {
-			const styleId = `lv-style-${themeClassName}`;
-			if (!document.getElementById(styleId)) {
-				const styleEl = document.createElement("style");
-				styleEl.id = styleId;
-				styleEl.textContent = `@layer learnvis.theme { .${themeClassName} { ${cssVars} } }`;
-				document.head.appendChild(styleEl);
-			}
-		}
-	}
-	function steps(defs, opts) {
-		const { start = 0, mode = "full", controls } = opts ?? {};
-		const normalized = defs.map((d) => typeof d === "function" ? { frame: d } : d);
-		let current = -1;
-		let busy = false;
-		const listeners = [];
-		let previousSnapshot = null;
-		let stepperHandle = null;
-		function go(i) {
-			if (i === current || busy || i < 0 || i >= normalized.length) return;
-			busy = true;
-			try {
-				fm.begin();
-				if (mode === "update" && previousSnapshot) for (const [id, state] of previousSnapshot) fm.declare(id, { ...state });
-				normalized[i].frame(api);
-				fm.commit();
-				current = i;
-				if (mode === "update") {
-					previousSnapshot = /* @__PURE__ */ new Map();
-					for (const id of fm.frameIds) {
-						const entity = fm.entities.get(id);
-						if (entity) previousSnapshot.set(id, { ...entity.desired });
-					}
-				}
-			} finally {
-				busy = false;
-			}
-			listeners.forEach((fn) => fn(i, normalized[i]));
-		}
-		go(start);
-		const ctrl = {
-			go,
-			next() {
-				go(current + 1);
-			},
-			prev() {
-				go(current - 1);
-			},
-			reset() {
-				go(0);
-			},
-			get current() {
-				return current;
-			},
-			get total() {
-				return normalized.length;
-			},
-			get currentStepDef() {
-				return current >= 0 && current < normalized.length ? normalized[current] : null;
-			},
-			onChange(fn) {
-				listeners.push(fn);
-				return () => {
-					const idx = listeners.indexOf(fn);
-					if (idx >= 0) listeners.splice(idx, 1);
-				};
-			},
-			destroy() {
-				listeners.length = 0;
-				stepperHandle?.destroy();
-				stepperHandle = null;
-			}
-		};
-		if (controls) {
-			const svgNode = ctx.svg.node();
-			const parent = svgNode?.parentNode;
-			if (parent && svgNode) {
-				const el = document.createElement("div");
-				el.className = "lv-stepper-host";
-				parent.insertBefore(el, svgNode.nextSibling);
-				stepperHandle = stepper(el, ctrl);
-			}
-		}
-		return ctrl;
-	}
-	function frame(frameFn, opts) {
-		return new Promise((resolve) => {
-			fm.begin();
-			frameFn(api);
-			fm.commit({ ms: opts?.ms });
-			setTimeout(resolve, opts?.ms ?? 500);
-		});
-	}
-	async function play(fns, opts) {
-		for (const fn of fns) await frame(fn, opts);
-	}
-	/** 零仪式感单帧渲染。begin → fn → commit，返回 void。 */
-	function render(frameFn, opts) {
-		fm.begin();
-		frameFn(api);
-		fm.commit({ animate: opts?.animate ?? true });
-	}
-	const api = {
-		ctx,
-		palette: p,
-		stage: ctx.stage,
-		root: ctx.root,
-		steps,
-		frame,
-		play,
-		render,
-		frames: fm,
-		theme: _theme,
-		math: void 0,
-		graph: void 0,
-		[Symbol.dispose]() {
-			_stages.delete(selector);
-			_observer?.disconnect();
-			ctx.svg.remove();
-			ctx.root.selectAll("*").remove();
-		}
-	};
-	const container = typeof selector === "string" ? document.querySelector(selector) : selector;
-	if (container && typeof MutationObserver !== "undefined") {
-		_observer = new MutationObserver(() => {
-			if (!document.contains(container)) api[Symbol.dispose]();
-		});
-		_observer.observe(document.body, {
-			childList: true,
-			subtree: true
-		});
-	}
-	_stages.set(selector, api);
-	api.math = createMathRenderer(fm, ctx, p);
-	api.graph = createGraph(fm, ctx, p);
-	return api;
-}
-/** 3D stage (placeholder — requires three.js renderer) */
-function stage3D(selector, opts) {
-	return stage(selector, {
-		...opts,
-		renderer: opts.renderer
-	});
-}
 
 //#endregion
 //#region vis/linalg.ts
@@ -7169,4 +6704,4 @@ if (typeof Symbol.dispose === "undefined") Symbol.dispose = Symbol("Symbol.dispo
 if (typeof Symbol.asyncDispose === "undefined") Symbol.asyncDispose = Symbol("Symbol.asyncDispose");
 
 //#endregion
-export { FrameManager, MARKER, SVGRenderer, TOKENS, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stage, stage3D, stepper, svgLabel, themes };
+export { FrameManager, MARKER, SVGRenderer, TOKENS, affineIdentity, alpha, applyAffine, applyMat2, bootstrap, canvas, centerIn, createCanvas, defineArrows, descBox, distribute, entryPt, exitPt, fmtCell, getBounds, halo, katexify, len, markerTip, mat2Det, mat2Diag, mat2Eigen, mat2FromAngle, mat2FromReflection, mat2Identity, mat2Inverse, mat2Multiply, mat2Scale, mat2Shear, mat2VecMul, palette, resolveTheme, stepper, svgLabel, themes };
