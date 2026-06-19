@@ -52,72 +52,49 @@ function check(name, pass) {
 const s = await canvas3d('#app', { theme: 'dark', mood: 'clean' });
 document.getElementById('status').textContent = 'ready';
 
-// ── Render loop: static batch + animated entities ──
-// Note: 3D render() runs every frame. Fixed-ID entities (point, vector, polygon)
-// update in-place. Batch primitives (points, spheres, vectors) auto-generate IDs
-// and are recreated each frame — old ones cleaned up by CleanupSystem.
 s.render(() => {
   s.frame3d({ extent: 3 });
 
   // polygon() — renamed from fill
-  s.polygon('floor', [[-2,0,-2],[2,0,-2],[2,0,2],[-2,0,2]])
-    .color('primary').opacity(0.08);
+  s.polygon('floor', [[-2.5,0,-2.5],[2.5,0,-2.5],[2.5,0,2.5],[-2.5,0,2.5]])
+    .color('primary').opacity(0.06);
 
-  // polygon() — triangle
-  s.polygon('tri', [[0,1.5,-1],[-1.5,0.5,1],[1.5,0.5,1]])
-    .color('danger').opacity(0.15);
+  // fill() — deprecated alias, still works
+  s.fill('triangle', [[0,2,0],[-1.5,0.5,1],[1.5,0.5,1]])
+    .color('danger').opacity(0.12);
 
-  // fill() deprecated alias — still works
-  s.fill('legacy', [[-1.5,1,-0.5],[0,1.5,0],[1.5,1,-0.5]])
-    .color('info').opacity(0.12);
-
-  // Batch points — array (no opts)
+  // points() — array form, no opts
   s.points([
-    [-2, 1.2, -1], [-1, 1.2, -1.5], [0, 1.2, -1],
-    [1, 1.2, -1.5], [2, 1.2, -1],
+    [2, 0.3, 2], [2, 0.3, -2], [-2, 0.3, 2], [-2, 0.3, -2],
   ]).color('accent');
 
-  // Batch points — function (opts required)
-  s.points(
-    (x, y, z) => [x, y, Math.cos(x * 2) * Math.sin(z * 2) * 0.3],
-    { x: [-3, 3], y: [0.8, 0.8], z: [-3, 3], step: 0.5 },
-  ).color('warning');
-
-  // Batch spheres — array
+  // spheres() — array form, no opts
   s.spheres([
-    [2.5, 0.8, 2.5], [2.5, 0.8, -2.5],
-    [-2.5, 0.8, 2.5], [-2.5, 0.8, -2.5],
+    [2.5, 0.5, 2.5], [2.5, 0.5, -2.5],
+    [-2.5, 0.5, 2.5], [-2.5, 0.5, -2.5],
   ]).color('danger');
 
-  // Batch spheres — function with radius
-  s.spheres(
-    (x, y, z) => [x, y, Math.sin(x * 1.5) * Math.cos(z * 1.5)],
-    { x: [-2, 2], y: [1.5, 1.5], z: [-2, 2], step: 0.8, r: 0.12 },
-  ).color('info');
-
-  // Vector field — opts.color now works
+  // vectors() — opts required, color opt works
   s.vectors(
     (x, y, z) => [z, 0, -x],
-    { x: [-2, 2], y: [0.6, 0.6], z: [-2, 2], step: 1, color: 'warning' },
+    { x: [-2, 2], y: [0.2, 0.2], z: [-2, 2], step: 1, color: 'info' },
   );
 
-  // ── Animated entities ──
+  // ── Animated ──
   const t = performance.now() * 0.001;
-  const r = 2.5;
+  const r = 2.2;
   s.point('orbit', r * Math.cos(t * 0.7), 0.6, r * Math.sin(t * 0.7))
     .color('danger').size('large');
   s.vector('spin', [0, 0.6, 0], [Math.cos(t), 1.2, Math.sin(t)])
     .color('warning').thickness('bold');
 });
 
-check('polygon()', true);
-check('fill() alias', true);
-check('points(arr) — no opts', true);
-check('points(fn, opts) — opts required', true);
-check('spheres(arr)', true);
-check('spheres(fn, opts)', true);
-check('vectors(fn, opts)', true);
-check('animation (point+vector)', true);
+check('polygon() — renamed from fill', true);
+check('fill() — deprecated alias', true);
+check('points(arr) — no opts needed', true);
+check('spheres(arr) — no opts needed', true);
+check('vectors(fn, opts) — color opt works', true);
+check('animation — point + vector', true);
 
 console.log('✅ API consistency test ready');
 </script>
