@@ -50,4 +50,5 @@ vp.vector('v', [0, 0], [3, 1]).color('primary');
 - **[api-graph](references/api-graph.md)** — `vertex`, `edge`, `block`, `layout` (circular/force)
 - **[api-controlflow](references/api-controlflow.md)** — `canvas()`, `render()`, `steps()`, `stepper()`
 - **[theme](references/theme.md)** — 6 内置主题, CSS 变量覆盖, 语义色 Token
+- **[api-3d](references/api-3d.md)** — `canvas3d()`, 3D 原语, coords3d, camera, steps, Gfx3d
 - **[api-atomic](references/api-atomic.md)** — FrameManager, EntityId, SVGRenderer (internal)

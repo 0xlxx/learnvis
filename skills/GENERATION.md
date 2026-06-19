@@ -23,6 +23,7 @@ skills/
         ├── api-graph.md       # vertex, edge, block, layout
         ├── api-controlflow.md # canvas(), render(), steps(), stepper()
         ├── theme.md           # 6 themes, CSS variable override, semantic tokens
+        ├── api-3d.md          # canvas3d(), 3D primitives, coords3d, camera, steps, Gfx3d
         └── api-atomic.md      # FrameManager, EntityId, SVGRenderer (internal)
 ```
 
