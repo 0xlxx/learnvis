@@ -560,7 +560,7 @@ export class Scene3dImpl implements Scene3d {
     const key = `:pts:${pts.length}`;
     const cached = this._store.get(key);
     if (cached) { this._touch(key); return cached; }
-    const gfx = this._instancedSpheres(key, pts, 'sphere', this._resolve('primary'), 0.12);
+    const gfx = this._instancedSpheres(key, pts, 'sphere', this._resolve(opts?.color ?? 'primary'), 0.12);
     this._store.set(key, gfx as Gfx3dImpl);
     return gfx;
   }
@@ -577,7 +577,7 @@ export class Scene3dImpl implements Scene3d {
     const key = `:sph:${pts.length}:${r}`;
     const cached = this._store.get(key);
     if (cached) { this._touch(key); return cached; }
-    const gfx = this._instancedSpheres(key, pts, 'sphere', this._resolve('accent'), r);
+    const gfx = this._instancedSpheres(key, pts, 'sphere', this._resolve(opts?.color ?? 'accent'), r);
     this._store.set(key, gfx as Gfx3dImpl);
     return gfx;
   }
@@ -585,7 +585,7 @@ export class Scene3dImpl implements Scene3d {
   /** Batch vectors. Single Line2 for all shafts + single InstancedMesh for all cones = 2 draw calls. */
   vectors(
     fn: GridSamplerFn,
-    opts: { x: [number, number]; y: [number, number]; z: [number, number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' },
+    opts: GridSamplerOpts & { scale?: number | 'auto'; seed?: 'rect' | 'poisson' },
   ): Gfx3d {
     const step = opts.step ?? ((opts.x[1] - opts.x[0]) / 6);
     const seedMode = opts.seed ?? 'rect';
@@ -709,7 +709,7 @@ export class Scene3dImpl implements Scene3d {
     }
     const shaftGeo = new LineSegmentsGeometry();
     shaftGeo.setPositions(shaftPositions);
-    const shaftColor = this._resolve('info');
+    const shaftColor = this._resolve(opts.color ?? 'info');
     const arrThick = 0.021;
     const shaftMat = new THREE.Line2NodeMaterial({ color: shaftColor, linewidth: arrThick, transparent: true, alphaToCoverage: false });
     shaftMat.worldUnits = true;

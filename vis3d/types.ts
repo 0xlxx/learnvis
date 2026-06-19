@@ -87,6 +87,8 @@ export interface GridSamplerOpts {
   y: [number, number];
   z: [number, number];
   step?: number;
+  /** Semantic color token or #hex. Default: 'primary' (points), 'accent' (spheres), 'info' (vectors). */
+  color?: string;
 }
 
 // ── Gfx3d — unified fluent builder ──
