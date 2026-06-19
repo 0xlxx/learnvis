@@ -25,6 +25,22 @@ pnpm add github:0xlxx/learnvis
 | 2D 步进器 | `import { stepper } from 'learnvis'` |
 | 3D 场景 | `import { canvas3d } from '@learnvis/vis3d'` |
 
+## HTML 模板
+
+直接复制，替换 `// ...你的代码...`：
+
+```html
+<!doctype html>
+<div id="app"></div>
+<script type="module">
+import { canvas } from 'https://esm.sh/gh/0xlxx/learnvis';
+const s = canvas('#app');
+// ...你的代码...
+</script>
+```
+
+2D 用 `https://esm.sh/gh/0xlxx/learnvis`，3D 用 `https://esm.sh/gh/0xlxx/learnvis/vis3d`。
+
 ## 2D Quick Start
 
 ```ts
