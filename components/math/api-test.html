@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>API Test — 2D</title>
+  <link rel="stylesheet" href="../../theme.css">
+  <style>
+    *{box-sizing:border-box} body{background:var(--bg);color:var(--text);font-family:var(--font);margin:0;padding:2rem}
+    h1{font-size:1.2rem;margin:0 0 .5rem}
+    .sub{color:var(--text-muted);font-size:.78rem;margin:0 0 1.5rem}
+    .row{display:flex;gap:20px;flex-wrap:wrap}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px}
+    .card h3{font-size:.78rem;margin:0 0 6px;color:var(--text-dim)}
+    .card .stage{display:block}
+    .pass{color:#22c55e;font-size:.65rem}
+    .lv-stepper-host{margin-top:6px}
+  </style>
+</head>
+<body>
+<h1>2D API Consistency Test</h1>
+<p class="sub">curve { t } · render { transition } · steps frame() · RAF animation</p>
+<div class="row" id="sections"></div>
+
+<script type="module">
+import { canvas, stepper } from '@learnvis/vis2d';
+
+const sections = document.getElementById('sections');
+
+function card(title, w, h) {
+  const div = document.createElement('div'); div.className = 'card';
+  div.innerHTML = `<h3>${title}</h3><svg class="stage" width="${w}" height="${h}"></svg>`;
+  sections.appendChild(div);
+  return div.querySelector('svg');
+}
+
+// ── 1. curve() with { t: [lo, hi] } domain ──
+{
+  const svg = card('curve() — domain { t: [lo, hi] }', 400, 260);
+  const s = canvas(svg, { width: 400, height: 260, theme: 'warm' });
+  const vp = s.coords({ x: [-Math.PI, Math.PI], y: [-1.5, 1.5], margin: 0.1 });
+  s.render(() => {
+    vp.axes({ xLabel: 'x', yLabel: 'sin(x)' }).color('dim');
+    vp.grid();
+    // New domain format: { t: [lo, hi] }
+    vp.curve('sin', x => Math.sin(x), { t: [-Math.PI, Math.PI] }).color('danger').stroke(2);
+  });
+}
+
+// ── 2. render() { transition: false } — RAF animation ──
+{
+  const svg = card('render() { transition: false } — RAF orbit', 400, 260);
+  const s = canvas(svg, { width: 400, height: 260, theme: 'cool' });
+  let t = 0;
+  s.render(() => {
+    s.point('P', 200, 130).color('primary').label('O').size(3);
+  }, { transition: false });
+
+  function loop() {
+    t += 0.02;
+    const cx = 200, cy = 130, rx = 80, ry = 50;
+    s.render(() => {
+      s.point('P', cx + rx * Math.cos(t), cy + ry * Math.sin(t))
+        .color('danger').size(6);
+    }, { transition: false });
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+}
+
+// ── 3. steps() with frame() callback ──
+{
+  const svg = card('steps() — frame() step-by-step', 400, 260);
+  const s = canvas(svg, { width: 400, height: 260, theme: 'paper' });
+  const ctrl = s.steps([
+    {
+      label: '点 P',
+      frame(s) {
+        s.axes('ax', [60, 220], { xLen: 280, yLen: 180 }).color('dim');
+        s.point('P', 120, 160).color('danger').label('P');
+      },
+    },
+    {
+      label: '点 Q',
+      frame(s) {
+        s.axes('ax', [60, 220], { xLen: 280, yLen: 180 }).color('dim');
+        s.point('P', 120, 160).color('danger').label('P');
+        s.point('Q', 260, 100).color('info').label('Q');
+      },
+    },
+    {
+      label: 'PQ 连线',
+      frame(s) {
+        s.axes('ax', [60, 220], { xLen: 280, yLen: 180 }).color('dim');
+        s.point('P', 120, 160).color('danger').label('P');
+        s.point('Q', 260, 100).color('info').label('Q');
+        s.line('PQ', 120, 160, 260, 100).color('primary').stroke(2);
+      },
+    },
+  ]);
+  const host = document.createElement('div');
+  host.className = 'lv-stepper-host';
+  svg.parentElement.appendChild(host);
+  host.appendChild(stepper(ctrl));
+}
+
+// ── 4. coords() basis transform ──
+{
+  const svg = card('coords() — basis + grid + curve', 400, 260);
+  const s = canvas(svg, { width: 400, height: 260, theme: 'dark' });
+  const vp = s.coords({ x: [-3, 3], y: [-3, 3], basis: [[1, 0.5], [0.3, 1]] });
+  s.render(() => {
+    vp.axes({ xLabel: 'î', yLabel: 'ĵ' }).color('dim');
+    vp.grid();
+    vp.origin();
+    vp.curve('fn', x => Math.sin(x * 2) * 0.8, { t: [-2.5, 2.5] })
+      .color('info').stroke(2);
+  });
+}
+
+console.log('✅ 2D API consistency test ready');
+</script>
+</body>
+</html>
