@@ -2,6 +2,19 @@
 
 `canvas3d()` 是唯一工厂，返回 `Scene3d`。基于 WebGPU + ECS。
 
+## 安装与导入
+
+```bash
+pnpm add github:0xlxx/learnvis
+```
+
+```ts
+import { canvas3d } from '@learnvis/vis3d';
+// 注意：不是 @learnvis/vis2d，两个包独立
+```
+
+`canvas3d()` 是异步的——必须 `await`。WebGPU 仅 Chrome 113+ / Edge 113+。
+
 ## 1. canvas3d() — 工厂入口
 
 ```ts
