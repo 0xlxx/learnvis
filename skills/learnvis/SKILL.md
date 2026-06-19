@@ -39,12 +39,16 @@ const s = canvas('#app');
 s.render(() => { s.point('P', 200, 200).color('danger'); });
 ```
 
-坐标系 + 动画（`render()` + `requestAnimationFrame`）：
+连续动画（`{ animate: false }` 跳过 D3 过渡，否则网格每帧消失）：
 
 ```ts
 const vp = s.coords({ x: [-6, 6], y: [-4, 4], aspect: 'equal' });
-vp.axes({ xLabel: 'x', yLabel: 'y' }).color('dim'); vp.grid();
-vp.point('P', 3, 2).color('danger').label('P');
+s.render(() => { vp.axes().color('dim'); vp.grid(); vp.point('P', 3, 2).color('danger'); }, { animate: false });
+let t = 0;
+(function loop() {
+  s.render(() => { vp.point('P', 5*Math.cos(t), 3*Math.sin(t)).color('danger'); }, { animate: false });
+  t += 0.02; requestAnimationFrame(loop);
+})();
 ```
 
 原语：`point`, `vector`, `circle`, `line`, `vertex`, `edge`, `polygon`, `rect`, `fill`, `curve`, `angle`, `block`。链式：`.color(c) .size(n) .stroke(w) .fill(c) .opacity(v) .dash(p?) .label(t) .move(x,y) .rotate(deg,cx,cy) .scale(sx,sy?)`。
