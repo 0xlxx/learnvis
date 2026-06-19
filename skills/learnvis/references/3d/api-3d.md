@@ -18,43 +18,30 @@ import { canvas3d } from '@learnvis/vis3d';
 ## 1. canvas3d() — 工厂入口
 
 ```ts
-import { canvas3d } from '@learnvis/vis3d';
-
 const s = await canvas3d('#app', {
-  theme: 'warm',            // warm | cool | dark | paper | vivid | soft
-  mood: 'clean',            // playful | clean | minimal | sketch
-  projection: 'orthographic', // orthographic (default) | perspective
+  theme: 'warm',
+  mood: 'clean',
+  projection: 'orthographic',
   width: 800, height: 600,
   background: '#1a1a2e',
 });
 ```
 
-## 2. 原语 (primitives)
-
-所有原语直接挂载在 Scene3d 上，统一返回 `Gfx3d` 链式构建器。
+## 2. 原语
 
 ```ts
-// 点、线、向量
 s.point('P', 1, 2, 0).color('danger').size('medium').label('P');
 s.line3d('l', [0,0,0], [3,1,2]).color('primary').thickness('thin');
 s.vector('v', [0,0,0], [2,1,0]).color('danger').thickness('medium').label('v');
-
-// 球、立方体
 s.sphere('s', 0, 0, 0, 1.2).color('accent').opacity(0.3).wireframe();
 s.cube('c', 0, 0, 0, 1.5).color('primary');
-
-// 参数曲面 f(u,v) → [x,y,z]
 s.surface('surf', (u, v) => [u, v, u*u - v*v], [-2, 2], [-2, 2], {
-  uSegments: 32, vSegments: 32,
-  color: 'accent',
-  style: 'wireframe-face',  // wireframe-face | height-color | minimal
+  uSegments: 32, vSegments: 32, color: 'accent', style: 'wireframe-face',
 });
-
-// 填充多边形、圆弧、直角标记
 s.fill('tri', [[0,0,0], [2,0,0], [1,0,1.5]]).color('primary').opacity(0.2);
 s.arc('a', [1,0,0], [0,1,0], [0,0,1]).color('warning').label('α');
 s.rightAngle('ra', [0,0,0], [1,0,0], [0,1,0]).color('dim');
-s.perpFoot('pf', [0,2,1], [0,0,0], [3,0,0], 'danger');  // 垂足 + 自动直角标记
+s.perpFoot('pf', [0,2,1], [0,0,0], [3,0,0], 'danger');
 ```
 
 ### Gfx3d 链式方法
@@ -76,7 +63,7 @@ s.perpFoot('pf', [0,2,1], [0,0,0], [3,0,0], 'danger');  // 垂足 + 自动直角
 | `.scale(sx, sy?, sz?)` | 缩放 |
 | `.hide()` / `.show()` / `.visible(v)` | 可见性 |
 
-## 3. 参照系 (reference frame)
+## 3. 参照系
 
 ```ts
 // 一步完成：坐标轴 + 网格
@@ -99,25 +86,18 @@ s.grid3d({ plane: 'xz', spacing: 1, size: 8, color: 'dim' });
 | `Grid3dOpts.spacing` | `1` | 网格间距 |
 | `Grid3dOpts.size` | `8` | 总尺寸 |
 
-## 4. 批量原语 (batch primitives)
-
-InstancedMesh 渲染，适合大量同类图元。
+## 4. 批量原语
 
 ```ts
-// 参数曲线 r(t) → polyline
 s.curve(t => [Math.cos(t*3), t, Math.sin(t*3)], { t: [-2, 2], segments: 200 })
  .color('danger').thickness('medium');
 
-// 批量点 / 球 — 数组或 grid 采样函数
 s.points((x, y, z) => [x, y, Math.sin(x)*Math.cos(y)], {
-  x: [-3, 3], y: [-3, 3], z: [-1, 1], step: 0.5,
-  scale: 'auto', seed: 'rect',
+  x: [-3, 3], y: [-3, 3], z: [-1, 1], step: 0.5, scale: 'auto',
 });
 
-// 向量场 — 3D grid 采样
 s.vectors((x, y, z) => [y, -x, z*0.5], {
-  x: [-3, 3], y: [-3, 3], z: [-2, 2], step: 1.5,
-  scale: 'auto',
+  x: [-3, 3], y: [-3, 3], z: [-2, 2], step: 1.5, scale: 'auto',
 }).color('primary');
 ```
 

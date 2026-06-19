@@ -17,14 +17,16 @@ This document tracks how learnvis skills are generated and kept in sync with the
 skills/
 ├── GENERATION.md
 └── learnvis/
-    ├── SKILL.md               # Compass: Quick Start, reference links
+    ├── SKILL.md                 # 2D + 3D Quick Start, domain selection, reference links
     └── references/
-        ├── api-math.md        # coords(), math primitives, basis, axes/grid/origin
-        ├── api-graph.md       # vertex, edge, block, layout
-        ├── api-controlflow.md # canvas(), render(), steps(), stepper()
-        ├── theme.md           # 6 themes, CSS variable override, semantic tokens
-        ├── api-3d.md          # canvas3d(), 3D primitives, coords3d, camera, steps, Gfx3d
-        └── api-atomic.md      # FrameManager, EntityId, SVGRenderer (internal)
+        ├── 2d/
+        │   ├── api-math.md      # coords(), math primitives, basis, axes/grid/origin
+        │   ├── api-graph.md     # vertex, edge, block, layout
+        │   ├── api-controlflow.md # canvas(), render(), steps(), stepper()
+        │   ├── theme.md         # 6 themes, CSS variable override, semantic tokens
+        │   └── api-atomic.md    # FrameManager, EntityId, SVGRenderer (internal)
+        └── 3d/
+            └── api-3d.md        # canvas3d(), 3D primitives, coords3d, camera, steps, mood, ECS
 ```
 
 ## How to Update Skills
@@ -63,6 +65,7 @@ When source API changes:
 |------|---------|
 | 2026-06-20 | Fix source paths (vis/ → vis2d/), add foundation/. Note vis3d streamlines removal. |
 | 2026-06-20 | Prune three-tsl (kill no-ops, merge 常见坑 into API table, collapse 查文档流程). Tighten learnvis description + kill inline comments. |
+| 2026-06-20 | Restructure references into 2d/ and 3d/ subdirectories. Add 3D Quick Start to SKILL.md. Update description to cover both 2D and 3D. |
 | 2026-06-18 | Full skill rewrite for v4.0.0: flat namespace, Gfx return from axes(), Scene primitives, CanvasOpts, CoordView. |
 | 2026-06-18 | Axes API refactor: CoordView.axes() returns Gfx, cleaned AxesOpts/CoordsConfig, fixed GroupState semantics. |
 
