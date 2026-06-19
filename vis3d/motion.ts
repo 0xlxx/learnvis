@@ -29,10 +29,11 @@ export function createStepsController3d(
         return;
       }
       const def = defs[i]!;
+      const fn = def.animation ?? def.frame;
       if (isUpdateMode) {
-        scene.render(s => { def.frame(s); });
+        scene.render(s => { fn(s); });
       } else {
-        scene.render(s => { def.frame(s); });
+        scene.render(s => { fn(s); });
       }
       // Auto-animate camera if step defines a preferred view
       if (def.camera) scene.camera(def.camera);

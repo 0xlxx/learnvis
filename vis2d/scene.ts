@@ -468,14 +468,15 @@ function createStepsController(
   function _exec(i: number) {
     const def = defs[i];
     if (!def) return;
+    const fn = def.animation ?? def.frame;
     if (_mode === 'full') {
       scene.render(s => {
-        def.frame(s);
+        fn(s);
       });
     } else {
       // 'update' mode: only apply diff
       scene.render(s => {
-        def.frame(s);
+        fn(s);
       });
     }
     _listeners.forEach(fn => fn(i, def));

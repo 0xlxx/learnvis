@@ -64,7 +64,7 @@ let t = 0;
 
 原语：`point`, `vector`, `circle`, `line`, `vertex`, `edge`, `polygon`, `rect`, `fill`, `curve`, `angle`, `block`。链式：`.color(c) .size(n) .stroke(w) .fill(c) .opacity(v) .dash(p?) .label(t) .move(x,y) .rotate(deg,cx,cy) .scale(sx,sy?)`。
 
-分步演示用 `s.steps([{ label, frame(s){...} }])`。
+分步演示用 `s.steps([{ label, animation(s){...} }])`。
 
 ## 3D Quick Start
 

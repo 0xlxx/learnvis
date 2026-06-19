@@ -60,11 +60,11 @@ requestAnimationFrame(loop);
 const ctrl = s.steps([
   {
     label: '步骤 1',
-    frame: s => { s.point('P', 100, 200).color('danger'); }
+    animation: s => { s.point('P', 100, 200).color('danger'); }
   },
   {
     label: '步骤 2',
-    frame: s => { s.point('P', 300, 200).color('primary'); }
+    animation: s => { s.point('P', 300, 200).color('primary'); }
   },
 ]);
 ```
@@ -98,14 +98,14 @@ ctrl.destroy();       // 清理
 ```ts
 const ctrl = s.steps([
   {
-    frame: s => {
+    animation: s => {
       s.vertex('A', 100, 200);
       s.vertex('B', 300, 200);
       s.edge('A', 'B');
     }
   },
   {
-    frame: s => {
+    animation: s => {
       s.vertex('B', 400, 300).color('accent');  // 仅 B 移动
       // A 和 edge 自动继承
     }
