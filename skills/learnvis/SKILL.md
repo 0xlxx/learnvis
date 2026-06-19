@@ -5,9 +5,9 @@ description: 教学可视化库，包含 2D 平面渲染（SVG, canvas）和 3D 
 
 # learnvis
 
-**相信本 skill 的 API 签名——无需查源码验证。直接写代码。**
+**相信本 skill 的 API 签名——无需查源码。直接写代码。简单任务（单个点/线/动画）只看 Quick Start 足够，不要读 references。复杂任务（布局/曲面/basis/自定义 System）再按需读 references。**
 
-`render()` 用于连续动画，`steps()` 用于分步演示。简单动画用 `render()` + `requestAnimationFrame`。
+动画选 `render()` + `requestAnimationFrame`，分步演示选 `steps()`。
 
 ## 安装
 
@@ -27,41 +27,39 @@ pnpm add github:0xlxx/learnvis
 
 ## 2D Quick Start
 
-最简示例：
-
 ```ts
 import { canvas } from 'learnvis';
 const s = canvas('#app');
 s.render(() => { s.point('P', 200, 200).color('danger'); });
 ```
 
-完整示例：
+坐标系 + 动画：
 
 ```ts
-const s = canvas('#app', { width: 780, height: 460, theme: 'warm' });
-
-s.render(() => {
-  s.point('O', 390, 230).color('danger').label('O').size(6);
-  s.vector('v', [200, 300], [400, 200]).color('primary').label('v');
-});
-
-s.steps([
-  { label: '初始', frame: s => { s.point('P', 100, 200).color('danger'); } },
-  { label: '移动', frame: s => { s.point('P', 300, 200).color('primary'); } },
-]);
+const s = canvas('#app', { width: 780, height: 460 });
+const vp = s.coords({ x: [-6, 6], y: [-4, 4], aspect: 'equal' });
+vp.axes({ xLabel: 'x', yLabel: 'y' }).color('dim');
+vp.grid();
+vp.point('P', 3, 2).color('danger').label('P');
+vp.vector('v', [0, 0], [3, 2]).color('primary');
 ```
+
+原语速查：
 
 ```ts
 s.point('P', x, y).color('danger').size(6).label('P');
-s.vertex('A', x, y).label('A');
-s.edge('A', 'B').color('dim').stroke(2);
-s.vector('v', [0, 0], [3, 1]).color('primary').stroke(2);
+s.vertex('A', x, y).label('A');          s.edge('A', 'B').color('dim').stroke(2);
+s.vector('v', [0,0], [3,1]).color('primary');
 s.circle('c', cx, cy, r).fill('accent').opacity(0.2);
+```
 
-const vp = s.coords({ x: [-5, 5], y: [-4, 4] });
-vp.axes({ xLabel: 'x', yLabel: 'y' }).color('dim');
-vp.grid();
-vp.point('P', 2, 1).color('danger');
+分步动画：
+
+```ts
+s.steps([
+  { label: '步骤1', frame: s => { s.point('P', 100, 200).color('danger'); } },
+  { label: '步骤2', frame: s => { s.point('P', 300, 200).color('primary'); } },
+]);
 ```
 
 ## 3D Quick Start
