@@ -468,7 +468,7 @@ function createStepsController(
   function _exec(i: number) {
     const def = defs[i];
     if (!def) return;
-    const fn = def.animation ?? def.frame;
+    const fn = def.frame;
     if (_mode === 'full') {
       scene.render(s => {
         fn(s);

@@ -216,8 +216,6 @@ export interface LightDef {
 
 export interface StepDef3d {
   frame(s: Scene3d): void;
-  /** Declarative animation — same as frame, preferred naming for 2D/3D consistency. */
-  animation?(s: Scene3d): void;
   label?: string;
   title?: string;
   desc?: string;

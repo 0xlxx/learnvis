@@ -191,8 +191,6 @@ export interface CoordsConfig {
 /** A single step in a multi-step animation. Frame function receives a fresh Scene. */
 export interface StepDef {
   frame(s: Scene): void;
-  /** Declarative animation — same as frame, preferred naming for 2D/3D consistency. */
-  animation?(s: Scene): void;
   label?: string;
   title?: string;
   desc?: string;

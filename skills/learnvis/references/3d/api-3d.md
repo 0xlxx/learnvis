@@ -107,11 +107,11 @@ s.camera({ direction: 'front' }, { duration: 0.8, easing: 'ease-out' });
 
 ```ts
 const ctrl = s.steps([
-  { label: '点 P', animation(s) { s.point('P', 0,0,0).color('danger'); } },
-  { label: '向量 v', animation(s) { s.point('P', 0,0,0).color('danger'); s.vector('v', [0,0,0], [2,1,0]); } },
+  { label: '点 P', frame(s) { s.point('P', 0,0,0).color('danger'); } },
+  { label: '向量 v', frame(s) { s.point('P', 0,0,0).color('danger'); s.vector('v', [0,0,0], [2,1,0]); } },
 ]);
 ctrl.next(); ctrl.prev(); ctrl.go(0); ctrl.current; ctrl.total;
-// StepDef3d 支持 camera 字段：{ label:'俯视', camera:{direction:'top-down'}, animation(s){...} }
+// StepDef3d 支持 camera 字段：{ label:'俯视', camera:{direction:'top-down'}, frame(s){...} }
 ```
 
 ## 照明 + Mood

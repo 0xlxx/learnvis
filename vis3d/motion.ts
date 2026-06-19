@@ -29,7 +29,7 @@ export function createStepsController3d(
         return;
       }
       const def = defs[i]!;
-      const fn = def.animation ?? def.frame;
+      const fn = def.frame;
       if (isUpdateMode) {
         scene.render(s => { fn(s); });
       } else {
