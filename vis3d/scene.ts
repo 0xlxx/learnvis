@@ -9,7 +9,7 @@ import { World } from '@learnvis/ecs';
 import type { Entity, System, ComponentOf, GeometryKind } from '@learnvis/ecs';
 import { bootstrap3d, type Bootstrap3d } from './bootstrap';
 import { Gfx3dImpl, createColorResolver, type ColorResolver } from './gfx';
-import { GeometrySystem, disposeTree } from './systems/geometry';
+import { GeometrySystem, disposeTree, _desaturateHex, _lightenHex } from './systems/geometry';
 import { TransformSystem } from './systems/transform';
 import { MaterialSystem } from './systems/material';
 import { TransitionSystem } from './systems/transition';
@@ -709,7 +709,9 @@ export class Scene3dImpl implements Scene3d {
     }
     const shaftGeo = new LineSegmentsGeometry();
     shaftGeo.setPositions(shaftPositions);
-    const shaftColor = this._resolve(opts.color ?? 'info');
+    const baseColor = this._resolve(opts.color ?? 'info');
+    const shaftColor = _desaturateHex(baseColor, 0.30);
+    const tipColor   = _lightenHex(baseColor, 0.15);
     const arrThick = 0.021;
     const shaftMat = new THREE.Line2NodeMaterial({ color: shaftColor, linewidth: arrThick, transparent: true, alphaToCoverage: false });
     shaftMat.worldUnits = true;
@@ -719,7 +721,7 @@ export class Scene3dImpl implements Scene3d {
     const headLen = Math.max(arrThick * 8, 0.08);
     const coneRadius = arrThick * 1.65; // proportional to shaft thickness
     const coneGeo = new THREE.ConeGeometry(coneRadius, headLen, 8);
-    const coneMat = new THREE.MeshBasicMaterial({ color: shaftColor });
+    const coneMat = new THREE.MeshBasicMaterial({ color: tipColor });
     const cones = new THREE.InstancedMesh(coneGeo, coneMat, N);
     const dummy = new THREE.Object3D();
     const up = new THREE.Vector3(0, 1, 0);
