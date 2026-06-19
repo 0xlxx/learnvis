@@ -99,7 +99,7 @@ for (const sec of sections) {
 
   const s = canvas(`#${stage.id}`, { width: 340, height: 260 });
   const ctrl = s.steps(sec.steps, { controls: false });
-  stepper(host, ctrl);
+  host.appendChild(stepper(ctrl));
 }
 </script>
 </body>

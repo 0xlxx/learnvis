@@ -1,6 +1,6 @@
 ---
 name: learnvis
-description: 面向教育场景的 SVG 可视化库——动画演示算法、数学几何、图论数据结构。当用户需要逐步展示算法逻辑、绘制坐标系/函数图像、构建图/树/网络拓扑动画，或提到"learnvis""算法动画""数学可视化"时使用。内置点/向量/多边形/图顶点/边/力导向布局等原语，以及 steps 步骤控制器。
+description: SVG 教学可视化库。当用户需要算法动画、数学坐标系、图论/网络拓扑演示，或提到 learnvis 时使用。扁平命名空间原语 + steps 步骤控制器。
 ---
 
 # learnvis
@@ -25,8 +25,6 @@ s.steps([
 ]);
 ```
 
-所有原语直接挂载在 Scene 上（扁平命名空间），统一返回 `Gfx` 链式构建器：
-
 ```ts
 s.point('P', x, y).color('danger').size(6).label('P');
 s.vertex('A', x, y).label('A');
@@ -35,14 +33,14 @@ s.vector('v', [0, 0], [3, 1]).color('primary').stroke(2);
 s.circle('c', cx, cy, r).fill('accent').opacity(0.2);
 ```
 
-数学坐标系通过 `coords()` 获取，原语使用 math 坐标自动投影：
+数学坐标系通过 `coords()` 获取：
 
 ```ts
 const vp = s.coords({ x: [-5, 5], y: [-4, 4] });
-vp.axes({ xLabel: 'x', yLabel: 'y' }).color('dim');  // axes() 返回 Gfx
+vp.axes({ xLabel: 'x', yLabel: 'y' }).color('dim');
 vp.grid();
 vp.origin();
-vp.point('P', 2, 1).color('danger');     // math 坐标，自动投影
+vp.point('P', 2, 1).color('danger');
 vp.vector('v', [0, 0], [3, 1]).color('primary');
 ```
 

@@ -38,8 +38,8 @@ export interface CoordSystem3d {
   surface(id: string, fn: SurfaceFn, uRange: [number, number], vRange: [number, number], opts?: Surface3dOpts): Gfx3d;
   fill(id: string, vertices: Vec3[]): Gfx3d;
   arc(id: string, a: Vec3 | [Vec3, Vec3], b: Vec3, c: Vec3): Gfx3d;
-  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3): Gfx3d;
-  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3): Vec3;
+  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3, color?: string): Gfx3d;
+  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3, color?: string): Vec3;
   axes3d(opts?: Axes3dOpts): Gfx3d;
   grid3d(opts?: Grid3dOpts): Gfx3d;
   group(entities: Gfx3d[]): Gfx3d;
@@ -259,9 +259,9 @@ export interface Scene3d {
    *   arc(id, [P1, P2], Q1, Q2)         — dihedral: edge P1-P2, one point on each face
    */
   arc(id: string, a: Vec3 | [Vec3, Vec3], b: Vec3, c: Vec3): Gfx3d;
-  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3): Gfx3d;
+  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3, color?: string): Gfx3d;
   /** Drop perpendicular from point to line, auto-mark right angle at foot. Returns foot [x,y,z]. */
-  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3): Vec3;
+  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3, color?: string): Vec3;
   axes3d(opts?: Axes3dOpts): Gfx3d;
   grid3d(opts?: Grid3dOpts): Gfx3d;
   group(entities: Gfx3d[]): Gfx3d;

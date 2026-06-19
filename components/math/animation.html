@@ -182,7 +182,7 @@ for (const [si, sec] of sections.entries()) {
   const s = canvas(`#st${si}`, { width: 340, height: 260, theme: 'paper' });
   const ctrl = s.steps(sec.steps, { controls: false });
   const host = el.querySelector('.lv-stepper-host');
-  if (host) stepper(host, ctrl);
+  if (host) host.appendChild(stepper(ctrl));
 }
 </script>
 </body>

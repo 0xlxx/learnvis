@@ -230,12 +230,12 @@ class CoordSystem3dImpl implements CoordSystem3d {
     return this._wrap(this._inner.arc(id, this.project(center), this._applyBasis(b), this._applyBasis(c)));
   }
 
-  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3): Gfx3d {
-    return this._wrap(this._inner.rightAngle(id, this.project(center), this._applyBasis(dirA), this._applyBasis(dirB)));
+  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3, color?: string): Gfx3d {
+    return this._wrap(this._inner.rightAngle(id, this.project(center), this._applyBasis(dirA), this._applyBasis(dirB), color));
   }
 
-  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3): Vec3 {
-    const wFoot = this._inner.perpFoot(id, this.project(point), this.project(lineStart), this.project(lineEnd));
+  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3, color?: string): Vec3 {
+    const wFoot = this._inner.perpFoot(id, this.project(point), this.project(lineStart), this.project(lineEnd), color);
     return this.unproject(wFoot);
   }
 

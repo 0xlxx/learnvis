@@ -60,7 +60,8 @@ When source API changes:
 
 | Date | Changes |
 |------|---------|
-| 2026-06-20 | Fix source paths (vis/ → vis2d/), add foundation/ to source list. Note vis3d streamlines removal, vis3d as separate library. |
+| 2026-06-20 | Fix source paths (vis/ → vis2d/), add foundation/. Note vis3d streamlines removal. |
+| 2026-06-20 | Prune three-tsl (kill no-ops, merge 常见坑 into API table, collapse 查文档流程). Tighten learnvis description + kill inline comments. |
 | 2026-06-18 | Full skill rewrite for v4.0.0: flat namespace, Gfx return from axes(), Scene primitives, CanvasOpts, CoordView. |
 | 2026-06-18 | Axes API refactor: CoordView.axes() returns Gfx, cleaned AxesOpts/CoordsConfig, fixed GroupState semantics. |
 

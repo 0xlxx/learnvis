@@ -391,16 +391,16 @@ export class Scene3dImpl implements Scene3d {
     return [M, dir1, dir2];
   }
 
-  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3): Vec3 {
+  perpFoot(id: string, point: Vec3, lineStart: Vec3, lineEnd: Vec3, color?: string): Vec3 {
     const e = v3sub(lineEnd, lineStart);
     const el2 = v3dot(e, e);
     const t = v3dot(v3sub(point, lineStart), e) / el2;
     const foot: Vec3 = v3add(lineStart, v3scale(e, t));
-    this.rightAngle(id, foot, v3sub(point, foot), e);
+    this.rightAngle(id, foot, v3sub(point, foot), e, color);
     return foot;
   }
 
-  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3): Gfx3d {
+  rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3, color?: string): Gfx3d {
     const existing = this._store.get(id);
     if (existing) {
       this._world.setComponent(existing._e, { type: 'position3', x: center[0], y: center[1], z: center[2] });
@@ -410,11 +410,12 @@ export class Scene3dImpl implements Scene3d {
         dirBX: dirB[0], dirBY: dirB[1], dirBZ: dirB[2],
         size: 0.18,
       } as ComponentOf<'geometry'>);
+      if (color) this._world.patchComponent(existing._e, 'appearance', { color: this._resolve(color) });
       this._touch(id);
       return existing;
     }
     this._upsert(id);
-    const { entity, gfx } = spawnRightAngle(this._world, this._resolve, id, center, dirA, dirB, 0.18);
+    const { entity, gfx } = spawnRightAngle(this._world, this._resolve, id, center, dirA, dirB, 0.18, color);
     this._register(gfx, entity);
     this._store.set(id, gfx);
     this._touch(id);

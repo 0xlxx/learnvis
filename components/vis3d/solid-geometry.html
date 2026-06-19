@@ -41,7 +41,7 @@
 
 <script type="module">
 import { canvas3d } from '@learnvis/vis3d';
-import { stepper } from '/vis/stepper.ts';
+import { stepper } from '@learnvis/vis2d';
 
 const gpuEl = document.getElementById('gpu');
 if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
@@ -152,7 +152,7 @@ const prob2 = [
     s.line3d('pc_hl', P, C).color('accent').thickness('medium');
     s.line3d('toHb', B, Hb).color('danger').opacity(0.5).dash();
     s.point('pHb', ...Hb).color('danger').size('tiny').label('Hb', [0.15,0.15,0]);
-    s.perpFoot('pf_hb', B, P, C);
+    s.perpFoot('pf_hb', B, P, C, 'danger');
   }},
   { label: '垂足 Hd', frame(s) {
     s.frame3d({ extent: 2.5 });
@@ -162,8 +162,8 @@ const prob2 = [
     s.point('pHb', ...Hb).color('danger').size('tiny');
     s.line3d('toHd', D, Hd).color('danger').opacity(0.5).dash();
     s.point('pHd', ...Hd).color('danger').size('tiny').label('Hd', [0.15,0.15,0]);
-    s.perpFoot('pf_hb', B, P, C);
-    s.perpFoot('pf_hd', D, P, C);
+    s.perpFoot('pf_hb', B, P, C, 'danger');
+    s.perpFoot('pf_hd', D, P, C, 'danger');
   }},
   { label: '平面角', frame(s) {
     s.frame3d({ extent: 2.5 });

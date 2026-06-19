@@ -182,7 +182,7 @@ for (const [si, sec] of sections.entries()) {
   // If setup returns a StepsController, attach stepper
   if (result && typeof result.go === 'function') {
     const host = el.querySelector('.lv-stepper-host');
-    if (host) stepper(host, result);
+    if (host) host.appendChild(stepper(result));
   }
 }
 </script>
