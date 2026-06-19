@@ -2,7 +2,7 @@
 
 import * as d3 from 'd3';
 import type { BaseType, Selection } from 'd3';
-import { svgColor } from './color';
+import { svgColor } from '../foundation/color';
 
 interface Bounds {
   left: number; top: number; w: number; h: number; cx: number; cy: number;

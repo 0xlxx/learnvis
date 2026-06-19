@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Parametric surface — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  header{padding:1.2rem 0 .2rem;text-align:center}
+  h1{font-size:1rem;font-weight:500;color:#1a1a1a}
+  .sub{font-size:.68rem;color:#888;margin-top:.2rem}
+  #app{position:relative;width:820px;height:540px;border-radius:10px;overflow:hidden;
+       border:1px solid rgba(0,0,0,.08);background:#fafaf8}
+  footer{width:820px;margin-top:.6rem;font-size:.64rem;color:#999;
+         display:flex;justify-content:space-between;align-items:center}
+  kbd{background:rgba(0,0,0,.04);border-radius:3px;padding:1px 5px;
+      font-size:.6rem;border:1px solid rgba(0,0,0,.1)}
+  button{font-size:.7rem;padding:4px 14px;border:1px solid rgba(0,0,0,.15);
+      border-radius:4px;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+  button:hover{background:#f0f0f0}
+  button.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+  .buttons{display:flex;gap:6px}
+</style>
+</head>
+<body>
+<header>
+  <h1>参数曲面</h1>
+  <p class="sub">f(u, v) → [x, y, z]</p>
+</header>
+<div id="app"></div>
+<footer>
+  <span><kbd>drag</kbd> 旋转 · <kbd>scroll</kbd> 缩放</span>
+  <div class="buttons">
+    <button data-surf="saddle" class="active">马鞍面</button>
+    <button data-surf="paraboloid">抛物面</button>
+    <button data-surf="torus">环面</button>
+    <button data-surf="helicoid">螺旋面</button>
+    <button data-surf="sphere">球面</button>
+    <span style="color:#ccc;margin:0 4px">|</span>
+    <button data-style="wireframe-face" class="active">线框+面</button>
+    <button data-style="height-color">高度色</button>
+    <button data-style="minimal">极简</button>
+  </div>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+const s = await canvas3d('#app', { mood: 'clean' });
+s.camera({ position: [4.5, 3, 5.5], target: [0, 0.3, 0] });
+
+const c = s.coords3d({ up: 'z' });
+
+const SURFACES = {
+  saddle: {
+    fn: (u, v) => [u, v, u*u - v*v],
+    urange: [-1.2, 1.2], vrange: [-1.2, 1.2],
+    label: 'z = x² − y²',
+  },
+  paraboloid: {
+    fn: (u, v) => {
+      const r = Math.sqrt(u*u + v*v);
+      return [u, v, r*r];
+    },
+    urange: [-1, 1], vrange: [-1, 1],
+    label: 'z = x² + y²',
+  },
+  torus: {
+    fn: (u, v) => {
+      const R = 1, r = 0.35;
+      const cx = R * Math.cos(u), cy = R * Math.sin(u);
+      return [
+        cx + r * Math.cos(v) * Math.cos(u),
+        cy + r * Math.cos(v) * Math.sin(u),
+        r * Math.sin(v),
+      ];
+    },
+    urange: [0, 2*Math.PI], vrange: [0, 2*Math.PI],
+    label: '环面 (R=1, r=0.35)',
+  },
+  helicoid: {
+    fn: (u, v) => [u * Math.cos(v), u * Math.sin(v), v],
+    urange: [-1, 1], vrange: [-Math.PI, Math.PI],
+    label: '螺旋面',
+  },
+  sphere: {
+    fn: (u, v) => {
+      const r = 1.2;
+      return [
+        r * Math.cos(u) * Math.cos(v),
+        r * Math.sin(u) * Math.cos(v),
+        r * Math.sin(v),
+      ];
+    },
+    urange: [-Math.PI, Math.PI], vrange: [-Math.PI/2, Math.PI/2],
+    label: '球面 (r=1.2)',
+  },
+};
+
+let current = 'saddle';
+let style = 'wireframe-face';
+
+s.render(() => {
+  c.frame3d({ extent: 2.5 });
+  const surf = SURFACES[current];
+  c.surface('S', surf.fn, surf.urange, surf.vrange, { uSegments: 40, vSegments: 40, color: 'primary', style });
+});
+
+// Switch surfaces
+document.querySelectorAll('[data-surf]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-surf]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    current = btn.dataset.surf;
+    document.querySelector('.sub').textContent = SURFACES[current].label;
+  });
+});
+
+// Switch style
+document.querySelectorAll('[data-style]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-style]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    style = btn.dataset.style;
+  });
+});
+
+console.log('Parametric surface demo ready');
+</script>
+</body>
+</html>

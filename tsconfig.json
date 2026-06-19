@@ -10,7 +10,10 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "allowUmdGlobalAccess": true,
+    "paths": {
+      "@learnvis/ecs": ["./packages/ecs/src/index.ts"]
+    },
     "types": ["d3"]
   },
-  "include": ["vis/**/*.ts"]
+  "include": ["vis/**/*.ts", "vis3d/**/*.ts", "packages/**/*.ts"]
 }

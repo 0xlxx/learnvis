@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>分质过渡演示 — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;min-height:100vh}
+  header{padding:1rem 1.5rem .4rem}
+  h1{font-size:1rem;font-weight:500}
+  .sub{font-size:.68rem;color:#888;margin-top:.2rem}
+  main{display:grid;grid-template-columns:repeat(auto-fill,minmax(380px,1fr));gap:10px;padding:10px 14px}
+  .card{background:#fafaf8;border-radius:8px;border:1px solid rgba(0,0,0,.06);overflow:hidden}
+  .card-head{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,.04);
+             display:flex;justify-content:space-between;align-items:center}
+  .card-head h2{font-size:.72rem;font-weight:600}
+  .card-head .meta{font-size:.6rem;color:#999}
+  .card-view{position:relative;width:100%;height:280px}
+  .card-ctrl{padding:6px 12px;display:flex;gap:6px;border-top:1px solid rgba(0,0,0,.04)}
+  button{font-size:.64rem;padding:3px 10px;border:1px solid rgba(0,0,0,.12);
+         border-radius:4px;background:#fff;color:#555;cursor:pointer}
+  button:hover{background:#f0f0f0}
+  button.enter{color:#16a34a;border-color:#16a34a}
+  button.exit{color:#dc2626;border-color:#dc2626}
+  button.both{color:#2563eb;border-color:#2563eb}
+  .legend{font-size:.56rem;color:#aaa;display:flex;gap:10px;padding:4px 12px}
+  .legend span{display:flex;align-items:center;gap:3px}
+  .swatch{display:inline-block;width:8px;height:8px;border-radius:2px}
+  footer{padding:.6rem 1.5rem;font-size:.6rem;color:#bbb;
+         display:flex;justify-content:space-between}
+  .badge{display:inline-block;padding:1px 6px;border-radius:3px;font-size:.56rem;
+         font-weight:600;margin-left:4px}
+  .badge.bloom{background:#fef3c7;color:#92400e}
+  .badge.condense{background:#dbeafe;color:#1e40af}
+  .badge.mark{background:#fce7f3;color:#9d174d}
+  .badge.draw{background:#d1fae5;color:#065f46}
+  .badge.reveal{background:#ede9fe;color:#5b21b6}
+  .badge.dot{background:#e5e7eb;color:#374151}
+  .badge.stage{background:#f3f4f6;color:#6b7280}
+</style>
+</head>
+<body>
+<header>
+  <h1>分质过渡演示</h1>
+  <p class="sub">7 组 · 11 种图元 · enter / exit 对称镜像</p>
+</header>
+<main id="grid"></main>
+<footer>
+  <span>同一条 spring 曲线 · 只变时长 + scale range · <kbd>drag</kbd> 旋转 <kbd>scroll</kbd> 缩放</span>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+// ═══ Category definitions ═══
+const CATEGORIES = [
+  {
+    group: 'BLOOM', klass: 'bloom', label: '绽放', desc: 'scale 0→1.0 · 400ms / 280ms',
+    build(s, show) {
+      if (!show) return;
+      s.fill('f', [[-0.6,0,-0.6],[0.6,0,-0.6],[0.6,0,0.6],[-0.6,0,0.6]]).color('primary').opacity(0.15);
+      s.cube('cb', 1.2, 0.8, 0, 1.2).color('accent');
+    },
+  },
+  {
+    group: 'CONDENSE', klass: 'condense', label: '凝结', desc: 'scale 0→1.15→1.0 · 350ms / 245ms',
+    build(s, show) {
+      if (!show) return;
+      s.sphere('A', 0, 0.6, 0, 0.6).color('danger').label('A', [0,0.7,0]);
+      s.sphere('B', 1.4, 0.2, 0.5, 0.4).color('info').label('B', [0,0.5,0]);
+    },
+  },
+  {
+    group: 'MARK', klass: 'mark', label: '盖戳', desc: 'scale 0→1.0 · 200ms / 140ms',
+    build(s, show) {
+      if (!show) return;
+      s.rightAngle('ra1', [0,0.2,0], [0.6,0,0], [0,0.8,0]);
+      s.rightAngle('ra2', [1.5,0.4,0.3], [0.4,0.4,0], [-0.3,0.1,0.4]);
+    },
+  },
+  {
+    group: 'DRAW', klass: 'draw', label: '画出', desc: 'fade only · 300ms / 210ms',
+    build(s, show) {
+      if (!show) return;
+      s.line3d('l1', [-1,0.3,0], [1,0.3,0]).color('danger').thickness('medium');
+      s.line3d('l2', [-0.8,0.6,0.3], [0.8,0.6,-0.3]).color('info').thickness('thin').dash();
+      s.vector('v1', [0,0.15,0], [0,1.2,0]).color('accent');
+      s.arc('a1', [0,0.3,0], [0.8,0,0], [0,0,0.8]).color('primary');
+    },
+  },
+  {
+    group: 'REVEAL', klass: 'reveal', label: '显现', desc: 'fade + settle 0.92→1.0 · 450ms / 315ms',
+    build(s, show) {
+      if (!show) return;
+      s.surface('sf', (u, v) => {
+        const r = 1.2 + 0.3 * Math.sin(u * Math.PI * 3) * Math.cos(v * Math.PI * 2);
+        return [r * Math.cos(u * Math.PI * 2), v * 1.4, r * Math.sin(u * Math.PI * 2)];
+      }, [0, 1], [0, 1], { style: 'wireframe-face', uSegments: 24, vSegments: 16 }).color('info');
+    },
+  },
+  {
+    group: 'DOT', klass: 'dot', label: '标点', desc: 'fade only · 200ms / 140ms',
+    build(s, show) {
+      if (!show) return;
+      s.point('p1', 0, 0.4, 0).color('danger').size('medium').label('P');
+      s.point('p2', 1.2, 0.1, 0.4).color('info').size('small').label('Q');
+      s.point('p3', -0.8, 0.2, -0.3).color('accent').size('tiny').label('R');
+    },
+  },
+  {
+    group: 'STAGE', klass: 'stage', label: '舞台', desc: 'fade only · 250ms / 175ms',
+    build(s, show) {
+      if (show) s.frame3d({ extent: 1.6 });
+    },
+  },
+];
+
+// ═══ Build cards ═══
+const grid = document.getElementById('grid');
+
+for (const cat of CATEGORIES) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <div class="card-head">
+      <h2>${cat.label} <span class="badge ${cat.klass}">${cat.group}</span></h2>
+      <span class="meta">${cat.desc}</span>
+    </div>
+    <div class="card-view" id="view-${cat.group}"></div>
+    <div class="card-ctrl">
+      <button class="enter" id="enter-${cat.group}">enter</button>
+      <button class="exit" id="exit-${cat.group}">exit</button>
+      <button class="both" id="both-${cat.group}">enter → exit</button>
+    </div>
+  `;
+  grid.appendChild(card);
+}
+
+// ═══ Create scenes ═══
+for (const cat of CATEGORIES) {
+  const viewEl = document.getElementById(`view-${cat.group}`);
+  const s = await canvas3d(`#view-${cat.group}`, { mood: 'clean' });
+  s.camera({});
+
+  // Initial state: all visible
+  s.render(scene => {
+    scene.frame3d({ extent: 1.6 });
+    cat.build(scene, true);
+  });
+
+  let visible = true;
+
+  // Enter button: empty → show
+  document.getElementById(`enter-${cat.group}`).addEventListener('click', () => {
+    if (visible) return;
+    visible = true;
+    s.render(scene => {
+      scene.frame3d({ extent: 1.6 });
+      cat.build(scene, true);
+    });
+  });
+
+  // Exit button: show → empty
+  document.getElementById(`exit-${cat.group}`).addEventListener('click', () => {
+    if (!visible) return;
+    visible = false;
+    s.render(scene => {
+      scene.frame3d({ extent: 1.6 });
+      // frame3d stays, primitives gone → they exit
+    });
+  });
+
+  // Both button: enter, wait, exit
+  document.getElementById(`both-${cat.group}`).addEventListener('click', async () => {
+    // Exit first if visible
+    if (visible) {
+      visible = false;
+      s.render(scene => {
+        scene.frame3d({ extent: 1.6 });
+      });
+      await new Promise(r => setTimeout(r, 600));
+    }
+    // Enter
+    visible = true;
+    s.render(scene => {
+      scene.frame3d({ extent: 1.6 });
+      cat.build(scene, true);
+    });
+    await new Promise(r => setTimeout(r, 1200));
+    // Exit
+    visible = false;
+    s.render(scene => {
+      scene.frame3d({ extent: 1.6 });
+    });
+  });
+}
+
+console.log('Transition demo ready — 7 categories, 11 primitives');
+</script>
+</body>
+</html>

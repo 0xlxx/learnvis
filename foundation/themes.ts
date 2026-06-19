@@ -85,6 +85,63 @@ export const themes = {
       success:  { fg:'oklch(0.48 0.10 150)', bg:'oklch(0.88 0.04 150)' },
     },
   },
+  // ── Mood-driven themes (vis3d) ──
+  playful: {
+    name: 'playful',
+    desc: '低龄段 · 暖色高饱和 · 手绘圆润感',
+    palette: {
+      primary:  { fg:'oklch(0.58 0.20 55)',  bg:'oklch(0.95 0.04 85)' },
+      accent:   { fg:'oklch(0.55 0.14 180)', bg:'oklch(0.93 0.05 180)' },
+      danger:   { fg:'oklch(0.50 0.18 15)',  bg:'oklch(0.93 0.03 15)' },
+      warning:  { fg:'oklch(0.58 0.22 80)',  bg:'oklch(0.95 0.06 80)' },
+      info:     { fg:'oklch(0.50 0.10 240)', bg:'oklch(0.93 0.03 240)' },
+      dim:      { fg:'oklch(0.55 0.03 85)',  bg:'oklch(0.96 0.02 85)' },
+      muted:    { fg:'oklch(0.55 0.03 85)',  bg:'oklch(0.96 0.02 85)' },
+      success:  { fg:'oklch(0.52 0.16 145)', bg:'oklch(0.93 0.05 145)' },
+    },
+  },
+  clean: {
+    name: 'clean',
+    desc: '中高年级 · 清晰中性 · 现代教科书风',
+    palette: {
+      primary:  { fg:'oklch(0.45 0.12 250)', bg:'oklch(0.96 0.01 260)' },
+      accent:   { fg:'oklch(0.48 0.12 160)', bg:'oklch(0.94 0.03 160)' },
+      danger:   { fg:'oklch(0.42 0.15 20)',  bg:'oklch(0.94 0.02 20)' },
+      warning:  { fg:'oklch(0.52 0.18 80)',  bg:'oklch(0.95 0.05 80)' },
+      info:     { fg:'oklch(0.42 0.08 240)', bg:'oklch(0.94 0.02 240)' },
+      dim:      { fg:'oklch(0.50 0.01 260)', bg:'oklch(0.97 0.00 0)' },
+      muted:    { fg:'oklch(0.50 0.01 260)', bg:'oklch(0.97 0.00 0)' },
+      success:  { fg:'oklch(0.45 0.14 150)', bg:'oklch(0.94 0.04 150)' },
+    },
+  },
+  minimal: {
+    name: 'minimal',
+    desc: '高中以上 · 极简精确 · 学术论文风',
+    palette: {
+      primary:  { fg:'oklch(0.25 0.01 260)', bg:'oklch(0.94 0.01 90)' },
+      accent:   { fg:'oklch(0.40 0.06 250)', bg:'oklch(0.92 0.02 250)' },
+      danger:   { fg:'oklch(0.35 0.08 20)',  bg:'oklch(0.92 0.02 20)' },
+      warning:  { fg:'oklch(0.48 0.10 80)',  bg:'oklch(0.93 0.03 80)' },
+      info:     { fg:'oklch(0.38 0.05 240)', bg:'oklch(0.92 0.02 240)' },
+      dim:      { fg:'oklch(0.48 0.01 90)',  bg:'oklch(0.95 0.01 90)' },
+      muted:    { fg:'oklch(0.48 0.01 90)',  bg:'oklch(0.95 0.01 90)' },
+      success:  { fg:'oklch(0.38 0.08 150)', bg:'oklch(0.92 0.03 150)' },
+    },
+  },
+  sketch: {
+    name: 'sketch',
+    desc: '黑板/草稿风 · 粉笔白+黑板绿 · 手写板书感',
+    palette: {
+      primary:  { fg:'oklch(0.85 0.04 100)', bg:'oklch(0.28 0.04 160)' },
+      accent:   { fg:'oklch(0.75 0.10 180)', bg:'oklch(0.24 0.03 180)' },
+      danger:   { fg:'oklch(0.72 0.12 30)',  bg:'oklch(0.24 0.03 30)' },
+      warning:  { fg:'oklch(0.78 0.14 80)',  bg:'oklch(0.26 0.04 80)' },
+      info:     { fg:'oklch(0.68 0.08 240)', bg:'oklch(0.24 0.03 240)' },
+      dim:      { fg:'oklch(0.50 0.03 180)', bg:'oklch(0.22 0.02 160)' },
+      muted:    { fg:'oklch(0.50 0.03 180)', bg:'oklch(0.22 0.02 160)' },
+      success:  { fg:'oklch(0.70 0.12 150)', bg:'oklch(0.26 0.04 150)' },
+    },
+  },
 };
 
 export function resolveTheme(name: string) {

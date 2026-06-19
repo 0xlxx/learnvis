@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Parametric motion — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#0d0d14;color:#ccc;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  header{padding:1.2rem 0 .2rem;text-align:center}
+  h1{font-size:1rem;font-weight:500;color:#eee}
+  .sub{font-size:.68rem;color:#666;margin-top:.2rem}
+  #app{width:820px;height:540px;border-radius:10px;overflow:hidden;
+       border:1px solid rgba(255,255,255,.06)}
+  footer{width:820px;margin-top:.6rem;font-size:.64rem;color:#555;
+         display:flex;justify-content:space-between}
+  kbd{background:rgba(255,255,255,.06);border-radius:3px;padding:1px 5px;
+      font-size:.6rem;border:1px solid rgba(255,255,255,.1)}
+  .eq{color:#aaa;font-family:ui-monospace,monospace;font-size:.72rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>Parametric curve + orbiting camera</h1>
+  <p class="sub">
+    <span class="eq">r(t) = ⟨2cos(ωt), 1.5sin(φt), sin(ψt)⟩</span>
+    <span style="color:#666"> — camera orbits · drag to take over</span>
+  </p>
+</header>
+<div id="app"></div>
+<footer>
+  <span><kbd>drag</kbd> orbit · <kbd>scroll</kbd> zoom</span>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) {
+  gpuEl.textContent = 'WebGPU not available';
+  throw new Error('WebGPU not available');
+}
+gpuEl.textContent = 'WebGPU';
+
+const s = await canvas3d('#app', { mood: 'sketch' });
+s.camera({ position: [6.5, 4.5, 6.5], target: [0, 0.3, 0] });
+
+// ═══ Camera: orbit → drag → smooth-return → orbit ═══
+let userCam = false;
+s.renderer.domElement.addEventListener('pointerdown', () => { userCam = true; });
+s.renderer.domElement.addEventListener('pointerup',   () => { userCam = false; });
+
+const or = (t, i) => 6.5 * Math.cos(t * 0.18 + i * 2.094);
+const oh = (t) => 3.5 + 1.2 * Math.sin(t * 0.3);
+const gt = (t) => 0.4 + 0.2 * Math.sin(t * 0.25);
+
+const t0 = performance.now();
+
+s.render(() => {
+  s.frame3d({ extent: 3 });
+  s.point('O', 0, 0, 0).color('dim');
+  const t = (performance.now() - t0) / 1000;
+  const goal = [or(t,0), oh(t), or(t,1)];
+
+  if (!userCam) {
+    s.camera(
+      { position: goal, target: [0, gt(t), 0] },
+      { duration: 1.5, easing: 'ease-out' },
+    );
+  }
+
+  // ═══ Parametric curve r(t) ═══
+  const ω = 0.6, φ = 0.85, ψ = 1.1;
+  const x = 2.0 * Math.cos(ω * t);
+  const y = 1.5 * Math.sin(φ * t);
+  const z = 1.0 * Math.sin(ψ * t);
+
+  // Tangent (velocity) — derivative of r(t), scaled to arrow length
+  const tx = -2.0 * ω * Math.sin(ω * t);
+  const ty =  1.5 * φ * Math.cos(φ * t);
+  const tz =  1.0 * ψ * Math.cos(ψ * t);
+  const ts = 0.6 / (Math.sqrt(tx*tx + ty*ty + tz*tz) || 1);
+
+  // Position vector: origin → current point
+  s.vector('r', [0,0,0], [x, y, z])
+    .color('warning').label('r(t)', [0, 0.6, 0]).thickness('medium');
+
+  // Tangent vector at current point
+  s.vector('rʼ', [x, y, z], [x + tx*ts, y + ty*ts, z + tz*ts])
+    .color('accent').label('rʼ(t)', [0, 0.6, 0]).thickness('thin');
+
+  // Current point on the curve
+  s.point('P', x, y, z).color('warning').size('medium');
+});
+
+console.log('Parametric motion + camera orbit ready');
+</script>
+</body>
+</html>

@@ -69,4 +69,4 @@ const s = canvas('#app', { theme: 'warm' });
 | `info` | 信息/蓝 | 辅助线、参考信息 |
 | `muted` | 暗色/灰 | 非重点元素、网格线（`dim` 别名到 `muted`） |
 
-颜色解析（`vis/color.ts`）：`oklch → CSS var(--lv-*)` 引用转换发生在渲染边界。所有 SVG `fill`/`stroke` 属性通过 `svgColor()` 透明转换。
+颜色解析（`foundation/color.ts`）：`oklch → CSS var(--lv-*)` 引用转换发生在渲染边界。所有 SVG `fill`/`stroke` 属性通过 `svgColor()` 透明转换。

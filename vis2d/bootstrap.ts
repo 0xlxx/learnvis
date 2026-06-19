@@ -4,7 +4,7 @@
 import * as d3 from 'd3';
 import type { BaseType } from 'd3';
 import type { Point, S, StageCtx } from './types';
-import { palette } from './tokens';
+import { palette } from '../foundation/tokens';
 import { createCanvas, defineArrows } from './primitives';
 
 export function bootstrap(selector: string | BaseType, opts: {

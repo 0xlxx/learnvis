@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Vector token contrast — vis3d</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#1a1a1a;font-family:system-ui,sans-serif;overflow:hidden}
+  #c{width:100vw;height:100vh;display:block}
+  #info{position:fixed;top:16px;left:50%;transform:translateX(-50%);font-size:.68rem;color:#999;z-index:10}
+  #gpu{position:fixed;top:16px;right:16px;font-size:.6rem;color:#888;z-index:10}
+  #hud{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:6px;flex-wrap:wrap;justify-content:center;z-index:10}
+  #hud button{padding:5px 14px;border:1px solid rgba(255,255,255,.12);border-radius:6px;background:rgba(0,0,0,.55);color:#ccc;font-size:.68rem;cursor:pointer;transition:all .15s;backdrop-filter:blur(4px)}
+  #hud button:hover{background:rgba(255,255,255,.12);color:#fff}
+  #hud button.active{background:rgba(59,130,246,.6);border-color:rgba(59,130,246,.8);color:#fff}
+</style>
+</head>
+<body>
+<div id="c"></div>
+<div id="info">drag to orbit · scroll to zoom · right-drag to pan</div>
+<span id="gpu"></span>
+<div id="hud"></div>
+
+<script type="module">
+import * as THREE from 'three/webgpu';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+// ── Base semantic tokens ──
+const TOKENS = [
+  { hex: 0x3b82f6, name: 'primary' },
+  { hex: 0x06b6d4, name: 'info' },
+  { hex: 0xf59e0b, name: 'accent' },
+  { hex: 0xef4444, name: 'danger' },
+];
+
+// ── Color derivation helpers ──
+function hexToRGB(h) { return [(h>>16)&0xff, (h>>8)&0xff, h&0xff]; }
+function rgbToHex(r, g, b) { return (Math.round(r)<<16)|(Math.round(g)<<8)|Math.round(b); }
+function clamp(v) { return Math.max(0, Math.min(255, v)); }
+function lerp(a,b,t) { return a+(b-a)*t; }
+
+function lighten(hex, amt) {
+  const c = hexToRGB(hex);
+  return rgbToHex(lerp(c[0],255,amt), lerp(c[1],255,amt), lerp(c[2],255,amt));
+}
+function darken(hex, amt) {
+  const c = hexToRGB(hex);
+  return rgbToHex(lerp(c[0],0,amt), lerp(c[1],0,amt), lerp(c[2],0,amt));
+}
+function desaturate(hex, amt) {
+  const c = hexToRGB(hex);
+  const gray = c[0]*0.299 + c[1]*0.587 + c[2]*0.114;
+  return rgbToHex(lerp(c[0],gray,amt), lerp(c[1],gray,amt), lerp(c[2],gray,amt));
+}
+
+// ── Derivation rules ──
+const RULES = [
+  {
+    id: 'luminance', label: 'Luminance · 深浅', desc: '杆 darken 25% / 尖 lighten 30%',
+    derive: (h) => ({ shaft: darken(h,0.25), tip: lighten(h,0.30), dot: darken(h,0.45) }),
+  },
+  {
+    id: 'desaturate', label: 'Desaturate · 去饱和', desc: '杆 desat 30% / 尖 lighten 15%',
+    derive: (h) => ({ shaft: desaturate(h,0.30), tip: lighten(h,0.15), dot: desaturate(h,0.50) }),
+  },
+  {
+    id: 'lighter-shaft', label: 'Lighter Shaft · 杆亮尖浓', desc: '杆 lighten 20% / 尖=原色',
+    derive: (h) => ({ shaft: lighten(h,0.20), tip: h, dot: darken(h,0.35) }),
+  },
+  {
+    id: 'high-contrast', label: 'High Contrast · 强对比', desc: '杆 darken 50% / 尖 lighten 45%',
+    derive: (h) => ({ shaft: darken(h,0.50), tip: lighten(h,0.45), dot: darken(h,0.65) }),
+  },
+  {
+    id: 'muted-shaft', label: 'Muted Shaft · 灰杆尖色', desc: '杆 desat+darken / 尖=原色',
+    derive: (h) => ({ shaft: desaturate(darken(h,0.15),0.20), tip: h, dot: desaturate(darken(h,0.30),0.30) }),
+  },
+  {
+    id: 'glow-tip', label: 'Glow Tip · 亮尖', desc: '杆 darken 15% / 尖 lighten 40%',
+    derive: (h) => ({ shaft: darken(h,0.15), tip: lighten(h,0.40), dot: darken(h,0.40) }),
+  },
+];
+
+// ── Arrow builder ──
+function mkCyl(pos, [rt,rb,h], material) {
+  const geo = new THREE.CylinderGeometry(rt, rb, h, 16);
+  const m = new THREE.Mesh(geo, material); m.position.set(...pos); return m;
+}
+function mkCone(pos, [r,h,seg], material) {
+  const geo = new THREE.ConeGeometry(r, h, seg);
+  const m = new THREE.Mesh(geo, material); m.position.set(...pos); return m;
+}
+function mkSphere(pos, r, material) {
+  const geo = new THREE.SphereGeometry(r, 12, 12);
+  const m = new THREE.Mesh(geo, material); m.position.set(...pos); return m;
+}
+function mat(c, r=0.45) {
+  return new THREE.MeshStandardMaterial({ color: c, roughness: r });
+}
+
+function orient(group, from, to) {
+  const d = new THREE.Vector3().subVectors(
+    new THREE.Vector3(to[0],to[1],to[2]), new THREE.Vector3(from[0],from[1],from[2]));
+  group.position.set(from[0], from[1], from[2]);
+  group.setRotationFromQuaternion(
+    new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0), d.normalize()));
+  return d.length();
+}
+
+function buildArrow(from, to, t, shaftHex, tipHex, dotHex) {
+  const g = new THREE.Group();
+  const len = orient(g, from, to);
+  const hl = Math.min(Math.max(t*5,0.05), 0.16, len*0.15);
+  const sl = len - hl;
+  g.add(mkCyl([0,sl/2,0], [t*0.65, t*0.65, sl], mat(shaftHex, 0.48)));
+  g.add(mkCone([0,sl+hl/2,0], [t*1.5, hl, 12], mat(tipHex, 0.35)));
+  g.add(mkSphere([0,0,0], t*0.7, mat(dotHex, 0.55)));
+  return g;
+}
+
+// ── Label sprite ──
+function makeSprite(text, w, y) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 512; canvas.height = 48;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffffcc';
+  ctx.font = '20px system-ui, sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, 256, 24);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.minFilter = THREE.LinearFilter;
+  const m = new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false });
+  const s = new THREE.Sprite(m);
+  s.scale.set(w, 0.4, 1);
+  s.position.y = y;
+  return s;
+}
+
+// ══ Layout ══
+const COLS = 3;
+const ROWS = 2;
+const SPACING_X = 5.5;
+const SPACING_Z = 7.0;
+const ORIGIN_X = -(COLS-1)*SPACING_X/2;
+const ORIGIN_Z = -(ROWS-1)*SPACING_Z/2;
+
+// ══ Scene ══
+const container = document.getElementById('c');
+const renderer = new THREE.WebGPURenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+container.appendChild(renderer.domElement);
+await renderer.init();
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x1a1a1a);
+
+const camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.5, 80);
+camera.position.set(0, 10, 17);
+camera.lookAt(0, 2.5, 0);
+
+scene.add(new THREE.AmbientLight(0xffffff, 2.2));
+const key = new THREE.DirectionalLight(0xffffff, 3.5);
+key.position.set(6, 10, 8); scene.add(key);
+const fill = new THREE.DirectionalLight(0x8899cc, 1.5);
+fill.position.set(-4, 3, -4); scene.add(fill);
+const rim = new THREE.DirectionalLight(0xffffff, 1.0);
+rim.position.set(0, -1, 6); scene.add(rim);
+
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 2.5, 0);
+controls.enableDamping = true; controls.dampingFactor = 0.08; controls.update();
+
+// ── Build cells ──
+for (let i = 0; i < RULES.length; i++) {
+  const col = i % COLS;
+  const row = Math.floor(i / COLS);
+  const cx = ORIGIN_X + col * SPACING_X;
+  const cz = ORIGIN_Z + row * SPACING_Z;
+
+  // Ground grid
+  const grid = new THREE.PolarGridHelper(2.0, 20, 12, 64, 0x444444, 0x333333);
+  grid.position.set(cx, 0.01, cz);
+  scene.add(grid);
+
+  // Rule label
+  const ruleLabel = makeSprite(RULES[i].label, 7, 4.2);
+  ruleLabel.position.set(cx, 0, cz);
+  scene.add(ruleLabel);
+
+  // Desc label
+  const descLabel = makeSprite(RULES[i].desc, 6, 3.6);
+  descLabel.position.set(cx, 0, cz);
+  descLabel.material.opacity = 0.6;
+  scene.add(descLabel);
+
+  // Main pair (primary token)
+  const c0 = RULES[i].derive(0x3b82f6); // primary
+  scene.add(buildArrow([cx,0,cz], [cx+1.5, 2.2, cz+0.4], 0.04, c0.shaft, c0.tip, c0.dot));
+  scene.add(buildArrow([cx,0,cz], [cx-1.1, 1.8, cz-0.5], 0.04, c0.shaft, c0.tip, c0.dot));
+
+  // Mini token row: 4 tokens × small arrows
+  const miniT = 0.028;
+  const tokOffsets = [-2.0, -0.9, 0.2, 1.3];
+  for (let j = 0; j < 4; j++) {
+    const tok = TOKENS[j];
+    const c = RULES[i].derive(tok.hex);
+    const ox = cx + tokOffsets[j];
+    const oz = cz + 2.4;
+    scene.add(buildArrow([ox,0,oz], [ox+0.35, 1.0, oz+0.12], miniT, c.shaft, c.tip, c.dot));
+    const tl = makeSprite(tok.name, 2.2, 1.7);
+    tl.position.set(ox, 0, oz);
+    scene.add(tl);
+  }
+}
+
+// ── HUD ──
+const hud = document.getElementById('hud');
+RULES.forEach((r, i) => {
+  const btn = document.createElement('button');
+  btn.textContent = r.label.split(' · ')[0];
+  btn.title = r.label;
+  btn.addEventListener('click', () => {
+    const col = i % COLS;
+    const row = Math.floor(i / COLS);
+    const cx = ORIGIN_X + col * SPACING_X;
+    const cz = ORIGIN_Z + row * SPACING_Z;
+    const startPos = camera.position.clone();
+    const endPos = new THREE.Vector3(cx, 4.5, cz + 7);
+    const startTgt = controls.target.clone();
+    const endTgt = new THREE.Vector3(cx, 2, cz);
+    const startTime = performance.now();
+    function anim(now) {
+      const t = Math.min((now-startTime)/600, 1);
+      const e = 1 - (1-t)**3;
+      camera.position.lerpVectors(startPos, endPos, e);
+      controls.target.lerpVectors(startTgt, endTgt, e);
+      if (t < 1) requestAnimationFrame(anim);
+    }
+    requestAnimationFrame(anim);
+    hud.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  });
+  hud.appendChild(btn);
+});
+
+window.addEventListener('resize', () => {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+function animate() {
+  requestAnimationFrame(animate);
+  controls.update();
+  renderer.render(scene, camera);
+}
+animate();
+
+console.log('Token contrast candidates ready');
+</script>
+</body>
+</html>

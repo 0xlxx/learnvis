@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Linear combination + basis transform — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  header{padding:1.2rem 0 .2rem;text-align:center}
+  h1{font-size:1rem;font-weight:500;color:#1a1a1a}
+  .sub{font-size:.68rem;color:#888;margin-top:.2rem}
+  #app{position:relative;width:820px;height:540px;border-radius:10px;overflow:hidden;
+       border:1px solid rgba(0,0,0,.08);background:#fafaf8}
+  footer{width:820px;margin-top:.6rem;font-size:.64rem;color:#999;
+         display:flex;justify-content:space-between;align-items:center}
+  kbd{background:rgba(0,0,0,.04);border-radius:3px;padding:1px 5px;
+      font-size:.6rem;border:1px solid rgba(0,0,0,.1)}
+  .eq{color:#888;font-family:ui-monospace,monospace;font-size:.7rem}
+</style>
+</head>
+<body>
+<header>
+  <h1>线性组合 + 基向量旋转变换</h1>
+  <p class="sub">
+    <span class="eq">绕 k̂ 连续旋转 · 组合 v = î + ĵ + k̂</span>
+  </p>
+</header>
+<div id="app"></div>
+<footer>
+  <span><kbd>drag</kbd> 旋转 · <kbd>scroll</kbd> 缩放</span>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+const s = await canvas3d('#app', { mood: 'clean', projection: 'perspective' });
+s.camera({ position: [6, 4, 6], target: [0.5, 0.4, 0.2] });
+
+function normalize3(v) { const l = Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return l < 1e-9 ? [0,0,0] : [v[0]/l, v[1]/l, v[2]/l]; }
+
+s.render(() => {
+  const t = performance.now() / 1000;
+
+  // ═══ Shear î toward ĵ-direction — basis becomes non-orthogonal ═══
+  // From outside, basis vectors tilt; grid follows → space visibly deforms.
+  const shear = 1.0 * Math.sin(t * 0.5);  // oscillate shear amount
+  const î = [2, 0, shear];                // î tilted in Three.js z (textbook y)
+  const ĵ = [0, 0, 1.5];                  // fixed
+  const k̂ = [0, 1, 0];                    // fixed
+
+  const basis = [normalize3(î), normalize3(ĵ), normalize3(k̂)];
+
+  // ═══ Fixed reference lattice — world space, does not transform ═══
+  s.grid3d({ id: '::refgrid', spacing: 0.6, size: 5, color: 'info' });
+
+  // ═══ Transforming frame — follows basis, space deforms ═══
+  s.frame3d({ extent: 2.5, basis });
+
+  // ═══ Basis vectors ═══
+  s.vector('i', [0,0,0], î).color('danger').label('î', [0.3, 0, 0.3]).thickness('medium');
+  s.vector('j', [0,0,0], ĵ).color('info').label('ĵ', [0, 0, 0.3]).thickness('medium');
+  s.vector('k', [0,0,0], k̂).color('accent').label('k̂', [0.3, 0.3, 0]).thickness('medium');
+
+  // ═══ Construction lines (tip-to-tail addition) ═══
+  const tip_i = î;
+  const tip_ij = [î[0]+ĵ[0], î[1]+ĵ[1], î[2]+ĵ[2]];
+  const tip_v  = [tip_ij[0]+k̂[0], tip_ij[1]+k̂[1], tip_ij[2]+k̂[2]];
+
+  s.line3d('cx', tip_i, tip_ij).color('warning').opacity(0.35).thickness('hair');
+  s.line3d('cy', tip_ij, tip_v).color('warning').opacity(0.35).thickness('hair');
+
+  // ═══ Resultant ═══
+  s.vector('v', [0,0,0], tip_v).color('warning').label('v', [0.25, 0.25, 0.25]).thickness('bold');
+
+  // ═══ Points ═══
+  s.point('O', 0, 0, 0).color('dim');
+  s.point('tip_i', ...tip_i).color('warning').size('small');
+  s.point('tip_ij', ...tip_ij).color('warning').size('small');
+  s.point('tip_v', ...tip_v).color('warning');
+});
+
+console.log('Linear combination — continuous rotation + scale');
+</script>
+</body>
+</html>

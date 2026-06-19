@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Vector style candidates — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;display:flex;flex-wrap:wrap;gap:10px;padding:10px}
+  .card{background:#fafaf8;border-radius:8px;border:1px solid rgba(0,0,0,.06);overflow:hidden;width:390px}
+  .card-head{padding:6px 10px;border-bottom:1px solid rgba(0,0,0,.04);font-size:.7rem;font-weight:600}
+  .card-view{width:390px;height:260px;position:relative}
+  .card-info{padding:4px 10px;font-size:.58rem;color:#999;border-top:1px solid rgba(0,0,0,.03)}
+  #gpu{font-size:.6rem;color:#aaa;padding:.3rem}
+</style>
+</head>
+<body>
+<span id="gpu"></span>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+const TOKENS = [
+  { t: 'hair', label: 'hair · 细如发丝', desc: 'thickness=0.008 arrow token' },
+  { t: 'thin', label: 'thin · 适中', desc: 'thickness=0.015 arrow token' },
+  { t: 'medium', label: 'medium · 较粗', desc: 'thickness=0.04 arrow token' },
+  { t: 'bold', label: 'bold · 醒目', desc: 'thickness=0.08 arrow token' },
+];
+
+const grid = document.body;
+for (const tk of TOKENS) {
+  const id = 'v-' + tk.t;
+  const card = document.createElement('div'); card.className = 'card';
+  card.innerHTML = `<div class="card-head">${tk.label}</div>
+    <div class="card-view" id="${id}"></div>
+    <div class="card-info">${tk.desc}</div>`;
+  grid.appendChild(card);
+}
+
+for (const tk of TOKENS) {
+  const id = 'v-' + tk.t;
+  const s = await canvas3d('#' + id, { mood: 'clean' });
+  s.camera({ position: [2, 2.5, 3], target: [0, 0.5, 0] });
+  s.render(() => {
+    s.frame3d({ extent: 1.6 });
+    s.vector('a', [0, 0.4, 0], [1.2, 1.8, 0.3]).color('info').thickness(tk.t);
+    s.vector('b', [0, 0.4, 0], [-0.8, 1.5, -0.4]).color('danger').thickness(tk.t);
+  });
+}
+
+console.log('Vector candidates ready');
+</script>
+</body>
+</html>

@@ -18,7 +18,7 @@ eid('group', 'axes')// → "group:axes"
 
 5 种实体前缀：`'node' | 'line' | 'region' | 'curve' | 'group'`
 
-对应 5 种实体状态类型（在 `vis/types.ts` 中定义）：
+对应 5 种实体状态类型（在 `vis2d/types.ts` 中定义）：
 
 | 类型 | 前缀 | SVG 元素 |
 |------|------|---------|

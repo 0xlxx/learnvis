@@ -1,0 +1,4 @@
+packages:
+  - 'packages/*'
+  - 'vis2d'
+  - 'vis3d'

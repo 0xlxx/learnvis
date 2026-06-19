@@ -1,0 +1,8 @@
+{
+  "name": "@learnvis/vis2d",
+  "version": "4.0.0",
+  "type": "module",
+  "exports": {
+    ".": "./index.ts"
+  }
+}

@@ -13,26 +13,25 @@
     "build:cli": "npx tsdown cli.ts --format esm --outDir dist --clean false --minify false",
     "setup": "node scripts/postinstall.mjs"
   },
-  "devDependencies": {
-    "@types/d3": "^7.4.3",
-    "jsdom": "^29.1.1",
-    "tsdown": "latest",
-    "typescript": "^6.0.3",
-    "vite": "^8.0.16",
-    "vitest": "^4.1.8"
-  },
   "dependencies": {
     "cac": "^7.0.0",
     "d3": "^7.9.0",
     "d3-interpolate": "^3.0.1",
-    "d3-shape": "^3.2.0"
+    "d3-shape": "^3.2.0",
+    "three": "^0.184.0"
+  },
+  "devDependencies": {
+    "@learnvis/ecs": "workspace:*",
+    "@learnvis/vis2d": "workspace:*",
+    "@learnvis/vis3d": "workspace:*",
+    "@types/d3": "^7.4.3",
+    "@types/three": "^0.184.1",
+    "jsdom": "^29.1.1",
+    "tsdown": "latest",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.9"
   },
   "main": "dist/learnvis.mjs",
-  "module": "dist/learnvis.mjs",
-  "exports": {
-    ".": {
-      "import": "./dist/learnvis.mjs",
-      "types": "./vis/index.ts"
-    }
-  }
+  "module": "dist/learnvis.mjs"
 }

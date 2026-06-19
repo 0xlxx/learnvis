@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>四棱锥 P-ABCD — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  header{padding:1.2rem 0 .4rem;text-align:center}
+  h1{font-size:1rem;font-weight:500;color:#1a1a1a}
+  .sub{font-size:.68rem;color:#888;margin-top:.2rem}
+  #app{position:relative;width:820px;height:520px;border-radius:10px;overflow:hidden;
+       border:1px solid rgba(0,0,0,.08);background:#fafaf8}
+  footer{width:820px;margin-top:.6rem;font-size:.64rem;color:#999;
+         display:flex;justify-content:space-between;align-items:center}
+  kbd{background:rgba(0,0,0,.04);border-radius:3px;padding:1px 5px;
+      font-size:.6rem;border:1px solid rgba(0,0,0,.1)}
+  button{font-size:.68rem;padding:4px 12px;border:1px solid rgba(0,0,0,.15);
+      border-radius:4px;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+  button:hover{background:#f0f0f0}
+  button.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+  .buttons{display:flex;gap:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>四棱锥 P−ABCD</h1>
+  <p class="sub" id="subtitle">底面正方形边长 2 · PA⊥底面 · PA=2</p>
+</header>
+<div id="app"></div>
+<div id="stepper" style="display:flex;justify-content:center;margin-top:8px"></div>
+<footer>
+  <span><kbd>drag</kbd> 旋转 · <kbd>scroll</kbd> 缩放</span>
+  <div class="buttons" id="buttons">
+    <button id="btn1" class="active">问题 1: BD⊥面PAC</button>
+    <button id="btn2">问题 2: 二面角 B−PC−D</button>
+  </div>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+import { stepper } from '/vis/stepper.ts';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+const s = await canvas3d('#app', { mood: 'clean' });
+s.camera({}); // auto-compute optimal initial view
+
+// ═══ Coordinates ═══
+const A = [0,0,0], B = [2,0,0], C = [2,0,2], D = [0,0,2], P = [0,2,0];
+const O = [1,0,1];
+
+function baseShape(s) {
+  s.fill('base', [A, B, C, D]).color('primary').opacity(0.06);
+  [[A,B],[B,C],[C,D],[D,A]].forEach(([a,b], i) => s.line3d(`be${i}`, a, b).color('primary'));
+  s.point('pA', ...A).color('primary').size('small').label('A', [-0.2,-0.15,-0.2]);
+  s.point('pB', ...B).color('primary').size('small').label('B', [ 0.2,-0.15,-0.2]);
+  s.point('pC', ...C).color('primary').size('small').label('C', [ 0.2,-0.15, 0.2]);
+  s.point('pD', ...D).color('primary').size('small').label('D', [-0.2,-0.15, 0.2]);
+  s.point('pP', ...P).color('primary').size('medium').label('P', [0,0.2,0]);
+  s.rightAngle('ra1', A, [1,0,0], [0,1,0]);
+  s.rightAngle('ra2', A, [0,0,1], [0,1,0]);
+}
+
+function sideEdges(s) {
+  [[P,A],[P,B],[P,C],[P,D]].forEach(([a,b], i) => s.line3d(`se${i}`, a, b).color('primary'));
+}
+
+// ═══ Problem 1: BD ⊥ plane PAC ═══
+const prob1 = [
+  { label: '四棱锥', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+  }},
+  { label: '对角线 BD', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('medium');
+  }},
+  { label: '平面 PAC', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('medium');
+    ['ac','pa','pc'].forEach((t, i) => {
+      const pts = { ac:[A,C], pa:[P,A], pc:[P,C] }[t];
+      s.line3d(`pac${i}`, pts[0], pts[1]).color('info').opacity(0.4).thickness('hair');
+    });
+    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+  }},
+  { label: '交点 O', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('medium');
+    ['ac','pa','pc'].forEach((t, i) => {
+      const pts = { ac:[A,C], pa:[P,A], pc:[P,C] }[t];
+      s.line3d(`pac${i}`, pts[0], pts[1]).color('info').opacity(0.4).thickness('hair');
+    });
+    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+    s.point('pO', ...O).color('danger').size('medium').label('O', [0.2,0,0.2]);
+    s.line3d('AC', A, C).color('info').opacity(0.5).thickness('hair');
+  }},
+  { label: 'BD⊥AC', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('medium');
+    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+    s.point('pO', ...O).color('danger').size('medium');
+    s.line3d('AC', A, C).color('info').opacity(0.6).thickness('hair');
+    s.rightAngle('raO', O, [1,0,-1], [1,0,1]);
+  }},
+  { label: 'BD⊥PA', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('medium');
+    s.line3d('PA_hl', P, A).color('accent').thickness('medium');
+    const O2 = [O[0], O[1]+1.5, O[2]];
+    s.line3d('pa_aux', O, O2).color('accent').opacity(0.4).dash();
+    s.rightAngle('ra3', O, [1,0,-1], [0,1.5,0]);
+  }},
+  { label: 'BD⊥平面PAC ✓', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('BD', B, D).color('danger').thickness('bold');
+    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.12);
+    s.point('pO', ...O).color('danger').size('medium').label('O', [0.2,0,0.2]);
+  }},
+];
+
+// ═══ Problem 2: Dihedral B-PC-D ═══
+const pcV = [C[0]-P[0], C[1]-P[1], C[2]-P[2]];
+const plen2 = pcV[0]*pcV[0]+pcV[1]*pcV[1]+pcV[2]*pcV[2];
+const foot = (X) => {
+  const v = [X[0]-P[0], X[1]-P[1], X[2]-P[2]];
+  const t = (v[0]*pcV[0]+v[1]*pcV[1]+v[2]*pcV[2]) / plen2;
+  return [P[0]+pcV[0]*t, P[1]+pcV[1]*t, P[2]+pcV[2]*t];
+};
+const Hb = foot(B), Hd = foot(D);
+
+const prob2 = [
+  { label: '棱 PC', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('pc_hl', P, C).color('accent').thickness('medium');
+  }},
+  { label: '垂足 Hb', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('pc_hl', P, C).color('accent').thickness('medium');
+    s.line3d('toHb', B, Hb).color('danger').opacity(0.5).dash();
+    s.point('pHb', ...Hb).color('danger').size('tiny').label('Hb', [0.15,0.15,0]);
+    s.perpFoot('pf_hb', B, P, C);
+  }},
+  { label: '垂足 Hd', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('pc_hl', P, C).color('accent').thickness('medium');
+    s.line3d('toHb', B, Hb).color('danger').opacity(0.5).dash();
+    s.point('pHb', ...Hb).color('danger').size('tiny');
+    s.line3d('toHd', D, Hd).color('danger').opacity(0.5).dash();
+    s.point('pHd', ...Hd).color('danger').size('tiny').label('Hd', [0.15,0.15,0]);
+    s.perpFoot('pf_hb', B, P, C);
+    s.perpFoot('pf_hd', D, P, C);
+  }},
+  { label: '平面角', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('pc_hl', P, C).color('accent').thickness('medium');
+    s.line3d('toHb', B, Hb).color('danger').opacity(0.4).dash();
+    s.point('pHb', ...Hb).color('danger').size('tiny');
+    s.line3d('toHd', D, Hd).color('danger').opacity(0.4).dash();
+    s.point('pHd', ...Hd).color('danger').size('tiny');
+    const nm = (v) => { const l=Math.sqrt(v[0]*v[0]+v[1]*v[1]+v[2]*v[2]); return l<1e-9?[0,0,0]:[v[0]/l,v[1]/l,v[2]/l]; };
+    const d1 = nm([B[0]-Hb[0], B[1]-Hb[1], B[2]-Hb[2]]);
+    const d2 = nm([D[0]-Hd[0], D[1]-Hd[1], D[2]-Hd[2]]);
+    const M = [(Hb[0]+Hd[0])/2, (Hb[1]+Hd[1])/2, (Hb[2]+Hd[2])/2];
+    const scl = 0.35;
+    s.vector('dir1', M, [M[0]+d1[0]*scl, M[1]+d1[1]*scl, M[2]+d1[2]*scl]).color('danger').thickness('thin');
+    s.vector('dir2', M, [M[0]+d2[0]*scl, M[1]+d2[1]*scl, M[2]+d2[2]*scl]).color('info').thickness('thin');
+  }},
+  { label: '二面角', frame(s) {
+    s.frame3d({ extent: 2.5 });
+    baseShape(s); sideEdges(s);
+    s.line3d('pc_hl', P, C).color('accent').thickness('medium');
+    s.arc('dihedral', [P, C], B, D).color('danger');
+  }},
+];
+
+// ═══ Stepper ═══
+let ctrl = s.steps(prob1);
+let stepperEl = stepper(ctrl);
+document.getElementById('stepper').appendChild(stepperEl);
+
+function switchProblem(defs) {
+  stepperEl.destroy();
+  ctrl.destroy();
+  ctrl = s.steps(defs);
+  stepperEl = stepper(ctrl);
+  document.getElementById('stepper').appendChild(stepperEl);
+}
+
+document.getElementById('btn1').addEventListener('click', () => {
+  document.getElementById('btn1').classList.add('active');
+  document.getElementById('btn2').classList.remove('active');
+  switchProblem(prob1);
+});
+document.getElementById('btn2').addEventListener('click', () => {
+  document.getElementById('btn1').classList.remove('active');
+  document.getElementById('btn2').classList.add('active');
+  switchProblem(prob2);
+});
+
+let showFrame = true;
+const _origFrame3d = s.frame3d.bind(s);
+s.frame3d = (opts) => { if (showFrame) _origFrame3d(opts); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'h') showFrame = !showFrame;
+});
+
+console.log('Pyramid P-ABCD ready — press h to toggle axes/grid');
+</script>
+</body>
+</html>

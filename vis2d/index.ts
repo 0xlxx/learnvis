@@ -17,9 +17,9 @@ export type { Renderer, RenderHandle } from './renderer';
 export { bootstrap } from './bootstrap';
 
 // ── Utilities ──
-export { TOKENS, alpha, palette } from './tokens';
+export { TOKENS, alpha, palette } from '../foundation/tokens';
 export { len, exitPt, entryPt, getBounds, distribute, centerIn } from './geometry';
 export { halo, svgLabel, defineArrows, createCanvas, MARKER, markerTip } from './primitives';
-export { themes, resolveTheme } from './themes';
+export { themes, resolveTheme } from '../foundation/themes';
 export { applyMat2, applyAffine, mat2Identity, affineIdentity, mat2Multiply, mat2VecMul, mat2Det, mat2Inverse, mat2FromAngle, mat2Scale, mat2Shear, mat2FromReflection, mat2Diag, mat2Eigen, fmtCell } from './linalg';
 export type { Mat2, Affine2 } from './linalg';

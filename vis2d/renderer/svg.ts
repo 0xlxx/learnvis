@@ -4,7 +4,7 @@ import * as d3 from 'd3';
 import type { EntityState, StageCtx, Vec2, NodeState, LineState, RegionState, CurveState, GroupState } from '../types';
 import type { Renderer, RenderHandle } from './index';
 import { applyLine, applyVertices, interpolate, type Transform } from '../transform';
-import { svgColor } from '../color';
+import { svgColor } from '../../foundation/color';
 
 type E = d3.Selection<any, unknown, null, undefined>;
 

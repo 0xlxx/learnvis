@@ -13,16 +13,51 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Commands
 
+All commands go through RTK for token optimization. **Never** chain `&& echo "---OK---"` — rely on exit codes.
+
 ```bash
-pnpm dev            # vite dev server (components/ hot-reload)
-pnpm build          # tsdown bundles vis/index.ts → dist/learnvis.mjs
-pnpm check          # tsc --noEmit type-check
-pnpm test           # vitest run (jsdom environment)
-pnpm test:watch     # vitest watch mode
-pnpm build:cli      # tsdown bundles cli.ts → dist/cli.mjs (ESM, no minify)
+# Type-check (tsc zero output on success → 100% token save)
+rtk tsc --noEmit
+
+# Run all tests (vitest output compressed 97%)
+rtk vitest run
+
+# Watch mode (interactive — no RTK)
+pnpm test:watch
+
+# Build (npx needed — tsdown not in rtk PATH)
+rtk npx tsdown
+
+# Dev server (long-running — keep bare pnpm)
+pnpm dev
+
+# CLI build
+rtk npx tsdown cli.ts --format esm --outDir dist --clean false --minify false
+
+# Verify all three in sequence — stop on first failure
+rtk tsc --noEmit && rtk vitest run && rtk npx tsdown
 ```
 
-Run a single test file: `npx vitest run vis/scene.test.ts`
+**Rules:**
+- `pnpm check` → `rtk tsc --noEmit`
+- `pnpm test` → `rtk vitest run`
+- `pnpm build` → `rtk npx tsdown`
+- Never append `2>&1` (RTK filters stderr)
+- Never append `&& echo "..."` (wastes tokens)
+- Chain with `&&` only — any failure stops the chain
+- Run single test file: `rtk vitest run path/to/file.test.ts`
+
+## Monorepo
+
+```
+vis.js/
+├── packages/ecs/       # @learnvis/ecs — zero-dependency ECS
+│   ├── src/index.ts
+│   └── __tests__/ecs.test.ts
+├── vis/                # 2D library (D3)
+├── vis3d/              # 3D library (Three.js + @learnvis/ecs)
+└── components/         # dev demos
+```
 
 ## Architecture
 

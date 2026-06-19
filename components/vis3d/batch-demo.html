@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Batch primitives — vis3d</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{background:#f5f3ef;color:#333;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  header{padding:1rem 0 .2rem;text-align:center}
+  h1{font-size:1rem;font-weight:500}
+  .sub{font-size:.68rem;color:#888;margin-top:.2rem}
+  #app{position:relative;width:820px;height:520px;border-radius:10px;overflow:hidden;
+       border:1px solid rgba(0,0,0,.08);background:#fafaf8}
+  .perf{position:absolute;top:8px;right:12px;font-size:.6rem;color:#999;font-family:monospace;pointer-events:none}
+  footer{width:820px;margin-top:.6rem;font-size:.64rem;color:#999;display:flex;justify-content:space-between;align-items:center}
+  kbd{background:rgba(0,0,0,.04);border-radius:3px;padding:1px 5px;font-size:.6rem;border:1px solid rgba(0,0,0,.1)}
+  button{font-size:.68rem;padding:4px 12px;border:1px solid rgba(0,0,0,.15);border-radius:4px;background:#fff;color:#555;cursor:pointer;transition:all .15s}
+  button:hover{background:#f0f0f0}
+  button.active{background:#3b82f6;color:#fff;border-color:#3b82f6}
+  .buttons{display:flex;gap:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>批量原语 · 向量场可视化</h1>
+  <p class="sub" id="stat"></p>
+</header>
+<div id="app">
+  <div class="perf" id="fps"></div>
+</div>
+<footer>
+  <span><kbd>drag</kbd> 旋转 · <kbd>scroll</kbd> 缩放</span>
+  <div class="buttons">
+    <button class="active" data-scene="curl">旋度场</button>
+    <button data-scene="gradient">梯度场</button>
+    <button data-scene="crystal">晶格</button>
+    <button data-scene="curve">曲线</button>
+  </div>
+  <div class="buttons">
+    <button id="btn-scale">scale: fixed</button>
+  </div>
+  <span id="gpu"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+const gpuEl = document.getElementById('gpu');
+if (!navigator.gpu) { gpuEl.textContent = 'WebGPU not available'; throw new Error('WebGPU'); }
+gpuEl.textContent = 'WebGPU';
+
+const s = await canvas3d('#app', { mood: 'clean' });
+s.camera({ position: [6, 4.5, 6], target: [0, 1, 0] });
+
+const fpsEl = document.getElementById('fps');
+let frames = 0, lastFps = performance.now();
+setInterval(() => {
+  const now = performance.now();
+  fpsEl.textContent = `${Math.round(frames / (now - lastFps) * 1000)} fps`;
+  frames = 0; lastFps = now;
+}, 1000);
+
+const atoms = [];
+const R = 2, n = 4;
+for (let i = 0; i < n; i++)
+  for (let j = 0; j < n; j++)
+    for (let k = 0; k < n; k++)
+      atoms.push([-R + i * 2*R/(n-1), -R + j * 2*R/(n-1), -R + k * 2*R/(n-1)]);
+const altAtoms = atoms.filter((_, i) => i % 3 === 0);
+
+function helixYup(R, h, turns) {
+  return t => [R * Math.cos(t), h * t, R * Math.sin(t)];
+}
+
+let current = 'curl';
+let autoScale = false;
+
+function setScene() {
+  s.render(() => {
+    s.frame3d({ extent: 4 });
+    frames++;
+
+    const vopts = { x: [-3,3], y:[-3,3], z:[-3,3] };
+    if (autoScale) vopts.scale = 'auto';
+
+    const stat = document.getElementById('stat');
+
+    if (current === 'curl') {
+      s.vectors((x, y, z) => [z, 0, -x], vopts);
+      stat.textContent = 'F = (z, 0, −x) 旋度' + (autoScale ? ' · auto-scale' : '');
+    }
+    if (current === 'gradient') {
+      s.vectors((x, y, z) => [-x, -y, 0], vopts);
+      stat.textContent = 'F = (−x, −y, 0) 梯度' + (autoScale ? ' · auto-scale' : '');
+    }
+    if (current === 'crystal') {
+      s.points(atoms).color('accent').size('tiny');
+      s.spheres(altAtoms, { r: 0.18 }).color('danger');
+      stat.textContent = '64 点 · 21 球 · simple cubic';
+    }
+    if (current === 'curve') {
+      s.curve(helixYup(1.5,0.4,3),{t:[-3*Math.PI,3*Math.PI],segments:300}).color('danger').thickness('medium');
+      s.curve(helixYup(2.0,0.4,3),{t:[-3*Math.PI,3*Math.PI],segments:300}).color('info').thickness('thin');
+      stat.textContent = '双螺旋 · 600 段 polyline';
+    }
+  });
+}
+
+document.querySelectorAll('[data-scene]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-scene]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    current = btn.dataset.scene;
+    setScene();
+  });
+});
+
+document.getElementById('btn-scale').addEventListener('click', function() {
+  autoScale = !autoScale;
+  this.textContent = 'scale: ' + (autoScale ? 'auto' : 'fixed');
+  this.classList.toggle('active');
+  setScene();
+});
+
+setScene();
+console.log('Batch demo ready');
+</script>
+</body>
+</html>

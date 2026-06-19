@@ -15,8 +15,8 @@ import { bootstrap } from './bootstrap';
 import { GfxImpl, resolveColor } from './gfx';
 import { createCoordView } from './coords';
 import { offsetLine, markerHalf } from './geometry';
-import { TOKENS } from './tokens';
-import { themes } from './themes';
+import { TOKENS } from '../foundation/tokens';
+import { themes } from '../foundation/themes';
 
 // ── Layout vertex helper ──
 

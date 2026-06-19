@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Primitives — vis3d</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#111;color:#eee;font-family:system-ui,sans-serif;
+       display:flex;flex-direction:column;align-items:center;min-height:100vh}
+  h1{font-size:1rem;padding:1rem 0 .3rem}
+  .sub{font-size:.72rem;color:#888;margin-bottom:1rem}
+  #app{width:780px;height:520px;border-radius:12px;overflow:hidden;
+       border:1px solid rgba(255,255,255,.1)}
+  footer{width:780px;margin-top:.6rem;font-size:.64rem;color:#666;
+          display:flex;justify-content:space-between}
+  #gpu{color:#22c55e}
+  .note{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);
+         border-radius:6px;padding:.4rem .6rem;margin-top:.5rem;font-size:.64rem;color:#22c55e}
+  kbd{background:rgba(255,255,255,.06);border-radius:3px;padding:1px 5px;
+      font-size:.55rem;border:1px solid rgba(255,255,255,.1)}
+</style>
+</head>
+<body>
+<h1>全原语画廊</h1>
+<p class="sub"><span id="gpu">checking WebGPU…</span></p>
+<div id="app"></div>
+<footer style="width:780px;margin-top:.6rem;font-size:.64rem;color:#666;display:flex;justify-content:space-between">
+  <span><kbd>drag</kbd> 旋转 · <kbd>scroll</kbd> 缩放</span>
+  <span id="status"></span>
+</footer>
+
+<script type="module">
+import { canvas3d } from '@learnvis/vis3d';
+
+if (!navigator.gpu) {
+  document.getElementById('gpu').innerHTML = '❌ WebGPU not available — use Chrome 113+';
+  throw new Error('WebGPU not available');
+}
+document.getElementById('gpu').innerHTML = '✅ WebGPU';
+
+const s = await canvas3d('#app', { theme: 'dark' });
+document.getElementById('status').textContent = 'ready';
+
+s.render(() => {
+  s.frame3d({ extent: 3 });
+
+  // basis vectors
+  s.vector('i', [0,0,0], [2,0,0]).color('danger').label('î');
+  s.vector('j', [0,0,0], [0,2,0]).color('info').label('ĵ');
+  s.vector('k', [0,0,0], [0,0,2]).color('accent').label('k̂');
+
+  // arbitrary vector
+  s.vector('v', [0,0,0], [1.2, 1.6, 0.8]).color('warning').label('v').thickness('bold');
+
+  // wireframe sphere at origin
+  s.sphere('S', 0, 0, 0, 0.6).color('accent').opacity(0.3).wireframe();
+
+  // two spheres connected by a vector
+  s.sphere('a', -2, 0, 0, 0.4).color('danger').opacity(0.5);
+  s.sphere('b',  2, 0, 0, 0.4).color('info').opacity(0.5);
+  s.vector('conn', [-1.6,0,0], [1.6,0,0]).color('primary');
+
+  // cube
+  s.cube('C', 0, -1.5, 0, 0.8).color('warning').opacity(0.3);
+
+  // point (billboard)
+  s.point('P', 2.5, 1.5, 0).color('accent');
+});
+
+console.log('✅ vis3d P0 demo ready');
+</script>
+</body>
+</html>

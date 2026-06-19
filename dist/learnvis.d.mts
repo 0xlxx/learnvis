@@ -523,8 +523,9 @@ declare function bootstrap(selector: string | BaseType, opts?: {
   };
 }): StageCtx;
 //#endregion
-//#region vis/tokens.d.ts
-interface TokensType {
+//#region foundation/tokens.d.ts
+/** Default OKLCH values. Themes override these. */
+declare const TOKENS: {
   primary: string;
   accent: string;
   danger: string;
@@ -532,16 +533,19 @@ interface TokensType {
   info: string;
   muted: string;
   success: string;
-  fills: Record<string, string>;
-}
-/** 7 语义色 + 7 填充变体，全部使用 OKLCH 色彩空间 */
-declare const TOKENS: TokensType;
-/** 给任意颜色附加透明度，使用 CSS 原生 color-mix() 实现 */
+  fills: {
+    primary: string;
+    accent: string;
+    danger: string;
+    warning: string;
+    info: string;
+    muted: string;
+    success: string;
+  };
+};
+/** Alpha via CSS color-mix(). */
 declare const alpha: (c: string, pct?: number) => string;
-/**
- * 统一调色板工厂：不再返回绝对颜色值，而是返回抽象的 CSS 变量。
- * 每个语义色返回 { fg, bg, a(pct) }
- */
+/** 2D palette factory. Each color token → { fg, bg, a(pct) }. */
 declare const palette: () => any;
 //#endregion
 //#region vis/geometry.d.ts
@@ -693,7 +697,7 @@ declare const createCanvas: (selector: string | BaseType, width?: number, height
   M: number;
 };
 //#endregion
-//#region vis/themes.d.ts
+//#region foundation/themes.d.ts
 declare const themes: {
   warm: {
     name: string;
@@ -886,6 +890,158 @@ declare const themes: {
     };
   };
   soft: {
+    name: string;
+    desc: string;
+    palette: {
+      primary: {
+        fg: string;
+        bg: string;
+      };
+      accent: {
+        fg: string;
+        bg: string;
+      };
+      danger: {
+        fg: string;
+        bg: string;
+      };
+      warning: {
+        fg: string;
+        bg: string;
+      };
+      info: {
+        fg: string;
+        bg: string;
+      };
+      dim: {
+        fg: string;
+        bg: string;
+      };
+      muted: {
+        fg: string;
+        bg: string;
+      };
+      success: {
+        fg: string;
+        bg: string;
+      };
+    };
+  };
+  playful: {
+    name: string;
+    desc: string;
+    palette: {
+      primary: {
+        fg: string;
+        bg: string;
+      };
+      accent: {
+        fg: string;
+        bg: string;
+      };
+      danger: {
+        fg: string;
+        bg: string;
+      };
+      warning: {
+        fg: string;
+        bg: string;
+      };
+      info: {
+        fg: string;
+        bg: string;
+      };
+      dim: {
+        fg: string;
+        bg: string;
+      };
+      muted: {
+        fg: string;
+        bg: string;
+      };
+      success: {
+        fg: string;
+        bg: string;
+      };
+    };
+  };
+  clean: {
+    name: string;
+    desc: string;
+    palette: {
+      primary: {
+        fg: string;
+        bg: string;
+      };
+      accent: {
+        fg: string;
+        bg: string;
+      };
+      danger: {
+        fg: string;
+        bg: string;
+      };
+      warning: {
+        fg: string;
+        bg: string;
+      };
+      info: {
+        fg: string;
+        bg: string;
+      };
+      dim: {
+        fg: string;
+        bg: string;
+      };
+      muted: {
+        fg: string;
+        bg: string;
+      };
+      success: {
+        fg: string;
+        bg: string;
+      };
+    };
+  };
+  minimal: {
+    name: string;
+    desc: string;
+    palette: {
+      primary: {
+        fg: string;
+        bg: string;
+      };
+      accent: {
+        fg: string;
+        bg: string;
+      };
+      danger: {
+        fg: string;
+        bg: string;
+      };
+      warning: {
+        fg: string;
+        bg: string;
+      };
+      info: {
+        fg: string;
+        bg: string;
+      };
+      dim: {
+        fg: string;
+        bg: string;
+      };
+      muted: {
+        fg: string;
+        bg: string;
+      };
+      success: {
+        fg: string;
+        bg: string;
+      };
+    };
+  };
+  sketch: {
     name: string;
     desc: string;
     palette: {
