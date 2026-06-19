@@ -26,6 +26,7 @@ import type {
   StepDef3d, StepsOptions3d, StepsController3d,
   SurfaceFn, Surface3dOpts,
   Axes3dOpts, Grid3dOpts, Frame3dOpts,
+  GridSamplerFn, GridSamplerOpts,
 } from './types';
 
 // ═══════════════════════════════════════════════════════════
@@ -212,10 +213,15 @@ class CoordSystem3dImpl implements CoordSystem3d {
     return this._wrap(this._inner.surface(id, projFn, uRange, vRange, opts));
   }
 
-  fill(id: string, vertices: Vec3[]): Gfx3d {
-    return this._wrap(this._inner.fill(id, vertices.map(v => this.project(v))));
+  polygon(id: string, vertices: Vec3[]): Gfx3d {
+    return this._wrap(this._inner.polygon(id, vertices.map(v => this.project(v))));
   }
 
+
+	  /** @deprecated Use polygon() instead. */
+	  fill(id: string, vertices: Vec3[]): Gfx3d {
+	    return this.polygon(id, vertices);
+	  }
   arc(id: string, a: Vec3 | [Vec3, Vec3], b: Vec3, c: Vec3): Gfx3d {
     if (typeof a[0] !== 'number') {
       // Dihedral form: edge [P1, P2] + two face points
@@ -256,22 +262,30 @@ class CoordSystem3dImpl implements CoordSystem3d {
     return this._wrap(this._inner.curve(projFn, opts));
   }
 
-  points(positions: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number }): Gfx3d {
-    const proj: Vec3[] | ((x: number, y: number, z: number) => Vec3) = Array.isArray(positions)
-      ? positions.map(v => this.project(v))
-      : (x, y, z) => this.project(positions(x, y, z));
-    return this._wrap(this._inner.points(proj, opts));
+  points(positions: Vec3[]): Gfx3d;
+  points(fn: GridSamplerFn, opts: GridSamplerOpts): Gfx3d;
+  points(positions: Vec3[] | GridSamplerFn, opts?: GridSamplerOpts): Gfx3d {
+    if (Array.isArray(positions)) {
+      return this._wrap(this._inner.points(positions.map(v => this.project(v))));
+    }
+    if (!opts) throw new Error('opts required when passing a sampler function');
+    const projFn = (x: number, y: number, z: number): Vec3 => this.project(positions(x, y, z));
+    return this._wrap(this._inner.points(projFn, opts));
   }
 
-  spheres(centers: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { r?: number; x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number }): Gfx3d {
-    const proj: Vec3[] | ((x: number, y: number, z: number) => Vec3) = Array.isArray(centers)
-      ? centers.map(v => this.project(v))
-      : (x, y, z) => this.project(centers(x, y, z));
-    const scaleR = opts?.r !== undefined ? opts.r * this._avgScale : undefined;
-    return this._wrap(this._inner.spheres(proj, { ...opts, r: scaleR }));
+  spheres(centers: Vec3[]): Gfx3d;
+  spheres(fn: GridSamplerFn, opts: GridSamplerOpts & { r?: number }): Gfx3d;
+  spheres(centers: Vec3[] | GridSamplerFn, opts?: GridSamplerOpts & { r?: number }): Gfx3d {
+    if (Array.isArray(centers)) {
+      return this._wrap(this._inner.spheres(centers.map(v => this.project(v))));
+    }
+    if (!opts) throw new Error('opts required when passing a sampler function');
+    const projFn = (x: number, y: number, z: number): Vec3 => this.project(centers(x, y, z));
+    const scaleR = opts.r !== undefined ? opts.r * this._avgScale : undefined;
+    return this._wrap(this._inner.spheres(projFn, { ...opts, r: scaleR }));
   }
 
-  vectors(fn: (x: number, y: number, z: number) => Vec3, opts: { x: [number,number]; y: [number,number]; z: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d {
+  vectors(fn: GridSamplerFn, opts: GridSamplerOpts & { scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d {
     // scene's vectors() loops over world-space grid and calls fn(wx,wy,wz).
     // We need to: unproject world → math, evaluate fn, transform direction → world.
     const projFn = (wx: number, wy: number, wz: number): Vec3 => {

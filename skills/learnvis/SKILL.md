@@ -50,14 +50,14 @@ const s = canvas('#app');
 s.render(() => { s.point('P', 200, 200).color('danger'); });
 ```
 
-连续动画（`{ animate: false }` 跳过 D3 过渡，否则网格每帧消失）：
+连续动画（`{ transition: false }` 跳过 D3 过渡，否则网格每帧消失）：
 
 ```ts
 const vp = s.coords({ x: [-6, 6], y: [-4, 4], aspect: 'equal' });
-s.render(() => { vp.axes().color('dim'); vp.grid(); vp.point('P', 3, 2).color('danger'); }, { animate: false });
+s.render(() => { vp.axes().color('dim'); vp.grid(); vp.point('P', 3, 2).color('danger'); }, { transition: false });
 let t = 0;
 (function loop() {
-  s.render(() => { vp.point('P', 5*Math.cos(t), 3*Math.sin(t)).color('danger'); }, { animate: false });
+  s.render(() => { vp.point('P', 5*Math.cos(t), 3*Math.sin(t)).color('danger'); }, { transition: false });
   t += 0.02; requestAnimationFrame(loop);
 })();
 ```
@@ -73,7 +73,7 @@ const s = await canvas3d('#app', { mood: 'clean' });
 s.render(() => { s.frame3d({ extent: 3 }); s.sphere('s', 0,0,0, 0.8).color('danger'); });
 ```
 
-原语：`point`, `line3d`, `vector`, `sphere`, `cube`, `surface`, `fill`, `arc`, `rightAngle`, `perpFoot`。批量：`curve`, `points`, `spheres`, `vectors`。链式：`.color .opacity .size .thickness .dash .wireframe .emissive .label .move .rotateX/Y/Z .scale .hide/show`。相机：`s.camera({direction:'isometric'})`。
+原语：`point`, `line3d`, `vector`, `sphere`, `cube`, `surface`, `polygon`, `arc`, `rightAngle`, `perpFoot`。批量：`curve`, `points`, `spheres`, `vectors`。链式：`.color .opacity .size .thickness .dash .wireframe .emissive .label .move .rotateX/Y/Z .scale .hide/show`。相机：`s.camera({direction:'isometric'})`。
 
 ## 参考（按需读取）
 

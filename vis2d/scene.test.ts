@@ -214,7 +214,7 @@ describe('Scene primitives', () => {
   it('curve() creates a function curve', () => {
     const s = canvas('#app');
     s.render(scene => {
-      scene.curve('sin', x => Math.sin(x), [-Math.PI, Math.PI]).color('primary');
+      scene.curve('sin', x => Math.sin(x), { t: [-Math.PI, Math.PI] }).color('primary');
     });
     expect(s.svg.querySelector('[data-id]')).not.toBeNull();
     s.dispose();

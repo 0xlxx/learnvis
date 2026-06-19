@@ -36,6 +36,8 @@ export interface CoordSystem3d {
   sphere(id: string, cx: number, cy: number, cz: number, r: number): Gfx3d;
   cube(id: string, cx: number, cy: number, cz: number, size: number): Gfx3d;
   surface(id: string, fn: SurfaceFn, uRange: [number, number], vRange: [number, number], opts?: Surface3dOpts): Gfx3d;
+  polygon(id: string, vertices: Vec3[]): Gfx3d;
+  /** @deprecated Use polygon() instead. */
   fill(id: string, vertices: Vec3[]): Gfx3d;
   arc(id: string, a: Vec3 | [Vec3, Vec3], b: Vec3, c: Vec3): Gfx3d;
   rightAngle(id: string, center: Vec3, dirA: Vec3, dirB: Vec3, color?: string): Gfx3d;
@@ -44,9 +46,11 @@ export interface CoordSystem3d {
   grid3d(opts?: Grid3dOpts): Gfx3d;
   group(entities: Gfx3d[]): Gfx3d;
   curve(fn: (t: number) => Vec3, opts: { t: [number, number]; segments?: number }): Gfx3d;
-  points(positions: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
-  spheres(centers: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { r?: number; x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
-  vectors(fn: (x: number, y: number, z: number) => Vec3, opts: { x: [number,number]; y: [number,number]; z: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
+  points(positions: Vec3[]): Gfx3d;
+  points(fn: GridSamplerFn, opts: GridSamplerOpts): Gfx3d;
+  spheres(centers: Vec3[]): Gfx3d;
+  spheres(fn: GridSamplerFn, opts: GridSamplerOpts & { r?: number }): Gfx3d;
+  vectors(fn: GridSamplerFn, opts: GridSamplerOpts & { scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
   frame3d(opts?: Frame3dOpts): void;
 
   // Projection
@@ -73,6 +77,17 @@ export type SurfaceFn = (u: number, v: number) => Vec3;
 
 /** Spatial sampler: f(x, y, z) → scalar value (for field visualization) */
 export type FieldSampler = (x: number, y: number, z: number) => number;
+
+/** Grid-sampled 3D function: f(x, y, z) → Vec3 */
+export type GridSamplerFn = (x: number, y: number, z: number) => Vec3;
+
+/** Required options for grid-sampled batch primitives (points, spheres, vectors). */
+export interface GridSamplerOpts {
+  x: [number, number];
+  y: [number, number];
+  z: [number, number];
+  step?: number;
+}
 
 // ── Gfx3d — unified fluent builder ──
 
@@ -178,12 +193,17 @@ export interface Frame3dOpts {
 export type CameraDirection = 'isometric' | 'top-down' | 'front' | 'side' | 'back';
 
 export interface CameraConfig {
-  // Escape hatch — raw coordinates (fallback if no semantic fields)
+  /**
+   * Priority: semantic fields (lookAt / direction / distance) take precedence
+   * over raw coordinates (position / target / fov). When both are set, raw
+   * coordinates are ignored.
+   */
+  // Escape hatch — raw coordinates (ignored when semantic fields are set)
   position?: Vec3;
   target?: Vec3;
   fov?: number;
 
-  // Semantic — preferred
+  // Semantic — use these (higher priority)
   /** Entity ID(s) to center the view on. */
   lookAt?: string | string[];
   /** View direction relative to the looked-at target. Default: 'isometric'. */
@@ -226,7 +246,6 @@ export interface StepDef3d {
 export interface StepsOptions3d {
   start?: number;
   mode?: 'full' | 'update';
-  controls?: boolean;
 }
 
 /** 3D-specific steps controller (mirrors vis/types StepsController but with StepDef3d). */
@@ -252,6 +271,8 @@ export interface Scene3d {
   sphere(id: string, cx: number, cy: number, cz: number, r: number): Gfx3d;
   cube(id: string, cx: number, cy: number, cz: number, size: number): Gfx3d;
   surface(id: string, fn: SurfaceFn, uRange: [number, number], vRange: [number, number], opts?: Surface3dOpts): Gfx3d;
+  polygon(id: string, vertices: Vec3[]): Gfx3d;
+  /** @deprecated Use polygon() instead. */
   fill(id: string, vertices: Vec3[]): Gfx3d;
   /**
    * Arc / dihedral angle marker. Two forms:
@@ -269,12 +290,16 @@ export interface Scene3d {
   // ═══ 批量原语 (batch primitives) ═══
   /** Parametric space curve r(t). Samples fn at `segments` points, renders as polyline. */
   curve(fn: (t: number) => Vec3, opts: { t: [number, number]; segments?: number }): Gfx3d;
-  /** Batch points. Array or grid-sampled function. InstancedMesh for performance. */
-  points(positions: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
-  /** Batch spheres. Array or grid-sampled function. InstancedMesh for performance. */
-  spheres(centers: Vec3[] | ((x: number, y: number, z: number) => Vec3), opts?: { r?: number; x?: [number,number]; y?: [number,number]; z?: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
-  /** Vector field. Samples fn(x,y,z) on 3D grid, renders arrows. */
-  vectors(fn: (x: number, y: number, z: number) => Vec3, opts: { x: [number,number]; y: [number,number]; z: [number,number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
+  /** Batch points from an array of positions. InstancedMesh for performance. */
+  points(positions: Vec3[]): Gfx3d;
+  /** Batch points by grid-sampling a function. */
+  points(fn: GridSamplerFn, opts: GridSamplerOpts): Gfx3d;
+  /** Batch spheres from an array of centers. InstancedMesh for performance. */
+  spheres(centers: Vec3[]): Gfx3d;
+  /** Batch spheres by grid-sampling a function. */
+  spheres(fn: GridSamplerFn, opts: GridSamplerOpts & { r?: number }): Gfx3d;
+  /** Vector field. Grid-samples fn(x,y,z) and renders arrows. */
+  vectors(fn: GridSamplerFn, opts: GridSamplerOpts & { scale?: number | 'auto'; seed?: 'rect' | 'poisson' }): Gfx3d;
 
   // ═══ 参照系 (reference frame) ═══
   /** One call to set up axes + grid with consistent sizing. axes3d()/grid3d() are the escape hatches. */

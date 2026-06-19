@@ -29,7 +29,7 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('A', { type: 'node', x: 100, y: 200, r: 10, stroke: 'red', fill: 'blue' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 300, y: 200, r: 4, stroke: 'green', fill: 'lightgreen' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.has('A')).toBe(true);
       expect(fm.entities.has('B')).toBe(true);
@@ -47,7 +47,7 @@ describe('FrameManager', () => {
 
     it('empty frame does not throw', () => {
       fm.begin();
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.entities.size).toBe(0);
     });
   });
@@ -83,7 +83,7 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('X', { type: 'node', x: 10, y: 20, r: 5, stroke: 'red', fill: 'blue' });
       fm.patch('X', { x: 99, stroke: 'green' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       const desired = fm.entities.get('X')!.desired;
       expect(desired.x).toBe(99);
@@ -100,7 +100,7 @@ describe('FrameManager', () => {
     it('throws on unknown id even when store has other entities', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 0, y: 0, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       fm.begin();
       expect(() => fm.patch('B', { x: 42 })).toThrow('Entity not found: B');
@@ -112,7 +112,7 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 300, y: 200, r: 4, stroke: 'blue', fill: 'blue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.has('A')).toBe(true);
       expect(fm.entities.has('B')).toBe(true);
@@ -122,11 +122,11 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 300, y: 200, r: 4, stroke: 'blue', fill: 'blue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.has('A')).toBe(true);
       expect(fm.entities.has('B')).toBe(false);
@@ -135,11 +135,11 @@ describe('FrameManager', () => {
     it('update: entity state updated across frames', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 300, y: 100, r: 4, stroke: 'blue', fill: 'blue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.get('A')!.desired.x).toBe(300);
       expect(fm.entities.get('A')!.desired.y).toBe(100);
@@ -151,13 +151,13 @@ describe('FrameManager', () => {
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 200, y: 200, r: 4, stroke: 'green', fill: 'green' });
       fm.declare('C', { type: 'node', shape: 'circle', x: 300, y: 200, r: 4, stroke: 'blue', fill: 'blue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' }); // update
       fm.declare('C', { type: 'node', shape: 'circle', x: 350, y: 250, r: 4, stroke: 'cyan', fill: 'cyan' }); // update
       fm.declare('D', { type: 'node', shape: 'circle', x: 400, y: 200, r: 4, stroke: 'yellow', fill: 'yellow' }); // enter
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.has('A')).toBe(true);
       expect(fm.entities.has('B')).toBe(false);
@@ -170,12 +170,12 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 200, y: 200, r: 4, stroke: 'green', fill: 'green' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       fm.begin();
       fm.declare('C', { type: 'node', shape: 'circle', x: 300, y: 200, r: 4, stroke: 'blue', fill: 'blue' });
       fm.declare('D', { type: 'node', shape: 'circle', x: 400, y: 200, r: 4, stroke: 'yellow', fill: 'yellow' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
 
       expect(fm.entities.has('A')).toBe(false);
       expect(fm.entities.has('B')).toBe(false);
@@ -205,7 +205,7 @@ describe('FrameManager', () => {
     it('vertex creates dummy element', () => {
       fm.begin();
       fm.declare('v1', { type: 'node', x: 100, y: 200, r: 10, stroke: 'red', fill: 'blue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       const e = fm.entities.get('v1')!;
       expect(e.svg).not.toBeNull();
     });
@@ -213,28 +213,28 @@ describe('FrameManager', () => {
     it('point creates dummy element', () => {
       fm.begin();
       fm.declare('p1', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.entities.get('p1')!.svg).not.toBeNull();
     });
 
     it('edge creates line element', () => {
       fm.begin();
       fm.declare('e1', { type: 'line', from: 'A', to: 'B', x1: 0, y1: 0, x2: 100, y2: 0, stroke: 'gray', strokeW: 1.8 });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.entities.get('e1')!.svg).not.toBeNull();
     });
 
     it('vector creates edge element', () => {
       fm.begin();
       fm.declare('v1', { type: 'line', marker: 'arrow', from: [0, 0], to: [100, 50], stroke: 'red', strokeW: 2 });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.entities.get('v1')!.svg).not.toBeNull();
     });
 
     it('circle creates circle element', () => {
       fm.begin();
       fm.declare('c1', { type: 'region', shape: 'circle', cx: 100, cy: 100, r: 40, stroke: 'blue', fill: 'lightblue' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.entities.get('c1')!.svg).not.toBeNull();
     });
 
@@ -244,7 +244,7 @@ describe('FrameManager', () => {
     it('creates SVG elements without transition', () => {
       fm.begin();
       fm.declare('p1', { type: 'node', shape: 'circle', x: 100, y: 200, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       const svg = fm.entities.get('p1')!.svg;
       expect(svg).not.toBeNull();
     });
@@ -255,7 +255,7 @@ describe('FrameManager', () => {
       fm.begin();
       fm.declare('A', { type: 'node', shape: 'circle', x: 0, y: 0, r: 4, stroke: 'red', fill: 'red' });
       fm.declare('B', { type: 'node', shape: 'circle', x: 0, y: 0, r: 4, stroke: 'red', fill: 'red' });
-      fm.commit({ animate: false });
+      fm.commit({ transition: false });
       expect(fm.frameIds.has('A')).toBe(true);
       expect(fm.frameIds.has('B')).toBe(true);
     });

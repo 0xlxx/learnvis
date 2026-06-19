@@ -67,13 +67,13 @@ export class FrameManager {
     return this.store.get(id) as any;
   }
 
-  commit(opts?: { ms?: number; animate?: boolean }) {
+  commit(opts?: { ms?: number; transition?: boolean }) {
     if (!this._uncommitted) throw new Error('begin() required before commit()');
     this._uncommitted = false;
 
-    if (opts?.animate === false || typeof requestAnimationFrame === 'undefined') {
+    if (opts?.transition === false || typeof requestAnimationFrame === 'undefined') {
       this._commitStatic();
-      this.renderer.commitFrame({ animate: false });
+      this.renderer.commitFrame({ transition: false });
       return;
     }
 
@@ -114,7 +114,7 @@ export class FrameManager {
       }
     }
 
-    this.renderer.commitFrame({ animate: true, ms: dur });
+    this.renderer.commitFrame({ transition: true, ms: dur });
   }
 
   private _commitStatic() {

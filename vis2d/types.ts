@@ -106,7 +106,7 @@ export interface RegionState {
 
 export interface CurveState {
   type: 'curve';
-  f: string; domain: [number, number]; range?: [number, number];
+  f: string; domain: { t: [number, number] }; range?: [number, number];
   x: number; y: number; width: number; height: number; samples: number;
   stroke: string; strokeW: number;
   dash?: string; opacity?: number; label?: string;
@@ -226,7 +226,7 @@ export interface CoordView {
   line(id: string, from: Vec2, to: Vec2): Gfx;
   circle(id: string, cx: number, cy: number, r: number): Gfx;
   polygon(id: string, vertices: Vec2[]): Gfx;
-  curve(id: string, fn: (x: number) => number, domain?: [number, number]): Gfx;
+  curve(id: string, fn: (x: number) => number, domain?: { t: [number, number] }): Gfx;
   fill(id: string, vertices: Vec2[]): Gfx;
   rect(id: string, cx: number, cy: number, w: number, h: number): Gfx;
   angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2): Gfx;
@@ -282,7 +282,7 @@ export interface Scene extends Disposable {
   circle(id: string, cx: number, cy: number, r: number): Gfx;
   polygon(id: string, vertices: Vec2[]): Gfx;
   rect(id: string, x: number, y: number, w: number, h: number): Gfx;
-  curve(id: string, fn: (x: number) => number, domain: [number, number]): Gfx;
+  curve(id: string, fn: (x: number) => number, domain: { t: [number, number] }): Gfx;
   angle(id: string, vertex: Vec2, ray1: Vec2, ray2: Vec2): Gfx;
   fill(id: string, vertices: Vec2[]): Gfx;
   block(id: string, x: number, y: number, w: number, h: number): Gfx;
@@ -299,8 +299,12 @@ export interface Scene extends Disposable {
   coords(config?: CoordsConfig): CoordView;
 
   // Frame lifecycle
-  /** Single-frame render (synchronous). begin → fn → commit. */
-  render(fn: (s: Scene) => void, opts?: { animate?: boolean }): void;
+  /**
+   * Single-frame render (synchronous). begin → fn → commit.
+   * Set `transition: false` to skip D3 enter/update/exit tweens
+   * (required for requestAnimationFrame continuous animation).
+   */
+  render(fn: (s: Scene) => void, opts?: { transition?: boolean }): void;
   /** Multi-step animation with navigation controls. */
   steps(defs: StepDef[], opts?: StepsOptions): StepsController;
 

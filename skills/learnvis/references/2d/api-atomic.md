@@ -36,7 +36,7 @@ import { FrameManager } from 'learnvis';
 fm.begin();                              // 开始帧 → 快照上一帧实体
 fm.declare(id, state);                   // 创建或更新实体
 fm.patch(id, partialState);              // 增量更新（Gfx 链式调用使用）
-fm.commit({ ms?: number, animate?: boolean }); // 提交帧 → enter/update/exit diff + D3 transition
+fm.commit({ ms?: number, transition?: boolean }); // 提交帧 → enter/update/exit diff + D3 transition
 ```
 
 - `fm.entities` — `ReadonlyMap<string, Entity>` 所有实体

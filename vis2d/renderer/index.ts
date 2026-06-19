@@ -15,7 +15,7 @@ export interface Renderer {
   /** Called before frame rendering */
   beginFrame(): void;
   /** Called after all entities are processed */
-  commitFrame(opts?: { animate?: boolean; ms?: number }): void;
+  commitFrame(opts?: { transition?: boolean; ms?: number }): void;
   /** Release resources */
   dispose(): void;
 }

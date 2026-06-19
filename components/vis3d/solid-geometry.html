@@ -55,7 +55,7 @@ const A = [0,0,0], B = [2,0,0], C = [2,0,2], D = [0,0,2], P = [0,2,0];
 const O = [1,0,1];
 
 function baseShape(s) {
-  s.fill('base', [A, B, C, D]).color('primary').opacity(0.06);
+  s.polygon('base', [A, B, C, D]).color('primary').opacity(0.06);
   [[A,B],[B,C],[C,D],[D,A]].forEach(([a,b], i) => s.line3d(`be${i}`, a, b).color('primary'));
   s.point('pA', ...A).color('primary').size('small').label('A', [-0.2,-0.15,-0.2]);
   s.point('pB', ...B).color('primary').size('small').label('B', [ 0.2,-0.15,-0.2]);
@@ -89,7 +89,7 @@ const prob1 = [
       const pts = { ac:[A,C], pa:[P,A], pc:[P,C] }[t];
       s.line3d(`pac${i}`, pts[0], pts[1]).color('info').opacity(0.4).thickness('hair');
     });
-    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+    s.polygon('pac_fill', [P, A, C]).color('info').opacity(0.08);
   }},
   { label: '交点 O', frame(s) {
     s.frame3d({ extent: 2.5 });
@@ -99,7 +99,7 @@ const prob1 = [
       const pts = { ac:[A,C], pa:[P,A], pc:[P,C] }[t];
       s.line3d(`pac${i}`, pts[0], pts[1]).color('info').opacity(0.4).thickness('hair');
     });
-    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+    s.polygon('pac_fill', [P, A, C]).color('info').opacity(0.08);
     s.point('pO', ...O).color('danger').size('medium').label('O', [0.2,0,0.2]);
     s.line3d('AC', A, C).color('info').opacity(0.5).thickness('hair');
   }},
@@ -107,7 +107,7 @@ const prob1 = [
     s.frame3d({ extent: 2.5 });
     baseShape(s); sideEdges(s);
     s.line3d('BD', B, D).color('danger').thickness('medium');
-    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.08);
+    s.polygon('pac_fill', [P, A, C]).color('info').opacity(0.08);
     s.point('pO', ...O).color('danger').size('medium');
     s.line3d('AC', A, C).color('info').opacity(0.6).thickness('hair');
     s.rightAngle('raO', O, [1,0,-1], [1,0,1]);
@@ -125,7 +125,7 @@ const prob1 = [
     s.frame3d({ extent: 2.5 });
     baseShape(s); sideEdges(s);
     s.line3d('BD', B, D).color('danger').thickness('bold');
-    s.fill('pac_fill', [P, A, C]).color('info').opacity(0.12);
+    s.polygon('pac_fill', [P, A, C]).color('info').opacity(0.12);
     s.point('pO', ...O).color('danger').size('medium').label('O', [0.2,0,0.2]);
   }},
 ];

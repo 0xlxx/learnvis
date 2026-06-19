@@ -36,6 +36,7 @@ import type {
   StepsController3d,
   SurfaceFn,
   Frame3dOpts,
+  GridSamplerFn, GridSamplerOpts,
 } from './types';
 
 // ── Easing helpers ──
@@ -71,7 +72,7 @@ interface CameraAnim {
 
 function resolvePositions(
   src: Vec3[] | ((x: number, y: number, z: number) => Vec3),
-  opts?: { x?: [number, number]; y?: [number, number]; z?: [number, number]; step?: number },
+  opts?: GridSamplerOpts,
 ): Vec3[] {
   if (Array.isArray(src)) return src;
   const xr = opts?.x ?? [-3, 3], yr = opts?.y ?? [-3, 3], zr = opts?.z ?? [-3, 3];
@@ -322,7 +323,7 @@ export class Scene3dImpl implements Scene3d {
     return gfx;
   }
 
-  fill(id: string, vertices: Vec3[]): Gfx3d {
+  polygon(id: string, vertices: Vec3[]): Gfx3d {
     const existing = this._store.get(id);
     if (existing) {
       this._world.setComponent(existing._e, {
@@ -341,6 +342,11 @@ export class Scene3dImpl implements Scene3d {
     return gfx;
   }
 
+
+	  /** @deprecated Use polygon() instead. */
+	  fill(id: string, vertices: Vec3[]): Gfx3d {
+	    return this.polygon(id, vertices);
+	  }
   arc(id: string, a: Vec3 | [Vec3, Vec3], b: Vec3, c: Vec3): Gfx3d {
     // Dihedral form: arc(id, [edgeStart, edgeEnd], ptOnFace1, ptOnFace2)
     if (typeof a[0] !== 'number') {
@@ -543,10 +549,12 @@ export class Scene3dImpl implements Scene3d {
     return gfx;
   }
 
+  points(positions: Vec3[]): Gfx3d;
+  points(fn: GridSamplerFn, opts: GridSamplerOpts): Gfx3d;
   /** Batch points. Cached — re-touched each frame without rebuilding. */
   points(
-    positions: Vec3[] | ((x: number, y: number, z: number) => Vec3),
-    opts?: { x?: [number, number]; y?: [number, number]; z?: [number, number]; step?: number },
+    positions: Vec3[] | GridSamplerFn,
+    opts?: GridSamplerOpts,
   ): Gfx3d {
     const pts = resolvePositions(positions, opts);
     const key = `:pts:${pts.length}`;
@@ -557,10 +565,12 @@ export class Scene3dImpl implements Scene3d {
     return gfx;
   }
 
+  spheres(centers: Vec3[]): Gfx3d;
+  spheres(fn: GridSamplerFn, opts: GridSamplerOpts & { r?: number }): Gfx3d;
   /** Batch spheres. Cached — re-touched each frame without rebuilding. */
   spheres(
-    centers: Vec3[] | ((x: number, y: number, z: number) => Vec3),
-    opts?: { r?: number; x?: [number, number]; y?: [number, number]; z?: [number, number]; step?: number },
+    centers: Vec3[] | GridSamplerFn,
+    opts?: GridSamplerOpts & { r?: number },
   ): Gfx3d {
     const pts = resolvePositions(centers, opts);
     const r = opts?.r ?? 0.25;
@@ -574,7 +584,7 @@ export class Scene3dImpl implements Scene3d {
 
   /** Batch vectors. Single Line2 for all shafts + single InstancedMesh for all cones = 2 draw calls. */
   vectors(
-    fn: (x: number, y: number, z: number) => Vec3,
+    fn: GridSamplerFn,
     opts: { x: [number, number]; y: [number, number]; z: [number, number]; step?: number; scale?: number | 'auto'; seed?: 'rect' | 'poisson' },
   ): Gfx3d {
     const step = opts.step ?? ((opts.x[1] - opts.x[0]) / 6);

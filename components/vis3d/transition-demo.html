@@ -63,7 +63,7 @@ const CATEGORIES = [
     group: 'BLOOM', klass: 'bloom', label: '绽放', desc: 'scale 0→1.0 · 400ms / 280ms',
     build(s, show) {
       if (!show) return;
-      s.fill('f', [[-0.6,0,-0.6],[0.6,0,-0.6],[0.6,0,0.6],[-0.6,0,0.6]]).color('primary').opacity(0.15);
+      s.polygon('f', [[-0.6,0,-0.6],[0.6,0,-0.6],[0.6,0,0.6],[-0.6,0,0.6]]).color('primary').opacity(0.15);
       s.cube('cb', 1.2, 0.8, 0, 1.2).color('accent');
     },
   },

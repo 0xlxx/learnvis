@@ -250,14 +250,12 @@ export class SceneImpl implements SceneInterface {
     return new GfxImpl(e, this._fm, p);
   }
 
-  curve(id: string, fn: (x: number) => number, domain: [number, number]): Gfx {
+  curve(id: string, fn: (x: number) => number, domain: { t: [number, number] }): Gfx {
     const e = eid('curve', id);
     const p = this._palette;
-    // Use reasonable bounds — we can't know canvas bounds here easily,
-    // so use domain as the rendering region
-    const sx = domain[0], ex = domain[1];
-    const x = Math.min(sx, ex);
-    const w = Math.abs(ex - sx);
+    const [t0, t1] = domain.t;
+    const x = Math.min(t0, t1);
+    const w = Math.abs(t1 - t0);
     const samples = 200;
     this._fm.declare(e, {
       type: 'curve',
@@ -431,10 +429,10 @@ export class SceneImpl implements SceneInterface {
 
   // ── Frame lifecycle ──
 
-  render(fn: (s: SceneInterface) => void, opts?: { animate?: boolean }): void {
+  render(fn: (s: SceneInterface) => void, opts?: { transition?: boolean }): void {
     this._fm.begin();
     fn(this);
-    this._fm.commit({ animate: opts?.animate });
+    this._fm.commit({ transition: opts?.transition });
   }
 
   steps(defs: StepDef[], opts?: StepsOptions): StepsController {

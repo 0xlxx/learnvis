@@ -19,7 +19,7 @@ s.vector('v', [0,0,0], [2,1,0]).color('danger').label('v');
 s.sphere('s', 0, 0, 0, 1.2).color('accent').opacity(0.3).wireframe();
 s.cube('c', 0, 0, 0, 1.5).color('primary');
 s.surface('surf', (u,v) => [u, v, u*u-v*v], [-2,2], [-2,2], { uSegments:32, vSegments:32, style:'wireframe-face' });
-s.fill('tri', [[0,0,0],[2,0,0],[1,0,1.5]]).color('primary').opacity(0.2);
+s.polygon('tri', [[0,0,0],[2,0,0],[1,0,1.5]]).color('primary').opacity(0.2);
 s.arc('a', [1,0,0], [0,1,0], [0,0,1]).color('warning').label('α');
 s.rightAngle('ra', [0,0,0], [1,0,0], [0,1,0]).color('dim');
 s.perpFoot('pf', [0,2,1], [0,0,0], [3,0,0], 'danger');

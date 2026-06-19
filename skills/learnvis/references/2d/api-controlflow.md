@@ -33,19 +33,19 @@ s.render(() => {
 });
 ```
 
-**连续动画（RAF）**：必须用 `{ animate: false }` 跳过 D3 过渡。默认 `animate: true` 每帧触发 500ms 过渡，和 RAF 冲突导致网格/轴消失。
+**连续动画（RAF）**：必须用 `{ transition: false }` 跳过 D3 过渡。默认 `transition: true` 每帧触发 500ms 过渡，和 RAF 冲突导致网格/轴消失。
 
 ```ts
 // 静态元素只声明一次，RAF 循环只更新变化的点
 s.render(() => {
   s.axes('ax', [320, 240], { xLen: 280, yLen: 200 });
   s.point('P', 320, 240).color('danger');
-}, { animate: false });
+}, { transition: false });
 
 function loop() {
   s.render(() => {
     s.point('P', cx + r*Math.cos(t), cy + r*Math.sin(t)).color('danger');
-  }, { animate: false });
+  }, { transition: false });
   t += 0.02;
   requestAnimationFrame(loop);
 }

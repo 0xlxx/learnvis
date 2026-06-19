@@ -418,7 +418,7 @@ function drawEntity(ctx: StageCtx, id: string, d: EntityState, markerCache: Reco
 
     case 'curve': {
       const cd = d as CurveState;
-      const [d0, d1] = cd.domain, n = cd.samples ?? 200;
+      const [d0, d1] = cd.domain.t, n = cd.samples ?? 200;
       const step = (d1 - d0) / (n - 1), ox = cd.x, oy = cd.y;
       const pw = cd.width, ph = cd.height;
       const fn = new Function('x', `return (${cd.f})(x)`) as (x: number) => number;
@@ -859,7 +859,7 @@ export class SVGRenderer implements Renderer {
 
   beginFrame() { this.ctx.root.selectAll('.vlbl').remove(); }
 
-  commitFrame(opts?: { animate?: boolean; ms?: number }) { this._repositionLabels(opts); }
+  commitFrame(opts?: { transition?: boolean; ms?: number }) { this._repositionLabels(opts); }
 
   create(id: string, state: EntityState): RenderHandle {
     const h = new SVGHandle(this.ctx, id, state, this._markerCache);
@@ -869,7 +869,7 @@ export class SVGRenderer implements Renderer {
 
   dispose() { this.handles.clear(); }
 
-  private _repositionLabels(opts?: { animate?: boolean; ms?: number }) {
+  private _repositionLabels(opts?: { transition?: boolean; ms?: number }) {
     const edgeAngles = new Map<string, number[]>();
     for (const [id, h] of this.handles) {
       if (h.state.type !== 'line') continue;
@@ -938,7 +938,7 @@ export class SVGHandle implements RenderHandle {
     this.svg = result.group; this._text = result.text;
   }
 
-  update(state: EntityState, opts?: { animate?: boolean; transition?: d3.Transition<d3.BaseType, unknown, null, undefined> }) {
+  update(state: EntityState, opts?: { transition?: boolean; transition?: d3.Transition<d3.BaseType, unknown, null, undefined> }) {
     if (!this.svg) { this.state = { ...state }; return; }
     if (opts?.transition) {
       transitionEntity(this.svg, this._text, this.state, state, opts.transition, this._cache, this.ctx.svg);

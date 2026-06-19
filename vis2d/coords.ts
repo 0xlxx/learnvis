@@ -181,18 +181,19 @@ export function createCoordView(
     return g(e);
   }
 
-  function curve(id: string, fn: (x: number) => number, domain?: [number, number]): Gfx {
-    const domainX = domain ?? xdr;
+  function curve(id: string, fn: (x: number) => number, domain?: { t: [number, number] }): Gfx {
+    const dt = domain?.t ?? xdr;
+    const domainObj = { t: dt };
     const samples = 200;
     const fStr = fn.toString();
     const e = eid('curve', id);
     // Use x-domain for width, y-domain for height (not x-domain for both!)
-    const sx = px(domainX[0]), sy = py(ydr[1]);
-    const sw = px(domainX[1]) - px(domainX[0]);
+    const sx = px(dt[0]), sy = py(ydr[1]);
+    const sw = px(dt[1]) - px(dt[0]);
     const sh = py(ydr[0]) - py(ydr[1]);
     fm.declare(e, {
       type: 'curve',
-      f: fStr, domain: domainX,
+      f: fStr, domain: domainObj,
       x: Math.min(sx, sx + sw), y: Math.min(sy, sy + sh),
       width: Math.abs(sw), height: Math.abs(sh), samples,
       stroke: p.primary.fg, strokeW: 2,
