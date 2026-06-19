@@ -1,6 +1,6 @@
 ---
 name: learnvis
-description: 教学可视化库（SVG + WebGPU 3D）。当用户需要算法动画、数学坐标系、图论/网络拓扑、3D 几何演示，或提到 learnvis 安装使用时触发。GitHub 安装（非 npm），扁平命名空间原语 + steps 步骤控制器。
+description: 教学可视化库，包含 2D 平面渲染（SVG, canvas）和 3D 空间渲染（WebGPU, canvas3d）。触发规则：2D（learnvis 包，canvas()）→ 平面几何、坐标系、函数曲线、图论/网络拓扑、算法动画、2D 向量；3D（@learnvis/vis3d 包，canvas3d()）→ 立体几何、多面体、三维空间、空间向量、三维坐标系、旋转体。安装：pnpm add github:0xlxx/learnvis。注意：立体几何、空间向量、多面体等问题必须使用 3D（canvas3d），不要降级为 2D 绘制。
 ---
 
 # learnvis
