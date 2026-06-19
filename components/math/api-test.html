@@ -117,25 +117,24 @@ function card(title, w, h) {
   });
 }
 
-  // ── 5. cos(x) animation with { transition: false } ──
+  // ── 5. cos(x) — curve drawing animation ──
   {
-    const svg = card('cos(x) tracer — { transition: false }', 400, 260);
+    const svg = card('cos(x) — curve draw (domain grows)', 400, 260);
     const s = canvas(svg, { width: 400, height: 260, theme: 'warm' });
     const vp = s.coords({ x: [0, 4 * Math.PI], y: [-1.8, 1.8], margin: 0.08 });
 
     s.render(() => {
       vp.axes({ xLabel: 'x', yLabel: 'cos(x)' }).color('dim');
       vp.grid();
-      vp.curve('cos', x => Math.cos(x), { t: [0, 4 * Math.PI] }).color('primary').stroke(1.5);
     }, { transition: false });
 
     let t = 0;
     function loop() {
-      t += 0.015;
+      t += 0.008;
       if (t > 1) t = 0;
-      const x = t * 4 * Math.PI;
+      const xEnd = t * 4 * Math.PI;
       s.render(() => {
-        vp.point('tracer', x, Math.cos(x)).color('danger').size(7).label('P');
+        vp.curve('cos', x => Math.cos(x), { t: [0, xEnd] }).color('primary').stroke(2.5);
       }, { transition: false });
       requestAnimationFrame(loop);
     }

@@ -80,17 +80,13 @@ s.render(() => {
     { x: [-2, 2], y: [0.2, 0.2], z: [-2, 2], step: 1, color: 'info' },
   );
 
-  // ── y = cos(1.5x) curve + animated tracer ──
-  // Lifted above the floor to avoid z-fighting
+  // ── cos(1.5x) — curve drawing animation ──
+  const ct = performance.now() * 0.001;
+  const xEnd = ((ct * 0.4) % 6) - 3; // cycles [-3, 3]
   s.curve(
     t => [t, Math.cos(t * 1.5) * 0.8 + 0.6, 0],
-    { t: [-3, 3], segments: 200 },
+    { t: [-3, xEnd], segments: Math.max(2, Math.floor((xEnd + 3) / 6 * 200)) },
   ).color('warning').thickness('bold');
-
-  const ct = performance.now() * 0.001;
-  const cx = ((ct * 0.6) % 6) - 3;
-  s.point('cos-tracer', cx, Math.cos(cx * 1.5) * 0.8 + 0.6, 0)
-    .color('danger').size('large').label('P');
 });
 
 check('polygon() — renamed from fill', true);
@@ -98,7 +94,7 @@ check('fill() — deprecated alias', true);
 check('points(arr) — no opts needed', true);
 check('spheres(arr) — no opts needed', true);
 check('vectors(fn, opts) — color opt works', true);
-check('curve + cos tracer animation', true);
+check('cos curve draw animation', true);
 
 console.log('✅ API consistency test ready');
 </script>
