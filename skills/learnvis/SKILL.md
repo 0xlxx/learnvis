@@ -32,6 +32,17 @@ pnpm add github:0xlxx/learnvis
 | 2D | `import { canvas, stepper } from 'learnvis'` |
 | 3D | `import { canvas3d } from '@learnvis/vis3d'` |
 
+## 动画接口对比
+
+| 场景 | 2D | 3D |
+|------|----|----|
+| 静态单帧 | `s.render(fn)` 默认 500ms D3 过渡 | `s.render(fn)` 即时渲染 |
+| **连续动画** | `s.render(fn, {animate:false})` + RAF | `s.render(fn)` + RAF |
+| 分步演示 | `s.steps([...])` D3 插值过渡 | `s.steps([...])` TransitionSystem |
+| 摄像机动画 | 无 | `s.camera({...}, {duration})` |
+
+2D 连续动画必须 `{animate:false}`——否则每帧触发 500ms D3 过渡，RAF 堆积导致网格消失。
+
 ## 2D Quick Start
 
 ```ts
